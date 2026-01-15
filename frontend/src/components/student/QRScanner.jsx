@@ -7,57 +7,49 @@ const QRScanner = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const qrCodeScanner = new Html5Qrcode("qr-reader");
+    const scanner = new Html5Qrcode("qr-reader");
 
-    qrCodeScanner
+    scanner
       .start(
-        { facingMode: "environment" }, // ✅ back camera
+        { facingMode: "environment" }, // ✅ BACK CAMERA ONLY
         {
           fps: 10,
           qrbox: { width: 250, height: 250 },
+          disableFlip: true,
         },
         (decodedText) => {
-          console.log("QR scanned:", decodedText);
+          console.log("QR detected:", decodedText);
 
-          // stop camera after successful scan
-          qrCodeScanner.stop().then(() => {
-            navigate(`/attendance/${encodeURIComponent(decodedText)}`);
+          scanner.stop().then(() => {
+            navigate("/student"); // or attendance page
           });
         },
-        () => {
-          // ignore scan errors
+        (error) => {
+          // silent error (important)
         }
-      )
-      .catch((err) => {
-        console.error("Camera start failed", err);
-      });
+      );
 
     return () => {
-      qrCodeScanner.stop().catch(() => {});
+      scanner
+        .stop()
+        .catch(() => {});
     };
   }, [navigate]);
 
   return (
-    <div className="min-h-screen bg-slate-100">
+    <>
       <Navbar />
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100">
+        <h2 className="text-xl font-semibold mb-4">Scan QR Code</h2>
 
-      <div className="pt-28 px-6 text-center">
-        <h1 className="text-2xl font-bold mb-2">
-          Scan Attendance QR
-        </h1>
-        <p className="text-slate-500 mb-6">
-          Point your camera at the QR code
-        </p>
-
-        {/* 🔥 Camera only – no upload option */}
+        {/* CAMERA ONLY – NO FILE UPLOAD */}
         <div
           id="qr-reader"
-          className="mx-auto w-[300px] rounded-xl overflow-hidden shadow bg-black"
+          className="w-[300px] h-[300px] rounded-lg overflow-hidden bg-black"
         />
       </div>
-    </div>
+    </>
   );
 };
 
 export default QRScanner;
-

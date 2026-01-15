@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import Navbar from "../components/common/Navbar";
-
+import { useNavigate } from "react-router-dom";
 const StudentDashboard = () => {
   const [student, setStudent] = useState(null);
-
+const navigate = useNavigate();
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem("classmark_user"));
     const profile = JSON.parse(localStorage.getItem("classmark_student"));
