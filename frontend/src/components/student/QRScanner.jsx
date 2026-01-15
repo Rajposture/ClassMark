@@ -9,50 +9,25 @@ const QRScanner = () => {
   useEffect(() => {
     const scanner = new Html5Qrcode("qr-reader");
 
-    scanner.start(
-      { facingMode: "environment" },
-      { fps: 10, qrbox: 250 },
-(decodedText) => {
-  const lectureId = decodedText; // ✅ ONLY lecture ID
-   localStorage.setItem("currentLecture", lectureId);
+    scanner
+      .start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: 250 },
+        (decodedText) => {
+          const lectureId = String(decodedText); // ✅ plain lectureId
 
-  scanner.stop().then(() => {
-    navigate("/attendance"); // ✅ NEW PAGE
-  });
+          // Save lectureId for attendance form
+          localStorage.setItem("currentLecture", lectureId);
 
-  const student = JSON.parse(localStorage.getItem("student")) || {};
-
-        if (!student || !lectureId) return;
-
-        const attendance =
-          JSON.parse(localStorage.getItem("attendance")) || {};
-
-        if (!attendance[lectureId]) {
-          attendance[lectureId] = [];
-        }
-
-        const alreadyMarked = attendance[lectureId].some(
-          (s) => s.enrollment === student.enrollment
-        );
-
-        if (!alreadyMarked) {
-          attendance[lectureId].push({
-            name: student.name,
-            enrollment: student.enrollment,
-            time: new Date().toLocaleTimeString(),
+          // Stop scanner BEFORE navigating
+          scanner.stop().then(() => {
+            navigate("/attendance");
           });
-
-          localStorage.setItem(
-            "attendance",
-            JSON.stringify(attendance)
-          );
         }
-
-        scanner.stop().then(() => {
-          navigate("/student");
-        });
-      }
-    );
+      )
+      .catch((err) => {
+        console.error("QR Scan Error:", err);
+      });
 
     return () => {
       scanner.stop().catch(() => {});

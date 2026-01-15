@@ -4,20 +4,11 @@ import { QRCodeCanvas } from "qrcode.react";
 const GenerateQR = ({ lecture, onClose }) => {
   const [qrValue, setQrValue] = useState("");
 
-  useEffect(() => {
-    const generateQR = () => {
-      setQrValue(
-        JSON.stringify({
-          lectureId: lecture.id,
-          timestamp: Date.now(),
-        })
-      );
-    };
 
-    generateQR();
-    const interval = setInterval(generateQR, 10000);
-    return () => clearInterval(interval);
-  }, [lecture.id]);
+ 
+useEffect(() => {
+  setQrValue(String(lecture.id));
+}, [lecture.id]);
 
   return (
     <div

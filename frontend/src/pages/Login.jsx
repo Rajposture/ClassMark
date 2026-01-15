@@ -13,7 +13,22 @@ const Login = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    // 🔥 AUTH STATE (MOST IMPORTANT)
+    // 🔥 MAIN USER OBJECT (FOR NAVBAR & AUTH)
+    const userData = {
+      name: role === "student" ? name : "Teacher",
+      enrollment: role === "student" ? enrollment : "",
+      email,
+      role,
+      profilePic: null,
+    };
+
+    // 🔥 STORE USER (NAVBAR READS THIS)
+    localStorage.setItem("user", JSON.stringify(userData));
+
+    // 🔥 DISPATCH LOGIN EVENT (THIS FIXES THE BUG)
+    window.dispatchEvent(new Event("user-login"));
+
+    // 🔥 KEEP YOUR EXISTING STORAGE (OPTIONAL, SAFE)
     localStorage.setItem(
       "classmark_user",
       JSON.stringify({
@@ -22,7 +37,6 @@ const Login = () => {
       })
     );
 
-    // 🔥 STUDENT PROFILE DATA
     if (role === "student") {
       localStorage.setItem(
         "classmark_student",
