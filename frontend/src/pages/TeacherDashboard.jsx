@@ -3,14 +3,15 @@ import Navbar from "../components/common/Navbar";
 import CreateLecture from "../components/teacher/CreateLecture";
 import GenerateQR from "../components/teacher/GenerateQR";
 
+
 const TeacherDashboard = () => {
   const [lectures, setLectures] = useState([]);
   const [activeLecture, setActiveLecture] = useState(null);
-
+const [selectedLecture, setSelectedLecture] = useState(null);
   // Load lectures from localStorage on mount
   useEffect(() => {
     const storedLectures =
-      JSON.parse(localStorage.getItem("classmark_lectures")) || [];
+      JSON.parse(localStorage.getItem("attendance")) || [];
     setLectures(storedLectures);
   }, []);
 
@@ -71,10 +72,16 @@ const TeacherDashboard = () => {
 
                     <button
                       onClick={() => setActiveLecture(lec)}
-                      className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
-                    >
+                      className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition">
+                    
                       Generate QR
                     </button>
+                    <button
+  onClick={() => setSelectedLecture(lecture.id)}
+  className="bg-gray-700 text-white px-4 py-2 rounded"
+>
+  View Attendance
+</button>
                   </div>
                 ))}
               </div>
@@ -83,18 +90,7 @@ const TeacherDashboard = () => {
         </div>
       </div>
 
- <div className="min-h-screen bg-slate-100">
-      <Navbar />
 
-      <div className="pt-28 px-6">
-        <h1 className="text-3xl font-bold">
-          Teacher Dashboard
-        </h1>
-        <p className="text-slate-500">
-          Logged in successfully
-        </p>
-      </div>
-    </div>
   
       {/* QR Modal */}
       {activeLecture && (
@@ -102,9 +98,12 @@ const TeacherDashboard = () => {
           lecture={activeLecture}
           onClose={() => setActiveLecture(null)}
         />
+        
       )}
     </div>
+    
   );
+  
 };
 
 export default TeacherDashboard;

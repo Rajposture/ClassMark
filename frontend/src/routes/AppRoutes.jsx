@@ -18,7 +18,6 @@ const AppRoutes = () => {
 <Route path="/scan" element={<QRScanner />} />
 
 
-
     </Routes>
   );
 };

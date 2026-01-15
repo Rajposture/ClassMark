@@ -9,43 +9,63 @@ const QRScanner = () => {
   useEffect(() => {
     const scanner = new Html5Qrcode("qr-reader");
 
-    scanner
-      .start(
-        { facingMode: "environment" }, // ✅ BACK CAMERA ONLY
-        {
-          fps: 10,
-          qrbox: { width: 250, height: 250 },
-          disableFlip: true,
-        },
-        (decodedText) => {
-          console.log("QR detected:", decodedText);
+    scanner.start(
+      { facingMode: "environment" },
+      { fps: 10, qrbox: 250 },
+(decodedText) => {
+  const lectureId = decodedText; // ✅ ONLY lecture ID
+   localStorage.setItem("currentLecture", lectureId);
 
-          scanner.stop().then(() => {
-            navigate("/student"); // or attendance page
-          });
-        },
-        (error) => {
-          // silent error (important)
+  scanner.stop().then(() => {
+    navigate("/attendance"); // ✅ NEW PAGE
+  });
+
+  const student = JSON.parse(localStorage.getItem("student")) || {};
+
+        if (!student || !lectureId) return;
+
+        const attendance =
+          JSON.parse(localStorage.getItem("attendance")) || {};
+
+        if (!attendance[lectureId]) {
+          attendance[lectureId] = [];
         }
-      );
+
+        const alreadyMarked = attendance[lectureId].some(
+          (s) => s.enrollment === student.enrollment
+        );
+
+        if (!alreadyMarked) {
+          attendance[lectureId].push({
+            name: student.name,
+            enrollment: student.enrollment,
+            time: new Date().toLocaleTimeString(),
+          });
+
+          localStorage.setItem(
+            "attendance",
+            JSON.stringify(attendance)
+          );
+        }
+
+        scanner.stop().then(() => {
+          navigate("/student");
+        });
+      }
+    );
 
     return () => {
-      scanner
-        .stop()
-        .catch(() => {});
+      scanner.stop().catch(() => {});
     };
   }, [navigate]);
 
   return (
     <>
       <Navbar />
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100">
-        <h2 className="text-xl font-semibold mb-4">Scan QR Code</h2>
-
-        {/* CAMERA ONLY – NO FILE UPLOAD */}
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
         <div
           id="qr-reader"
-          className="w-[300px] h-[300px] rounded-lg overflow-hidden bg-black"
+          className="w-[300px] h-[300px] bg-black rounded"
         />
       </div>
     </>
