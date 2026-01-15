@@ -1,16 +1,16 @@
 import { useState } from "react";
+import { useParams } from "react-router-dom";
 
 const AttendanceForm = () => {
+  const { lectureId } = useParams(); // 🔥 ALWAYS AVAILABLE
+
   const [name, setName] = useState("");
   const [enrollment, setEnrollment] = useState("");
   const [msg, setMsg] = useState("");
 
   const handleSubmit = () => {
-   const lectureId = String(localStorage.getItem("currentLecture"));
-
-
     if (!lectureId) {
-      setMsg("Lecture not found. Scan QR again.");
+      setMsg("Invalid lecture. Scan QR again.");
       return;
     }
 
@@ -19,19 +19,26 @@ const AttendanceForm = () => {
       return;
     }
 
-    // get existing attendance
-const attendance =
-  JSON.parse(localStorage.getItem("attendance")) || {};
+    const attendance =
+      JSON.parse(localStorage.getItem("attendance")) || {};
 
-attendance[lectureId] = attendance[lectureId] || [];
+    attendance[lectureId] = attendance[lectureId] || [];
 
-attendance[lectureId].push({
-  name,
-  enrollment,
-  time: new Date().toLocaleTimeString(),
-});
+    const alreadyMarked = attendance[lectureId].some(
+      (s) => s.enrollment === enrollment
+    );
 
-    // save back to localStorage
+    if (alreadyMarked) {
+      setMsg("Attendance already submitted");
+      return;
+    }
+
+    attendance[lectureId].push({
+      name,
+      enrollment,
+      time: new Date().toLocaleTimeString(),
+    });
+
     localStorage.setItem("attendance", JSON.stringify(attendance));
 
     setMsg("✅ Attendance submitted successfully");
@@ -57,7 +64,9 @@ attendance[lectureId].push({
       />
       <br /><br />
 
-      <button onClick={handleSubmit}>Submit Attendance</button>
+      <button onClick={handleSubmit}>
+        Submit Attendance
+      </button>
 
       {msg && <p>{msg}</p>}
     </div>
