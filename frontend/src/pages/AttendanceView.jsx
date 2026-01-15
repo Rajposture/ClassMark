@@ -1,64 +1,54 @@
 import { useParams, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import Navbar from "../components/common/Navbar";
 
 const AttendanceView = () => {
-const { lectureId } = useParams();
+  const { lectureId } = useParams();
+  const navigate = useNavigate();
+  const [students, setStudents] = useState([]);
 
-const attendance =
-  JSON.parse(localStorage.getItem("attendance")) || {};
+  useEffect(() => {
+    const attendance =
+      JSON.parse(localStorage.getItem("attendance")) || {};
 
-const list = attendance[String(lectureId)] || [];
+    setStudents(attendance[String(lectureId)] || []);
+  }, [lectureId]);
 
-const handleBack = () => {
-  if (window.history.length > 1) {
-    navigate(-1);
-  } else {
-    navigate("/teacher");
-  }
-};
   return (
-    <div className="min-h-screen bg-slate-100 p-8">
-<button
-  onClick={() => {
-    window.location.href = "/teacher";
-  }}
-  className="mb-4 px-4 py-2 bg-gray-600 text-white rounded"
->
-  ← Back to Dashboard
-</button>
+    <>
+      <Navbar />
 
+      <div className="pt-24 px-6 max-w-3xl mx-auto">
+        <button
+          onClick={() => navigate("/teacher")}
+          className="mb-4 px-4 py-2 bg-gray-600 text-white rounded"
+        >
+          ← Back
+        </button>
 
+        <h2 className="text-2xl font-bold mb-4">
+          Attendance List
+        </h2>
 
-      <h1 className="text-2xl font-bold mb-4">
-        Attendance List
-      </h1>
-
-      {list.length === 0 ? (
-        <p className="text-gray-500">
-          No attendance recorded yet.
-        </p>
-      ) : (
-        <table className="w-full bg-white rounded shadow">
-          <thead className="bg-slate-200">
-            <tr>
-              <th className="p-3 text-left">#</th>
-              <th className="p-3 text-left">Name</th>
-              <th className="p-3 text-left">Enrollment</th>
-              <th className="p-3 text-left">Time</th>
-            </tr>
-          </thead>
-          <tbody>
-            {list.map((student, index) => (
-              <tr key={index} className="border-t">
-                <td className="p-3">{index + 1}</td>
-                <td className="p-3">{student.name}</td>
-                <td className="p-3">{student.enrollment}</td>
-                <td className="p-3">{student.time}</td>
-              </tr>
+        {students.length === 0 ? (
+          <p className="text-gray-500">
+            No attendance recorded yet.
+          </p>
+        ) : (
+          <ul className="space-y-2">
+            {students.map((s, i) => (
+              <li
+                key={i}
+                className="border rounded p-3 flex justify-between"
+              >
+                <span>{s.name}</span>
+                <span>{s.enrollment}</span>
+              </li>
             ))}
-          </tbody>
-        </table>
-      )}
-    </div>
+          </ul>
+        )}
+      </div>
+    </>
   );
 };
 

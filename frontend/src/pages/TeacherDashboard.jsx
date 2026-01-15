@@ -107,8 +107,8 @@ const navigate = useNavigate();
                               localStorage.getItem("attendance")
                             ) || {};
 
-                          const list =
-                            attendance[lecture.id] || [];
+const list = attendance[String(lecture.id)] || [];
+
 
                           if (list.length === 0) {
                             return (

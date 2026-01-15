@@ -1,36 +1,46 @@
 import { Html5Qrcode } from "html5-qrcode";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../common/Navbar";
 
 const QRScanner = () => {
   const navigate = useNavigate();
 
+  const scannerRef = useRef(null);
+  const hasScannedRef = useRef(false);
+  const isStartedRef = useRef(false);
+
   useEffect(() => {
     const scanner = new Html5Qrcode("qr-reader");
+    scannerRef.current = scanner;
 
     scanner
       .start(
         { facingMode: "environment" },
         { fps: 10, qrbox: 250 },
         (decodedText) => {
-          const lectureId = String(decodedText); // ✅ plain lectureId
+  const lectureId = String(decodedText);
 
-          // Save lectureId for attendance form
-          localStorage.setItem("currentLecture", lectureId);
+  localStorage.setItem("currentLecture", lectureId);
 
-          // Stop scanner BEFORE navigating
-          scanner.stop().then(() => {
-            navigate("/attendance");
-          });
-        }
+  scanner.stop().finally(() => {
+    navigate(`/attendance/${lectureId}`);
+  });
+}
       )
+      .then(() => {
+        isStartedRef.current = true;
+      })
       .catch((err) => {
-        console.error("QR Scan Error:", err);
+        console.error("QR start error:", err);
       });
 
     return () => {
-      scanner.stop().catch(() => {});
+      // 🔥 cleanup — stop ONLY if running
+      if (scannerRef.current && isStartedRef.current) {
+        scannerRef.current.stop().catch(() => {});
+        isStartedRef.current = false;
+      }
     };
   }, [navigate]);
 

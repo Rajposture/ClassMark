@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/common/Navbar";
 
@@ -6,11 +6,19 @@ const AttendanceForm = () => {
   const [name, setName] = useState("");
   const [enrollment, setEnrollment] = useState("");
   const [message, setMessage] = useState("");
+  const [lectureId, setLectureId] = useState(null);
+
   const navigate = useNavigate();
 
-  const handleSubmit = () => {
-    const lectureId = localStorage.getItem("currentLecture");
+  // 🔥 FIX: wait for lectureId
+  useEffect(() => {
+    const storedLecture = localStorage.getItem("currentLecture");
+    if (storedLecture) {
+      setLectureId(storedLecture);
+    }
+  }, []);
 
+  const handleSubmit = () => {
     if (!lectureId) {
       setMessage("Invalid lecture. Please scan QR again.");
       return;
@@ -54,6 +62,20 @@ const AttendanceForm = () => {
       navigate("/student");
     }, 1500);
   };
+
+  // 🔥 Loading state (prevents blank screen)
+  if (!lectureId) {
+    return (
+      <>
+        <Navbar />
+        <div className="min-h-screen flex items-center justify-center">
+          <p className="text-gray-600 text-lg">
+            Loading attendance form...
+          </p>
+        </div>
+      </>
+    );
+  }
 
   return (
     <>

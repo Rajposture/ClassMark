@@ -17,10 +17,13 @@ const AppRoutes = () => {
 <Route path="/student" element={<StudentDashboard />} />
 <Route path="/scan" element={<QRScanner />} />
  <Route path="/attendance" element={<AttendanceForm />} />
-      <Route
-        path="/teacher/attendance/:lectureId"
-        element={<AttendanceView />}
-      />
+<Route path="/attendance/:lectureId" element={<AttendanceForm />} />
+<Route
+  path="/teacher/attendance/:lectureId"
+  element={<AttendanceView />}
+/>
+
+
     </Routes>
   );
 };
