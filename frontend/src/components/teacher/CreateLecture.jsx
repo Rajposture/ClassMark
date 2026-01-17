@@ -9,7 +9,10 @@ const CreateLecture = ({ onCreate }) => {
   const handleCreateLecture = (e) => {
     e.preventDefault();
 
-    if (!onCreate) return;
+    if (!title || !date || !startTime || !endTime) {
+      alert("Please fill all fields");
+      return;
+    }
 
     const newLecture = {
       id: Date.now(),
@@ -17,15 +20,65 @@ const CreateLecture = ({ onCreate }) => {
       date,
       startTime,
       endTime,
+      createdAt: Date.now(),
     };
 
-    onCreate(newLecture);
+    /* ================================
+       1️⃣ SAVE LECTURE
+    ================================= */
+    const lectures =
+      JSON.parse(localStorage.getItem("classmark_lectures")) || [];
 
-    // reset form
+    lectures.push(newLecture);
+    localStorage.setItem(
+      "classmark_lectures",
+      JSON.stringify(lectures)
+    );
+
+    /* ================================
+       2️⃣ CREATE STUDENT NOTIFICATION
+    ================================= */
+// 🔔 CREATE STUDENT NOTIFICATION
+const notifications =
+  JSON.parse(localStorage.getItem("classmark_notifications")) || [];
+
+notifications.push({
+  id: newLecture.id,
+  title: newLecture.title,
+  message: `New lecture scheduled on ${date} (${startTime} - ${endTime})`,
+  target: "student",   // ✅ IMPORTANT
+  read: false,
+  createdAt: Date.now(),
+});
+
+localStorage.setItem(
+  "classmark_notifications",
+  JSON.stringify(notifications)
+);
+
+// 🔥 Notify all listeners
+window.dispatchEvent(new Event("notificationUpdated"));
+
+
+    // 🔔 Notify Navbar instantly
+    window.dispatchEvent(new Event("notificationUpdated"));
+
+    /* ================================
+       3️⃣ INFORM PARENT DASHBOARD
+    ================================= */
+    if (onCreate) {
+      onCreate(newLecture);
+    }
+
+    /* ================================
+       4️⃣ RESET FORM
+    ================================= */
     setTitle("");
     setDate("");
     setStartTime("");
     setEndTime("");
+
+    alert("Lecture created successfully");
   };
 
   return (

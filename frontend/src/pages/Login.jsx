@@ -13,30 +13,19 @@ const Login = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    // 🔥 MAIN USER OBJECT (FOR NAVBAR & AUTH)
+    // ✅ SINGLE SOURCE OF TRUTH (Navbar + Routes)
     const userData = {
       name: role === "student" ? name : "Teacher",
       enrollment: role === "student" ? enrollment : "",
       email,
       role,
-      profilePic: null,
+      avatar: "",
     };
 
-    // 🔥 STORE USER (NAVBAR READS THIS)
-    localStorage.setItem("user", JSON.stringify(userData));
+    // 🔥 STORE USER (USED EVERYWHERE)
+    localStorage.setItem("classmark_user", JSON.stringify(userData));
 
-    // 🔥 DISPATCH LOGIN EVENT (THIS FIXES THE BUG)
-    window.dispatchEvent(new Event("user-login"));
-
-    // 🔥 KEEP YOUR EXISTING STORAGE (OPTIONAL, SAFE)
-    localStorage.setItem(
-      "classmark_user",
-      JSON.stringify({
-        role,
-        email,
-      })
-    );
-
+    // 🔥 OPTIONAL: student-only data
     if (role === "student") {
       localStorage.setItem(
         "classmark_student",
@@ -46,6 +35,13 @@ const Login = () => {
           avatar: "",
         })
       );
+    }
+
+    // 🔥 NOTIFY NAVBAR & ROUTES
+    window.dispatchEvent(new Event("userUpdated"));
+
+    // 🔥 REDIRECT
+    if (role === "student") {
       navigate("/student");
     } else {
       navigate("/teacher");
@@ -54,7 +50,6 @@ const Login = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-600 to-purple-600">
-      {/* Glass Card */}
       <form
         onSubmit={handleSubmit}
         className="w-full max-w-md bg-white/20 backdrop-blur-lg p-8 rounded-2xl shadow-xl text-white"
@@ -88,7 +83,7 @@ const Login = () => {
 
             <input
               type="text"
-              placeholder="Enrollment Number"
+ объясit placeholder="Enrollment Number"
               value={enrollment}
               onChange={(e) => setEnrollment(e.target.value)}
               required
@@ -116,7 +111,6 @@ const Login = () => {
           className="w-full mb-6 px-4 py-2 rounded-lg bg-white/80 text-black outline-none"
         />
 
-        {/* Submit */}
         <button
           type="submit"
           className="w-full py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 transition font-semibold"

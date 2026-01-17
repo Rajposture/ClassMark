@@ -7,27 +7,23 @@ import { useNavigate } from "react-router-dom";
 const TeacherDashboard = () => {
   const [lectures, setLectures] = useState([]);
   const [activeLecture, setActiveLecture] = useState(null);
-  const [selectedLecture, setSelectedLecture] = useState(null);
-const navigate = useNavigate();
 
-  // Load lectures
+  const navigate = useNavigate();
+
+  /* ================================
+     LOAD LECTURES
+  ================================= */
   useEffect(() => {
-    const storedLectures = JSON.parse(localStorage.getItem("lectures"));
-
-    if (Array.isArray(storedLectures)) {
-      setLectures(storedLectures);
-    } else if (storedLectures) {
-      setLectures([storedLectures]);
-    } else {
-      setLectures([]);
-    }
+    const stored =
+      JSON.parse(localStorage.getItem("classmark_lectures")) || [];
+    setLectures(stored);
   }, []);
 
-  // When a lecture is created
-  const handleLectureCreated = (newLecture) => {
-    const updatedLectures = [...lectures, newLecture];
-    setLectures(updatedLectures);
-    localStorage.setItem("lectures", JSON.stringify(updatedLectures));
+  /* ================================
+     WHEN NEW LECTURE IS CREATED
+  ================================= */
+  const handleLectureCreated = (lecture) => {
+    setLectures((prev) => [...prev, lecture]);
   };
 
   return (
@@ -43,10 +39,10 @@ const navigate = useNavigate();
         </p>
 
         <div className="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Create Lecture */}
+          {/* CREATE LECTURE */}
           <CreateLecture onCreate={handleLectureCreated} />
 
-          {/* Lectures */}
+          {/* TODAY’S LECTURES */}
           <div className="lg:col-span-2 bg-white rounded-xl shadow p-6">
             <h2 className="text-xl font-semibold text-slate-700 mb-4">
               Today’s Lectures
@@ -75,6 +71,7 @@ const navigate = useNavigate();
                       </div>
 
                       <div className="flex gap-2">
+                        {/* GENERATE QR */}
                         <button
                           onClick={() => setActiveLecture(lecture)}
                           className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
@@ -82,56 +79,19 @@ const navigate = useNavigate();
                           Generate QR
                         </button>
 
-<button
-  onClick={() =>
-    navigate(`/teacher/attendance/${lecture.id}`)
-  }
-  className="bg-gray-700 text-white px-4 py-2 rounded"
->
-  View Attendance
-</button>
-
+                        {/* VIEW ATTENDANCE */}
+                        <button
+                          onClick={() =>
+                            navigate(
+                              `/teacher/attendance/${lecture.id}`
+                            )
+                          }
+                          className="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800"
+                        >
+                          View Attendance
+                        </button>
                       </div>
                     </div>
-
-                    {/* ✅ ATTENDANCE SECTION (CORRECT PLACE) */}
-                    {selectedLecture === lecture.id && (
-                      <div className="mt-4">
-                        <h4 className="font-semibold">
-                          Attendance List
-                        </h4>
-
-                        {(() => {
-                          const attendance =
-                            JSON.parse(
-                              localStorage.getItem("attendance")
-                            ) || {};
-
-const list = attendance[String(lecture.id)] || [];
-
-
-                          if (list.length === 0) {
-                            return (
-                              <p className="text-slate-500">
-                                No attendance yet
-                              </p>
-                            );
-                          }
-
-                          return (
-                            <ul className="mt-2 list-disc list-inside">
-                              {list.map((student, index) => (
-                                <li key={index}>
-                                  {student.name} (
-                                  {student.enrollment}) –{" "}
-                                  {student.time}
-                                </li>
-                              ))}
-                            </ul>
-                          );
-                        })()}
-                      </div>
-                    )}
                   </div>
                 ))}
               </div>
@@ -140,7 +100,7 @@ const list = attendance[String(lecture.id)] || [];
         </div>
       </div>
 
-      {/* QR Modal */}
+      {/* QR MODAL */}
       {activeLecture && (
         <GenerateQR
           lecture={activeLecture}
