@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import Navbar from "../components/common/Navbar";
+import DashboardLayout from "../components/common/DashboardLayout";
 import { useNavigate } from "react-router-dom";
 const StudentDashboard = () => {
   const [student, setStudent] = useState(null);
@@ -14,8 +14,8 @@ const navigate = useNavigate();
   }, []);
 
   return (
-    <div className="min-h-screen bg-slate-100">
-      <Navbar />
+    <DashboardLayout>
+
 
       <div className="pt-28 px-6 max-w-5xl mx-auto">
         <h1 className="text-3xl font-bold text-slate-800">
@@ -67,7 +67,7 @@ const navigate = useNavigate();
 </button>
         </div>
       </div>
-    </div>
+    </DashboardLayout>
   );
 };
 

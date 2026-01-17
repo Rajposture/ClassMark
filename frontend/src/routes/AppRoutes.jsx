@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 
 import Landing from "../pages/Landing";
 import Login from "../pages/Login";
-
+import Signup from "../pages/Signup";
 import TeacherDashboard from "../pages/TeacherDashboard";
 import StudentDashboard from "../pages/StudentDashboard";
 
@@ -108,6 +108,7 @@ const AppRoutes = () => {
 
       {/* FALLBACK */}
       <Route path="*" element={<Navigate to="/" />} />
+      <Route path="/signup" element={<Signup />} />
     </Routes>
   );
 };

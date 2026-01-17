@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import Navbar from "../components/common/Navbar";
+import DashboardLayout from "../components/common/DashboardLayout";
 import CreateLecture from "../components/teacher/CreateLecture";
 import GenerateQR from "../components/teacher/GenerateQR";
 import { useNavigate } from "react-router-dom";
@@ -27,9 +27,8 @@ const TeacherDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100">
-      <Navbar />
 
+<DashboardLayout>
       <div className="pt-28 px-6 max-w-7xl mx-auto">
         <h1 className="text-3xl font-bold text-slate-800">
           Teacher Dashboard
@@ -107,7 +106,7 @@ const TeacherDashboard = () => {
           onClose={() => setActiveLecture(null)}
         />
       )}
-    </div>
+    </DashboardLayout>
   );
 };
 
