@@ -1,80 +1,73 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import Navbar from "../components/common/Navbar";
+import { useEffect, useState, useContext } from "react"
+import { useParams, useSearchParams, useNavigate } from "react-router-dom"
+import Navbar from "../components/common/Navbar"
+import { AuthContext } from "../context/AuthContext"
+import API_BASE from "../config/api"
 
 const AttendanceForm = () => {
-  const [name, setName] = useState("");
-  const [enrollment, setEnrollment] = useState("");
-  const [message, setMessage] = useState("");
-  const [lectureId, setLectureId] = useState(null);
+  const { lectureId } = useParams()
+  const [searchParams] = useSearchParams()
+  const token = searchParams.get("token")
 
-  const navigate = useNavigate();
+  const { user, loading } = useContext(AuthContext)
+  const navigate = useNavigate()
 
-  // 🔥 FIX: wait for lectureId
+  const [message, setMessage] = useState("")
+  const [submitting, setSubmitting] = useState(false)
+
   useEffect(() => {
-    const storedLecture = localStorage.getItem("currentLecture");
-    if (storedLecture) {
-      setLectureId(storedLecture);
+    if (loading) return
+    if (!user) {
+      navigate("/login")
+      return
     }
-  }, []);
-
-  const handleSubmit = () => {
-    if (!lectureId) {
-      setMessage("Invalid lecture. Please scan QR again.");
-      return;
+    if (user.role !== "student") {
+      navigate("/teacher")
     }
+  }, [user, loading, navigate])
 
-    if (!name || !enrollment) {
-      setMessage("Please fill all fields");
-      return;
-    }
-
-    const attendance =
-      JSON.parse(localStorage.getItem("attendance")) || {};
-
-    if (!attendance[lectureId]) {
-      attendance[lectureId] = [];
+  const handleSubmit = async () => {
+    if (!lectureId || !token) {
+      setMessage("Invalid QR. Please scan again.")
+      return
     }
 
-    const alreadyMarked = attendance[lectureId].some(
-      (s) => s.enrollment === enrollment
-    );
+    setSubmitting(true)
 
-    if (alreadyMarked) {
-      setMessage("Attendance already submitted");
-      return;
+    try {
+      const res = await fetch(`${API_BASE}/api/attendance`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ lectureId, token })
+      })
+
+      const data = await res.json()
+
+      if (res.ok) {
+        setMessage("✅ Attendance submitted successfully")
+        setTimeout(() => navigate("/student"), 1500)
+      } else {
+        setMessage(data.message)
+      }
+    } catch {
+      setMessage("Server error")
     }
 
-    attendance[lectureId].push({
-      name,
-      enrollment,
-      time: new Date().toLocaleTimeString(),
-    });
+    setSubmitting(false)
+  }
 
-    localStorage.setItem(
-      "attendance",
-      JSON.stringify(attendance)
-    );
-
-    setMessage("✅ Attendance submitted successfully");
-
-    setTimeout(() => {
-      navigate("/student");
-    }, 1500);
-  };
-
-  // 🔥 Loading state (prevents blank screen)
-  if (!lectureId) {
+  if (!lectureId || !token) {
     return (
       <>
         <Navbar />
         <div className="min-h-screen flex items-center justify-center">
           <p className="text-gray-600 text-lg">
-            Loading attendance form...
+            Invalid attendance link
           </p>
         </div>
       </>
-    );
+    )
   }
 
   return (
@@ -88,7 +81,7 @@ const AttendanceForm = () => {
           </h2>
 
           <p className="text-sm text-gray-500 text-center mb-6">
-            Please enter your details to mark attendance
+            Confirm your details
           </p>
 
           <div className="space-y-4">
@@ -98,10 +91,9 @@ const AttendanceForm = () => {
               </label>
               <input
                 type="text"
-                placeholder="Enter your full name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                value={user?.name || ""}
+                disabled
+                className="w-full border rounded-lg px-3 py-2 bg-gray-100"
               />
             </div>
 
@@ -111,18 +103,18 @@ const AttendanceForm = () => {
               </label>
               <input
                 type="text"
-                placeholder="Enter enrollment number"
-                value={enrollment}
-                onChange={(e) => setEnrollment(e.target.value)}
-                className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                value={user?.enrollmentNumber || ""}
+                disabled
+                className="w-full border rounded-lg px-3 py-2 bg-gray-100"
               />
             </div>
 
             <button
               onClick={handleSubmit}
+              disabled={submitting}
               className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg font-semibold transition"
             >
-              Submit Attendance
+              {submitting ? "Submitting..." : "Submit Attendance"}
             </button>
 
             {message && (
@@ -134,7 +126,7 @@ const AttendanceForm = () => {
         </div>
       </div>
     </>
-  );
-};
+  )
+}
 
-export default AttendanceForm;
+export default AttendanceForm

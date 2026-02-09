@@ -1,74 +1,94 @@
-import { useState } from "react";
+import { useState, useContext } from "react";
 import { useParams } from "react-router-dom";
+import { AuthContext } from "../context/AuthContext";
+import API_BASE from "../config/api";
 
 const AttendanceForm = () => {
-  const { lectureId } = useParams(); // 🔥 ALWAYS AVAILABLE
+  const { lectureId } = useParams();
+  const { user } = useContext(AuthContext);
 
-  const [name, setName] = useState("");
-  const [enrollment, setEnrollment] = useState("");
-  const [msg, setMsg] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
 
-  const handleSubmit = () => {
-    if (!lectureId) {
-      setMsg("Invalid lecture. Scan QR again.");
-      return;
+  const submitAttendance = async () => {
+    setLoading(true);
+    setMessage("");
+
+    try {
+      const res = await fetch(`${API_BASE}/api/attendance`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          lectureId,
+          token: localStorage.getItem("qr_token")
+        })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setMessage(data.message);
+      } else {
+        setMessage("Attendance submitted successfully");
+      }
+
+    } catch {
+      setMessage("Error submitting attendance");
     }
 
-    if (!name || !enrollment) {
-      setMsg("Fill all fields");
-      return;
-    }
-
-    const attendance =
-      JSON.parse(localStorage.getItem("attendance")) || {};
-
-    attendance[lectureId] = attendance[lectureId] || [];
-
-    const alreadyMarked = attendance[lectureId].some(
-      (s) => s.enrollment === enrollment
-    );
-
-    if (alreadyMarked) {
-      setMsg("Attendance already submitted");
-      return;
-    }
-
-    attendance[lectureId].push({
-      name,
-      enrollment,
-      time: new Date().toLocaleTimeString(),
-    });
-
-    localStorage.setItem("attendance", JSON.stringify(attendance));
-
-    setMsg("✅ Attendance submitted successfully");
-    setName("");
-    setEnrollment("");
+    setLoading(false);
   };
 
   return (
-    <div style={{ padding: "40px" }}>
-      <h2>Attendance Form</h2>
+    <div className="min-h-screen flex items-center justify-center bg-slate-100 px-4">
+      <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md">
 
-      <input
-        placeholder="Student Name"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-      />
-      <br /><br />
+        <h2 className="text-2xl font-bold text-slate-800 mb-6">
+          Confirm Attendance
+        </h2>
 
-      <input
-        placeholder="Enrollment Number"
-        value={enrollment}
-        onChange={(e) => setEnrollment(e.target.value)}
-      />
-      <br /><br />
+        <div className="space-y-4 mb-6">
 
-      <button onClick={handleSubmit}>
-        Submit Attendance
-      </button>
+          <div>
+            <label className="text-sm text-slate-500">Name</label>
+            <input
+              type="text"
+              value={user?.name || ""}
+              disabled
+              className="w-full mt-1 px-4 py-3 rounded-lg border bg-slate-100 text-slate-700"
+            />
+          </div>
 
-      {msg && <p>{msg}</p>}
+          <div>
+            <label className="text-sm text-slate-500">Enrollment Number</label>
+            <input
+              type="text"
+              value={user?.enrollmentNumber || ""}
+              disabled
+              className="w-full mt-1 px-4 py-3 rounded-lg border bg-slate-100 text-slate-700"
+            />
+          </div>
+
+        </div>
+
+        <button
+          onClick={submitAttendance}
+          disabled={loading}
+          className="w-full py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+        >
+          {loading ? "Submitting..." : "Submit Attendance"}
+        </button>
+
+        {message && (
+          <p className="mt-4 text-center text-sm text-slate-600">
+            {message}
+          </p>
+        )}
+
+      </div>
     </div>
   );
 };

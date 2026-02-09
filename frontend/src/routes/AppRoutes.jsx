@@ -1,116 +1,89 @@
-import { Routes, Route, Navigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { Routes, Route, Navigate } from "react-router-dom"
 
-import Landing from "../pages/Landing";
-import Login from "../pages/Login";
-import Signup from "../pages/Signup";
-import TeacherDashboard from "../pages/TeacherDashboard";
-import StudentDashboard from "../pages/StudentDashboard";
+import Landing from "../pages/Landing"
+import Login from "../pages/Login"
+import Signup from "../pages/Signup"
 
-import QRScanner from "../components/student/QRScanner";
-import AttendanceForm from "../pages/AttendanceForm";
-import AttendanceView from "../pages/AttendanceView";
-import StudentProfile from "../components/student/StudentProfile";
+import TeacherDashboard from "../pages/TeacherDashboard"
+import StudentDashboard from "../pages/StudentDashboard"
+
+import QRScanner from "../components/student/QRScanner"
+import AttendanceForm from "../pages/AttendanceForm"
+
+import ProtectedRoute from "./ProtectedRoute"
+import PublicRoute from "./PublicRoute"
 
 const AppRoutes = () => {
-  const [user, setUser] = useState(() =>
-    JSON.parse(localStorage.getItem("classmark_user"))
-  );
-
-  // 🔥 LISTEN FOR LOGIN / LOGOUT / PROFILE UPDATE
-  useEffect(() => {
-    const syncUser = () => {
-      setUser(JSON.parse(localStorage.getItem("classmark_user")));
-    };
-
-    window.addEventListener("userUpdated", syncUser);
-    window.addEventListener("storage", syncUser);
-
-    return () => {
-      window.removeEventListener("userUpdated", syncUser);
-      window.removeEventListener("storage", syncUser);
-    };
-  }, []);
-
   return (
     <Routes>
-      {/* PUBLIC */}
-      <Route path="/" element={<Landing />} />
-      <Route path="/login" element={<Login />} />
 
-      {/* STUDENT */}
       <Route
-        path="/student"
+        path="/"
         element={
-          user?.role === "student" ? (
-            <StudentDashboard />
-          ) : (
-            <Navigate to="/login" />
-          )
+          <PublicRoute>
+            <Landing />
+          </PublicRoute>
         }
       />
 
       <Route
-        path="/scan"
+        path="/login"
         element={
-          user?.role === "student" ? (
-            <QRScanner />
-          ) : (
-            <Navigate to="/login" />
-          )
+          <PublicRoute>
+            <Login />
+          </PublicRoute>
+        }
+      />
+
+      <Route
+        path="/signup"
+        element={
+          <PublicRoute>
+            <Signup />
+          </PublicRoute>
         }
       />
 
       <Route
         path="/attendance/:lectureId"
         element={
-          user?.role === "student" ? (
+          <ProtectedRoute role="student" allowDirectAccess>
             <AttendanceForm />
-          ) : (
-            <Navigate to="/login" />
-          )
+          </ProtectedRoute>
         }
       />
 
       <Route
-        path="/student/profile"
+        path="/student"
         element={
-          user?.role === "student" ? (
-            <StudentProfile />
-          ) : (
-            <Navigate to="/login" />
-          )
+          <ProtectedRoute role="student">
+            <StudentDashboard />
+          </ProtectedRoute>
         }
       />
 
-      {/* TEACHER */}
+      <Route
+        path="/scan"
+        element={
+          <ProtectedRoute role="student">
+            <QRScanner />
+          </ProtectedRoute>
+        }
+      />
+
       <Route
         path="/teacher"
         element={
-          user?.role === "teacher" ? (
+          <ProtectedRoute role="teacher">
             <TeacherDashboard />
-          ) : (
-            <Navigate to="/login" />
-          )
+          </ProtectedRoute>
         }
       />
 
-      <Route
-        path="/teacher/attendance/:lectureId"
-        element={
-          user?.role === "teacher" ? (
-            <AttendanceView />
-          ) : (
-            <Navigate to="/login" />
-          )
-        }
-      />
+      <Route path="*" element={<Navigate to="/" replace />} />
 
-      {/* FALLBACK */}
-      <Route path="*" element={<Navigate to="/" />} />
-      <Route path="/signup" element={<Signup />} />
     </Routes>
-  );
-};
+  )
+}
 
-export default AppRoutes;
+export default AppRoutes

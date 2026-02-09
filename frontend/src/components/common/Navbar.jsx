@@ -1,337 +1,266 @@
-import { useEffect, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useContext, useState, useRef, useEffect } from "react"
+import { Link, useNavigate } from "react-router-dom"
+import { AuthContext } from "../../context/AuthContext"
 
-const Navbar = ({ onMenuClick }) => {
-  const navigate = useNavigate();
+const Navbar = () => {
+  const { user, logout } = useContext(AuthContext)
+  const navigate = useNavigate()
 
-  const dropdownRef = useRef(null);
-  const notificationRef = useRef(null);
+  const dropdownRef = useRef(null)
+  const fileInputRef = useRef(null)
 
-  const [user, setUser] = useState(
-    JSON.parse(localStorage.getItem("classmark_user"))
-  );
+  const [openProfile, setOpenProfile] = useState(false)
+  const [openSidebar, setOpenSidebar] = useState(false)
+  const [profileImage, setProfileImage] = useState(
+    localStorage.getItem("profileImage") || ""
+  )
 
-  const [notifications, setNotifications] = useState([]);
-  const [openNotifications, setOpenNotifications] = useState(false);
-  const [openProfile, setOpenProfile] = useState(false);
-/* ✅ ADD THIS */
-const [openSidebar, setOpenSidebar] = useState(false);
-  /* 🔔 LOAD NOTIFICATIONS */
-  const loadNotifications = () => {
-    const currentUser = JSON.parse(
-      localStorage.getItem("classmark_user")
-    );
-    if (!currentUser) return;
-
-    const all =
-      JSON.parse(
-        localStorage.getItem("classmark_notifications")
-      ) || [];
-
-    const unread = all.filter(
-      (n) =>
-        n.target === currentUser.role &&
-        n.read === false
-    );
-
-    setNotifications(unread);
-  };
-
-  /* ✅ MARK ALL AS READ */
-  const markAllAsRead = () => {
-    const currentUser = JSON.parse(
-      localStorage.getItem("classmark_user")
-    );
-    if (!currentUser) return;
-
-    const all =
-      JSON.parse(
-        localStorage.getItem("classmark_notifications")
-      ) || [];
-
-    const updated = all.map((n) =>
-      n.target === currentUser.role
-        ? { ...n, read: true }
-        : n
-    );
-
-    localStorage.setItem(
-      "classmark_notifications",
-      JSON.stringify(updated)
-    );
-
-    setNotifications([]);
-    window.dispatchEvent(
-      new Event("notificationUpdated")
-    );
-  };
-
-  /* 🔄 SYNC NOTIFICATIONS */
-  useEffect(() => {
-    loadNotifications();
-
-    const handler = () => loadNotifications();
-
-    window.addEventListener(
-      "notificationUpdated",
-      handler
-    );
-    window.addEventListener("storage", handler);
-
-    return () => {
-      window.removeEventListener(
-        "notificationUpdated",
-        handler
-      );
-      window.removeEventListener("storage", handler);
-    };
-  }, []);
-
-  /* ❌ CLOSE DROPDOWNS ON OUTSIDE CLICK */
   useEffect(() => {
     const handleClick = (e) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(e.target)
-      ) {
-        setOpenProfile(false);
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setOpenProfile(false)
       }
+    }
 
-      if (
-        notificationRef.current &&
-        !notificationRef.current.contains(e.target)
-      ) {
-        setOpenNotifications(false);
-      }
-    };
+    document.addEventListener("mousedown", handleClick)
+    return () => document.removeEventListener("mousedown", handleClick)
+  }, [])
 
-    document.addEventListener("mousedown", handleClick);
-    return () =>
-      document.removeEventListener(
-        "mousedown",
-        handleClick
-      );
-  }, []);
+  const handleLogout = async () => {
+    await logout()
+    navigate("/login", { replace: true })
+  }
 
-  const logout = () => {
-    localStorage.removeItem("classmark_user");
-    navigate("/login");
-    window.location.reload();
-  };
+  const handleImageChange = (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      setProfileImage(reader.result)
+      localStorage.setItem("profileImage", reader.result)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const initials = user?.name
+    ? user.name
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .toUpperCase()
+    : ""
 
   return (
-    <nav
-  className="
-    fixed top-0 left-0 right-0 z-50
-    md:top-4 md:left-1/2 md:-translate-x-1/2
-    w-full md:w-[95%] md:max-w-7xl
-    rounded-none md:rounded-2xl
-    bg-white/80 backdrop-blur-xl
-    shadow-lg px-4 md:px-6 py-3
-    flex items-center justify-between
-  "
->
+    <>
+      {/* NAVBAR */}
+      <div className="fixed top-4 left-0 right-0 z-50 flex justify-center px-4 sm:px-6">
+        <nav className="w-full max-w-7xl bg-white/90 backdrop-blur-xl shadow-xl rounded-2xl px-5 sm:px-8 py-3 sm:py-4 flex justify-between items-center border">
 
-<div className="flex items-center gap-3">
-  {/* ☰ MOBILE MENU */}
-  {user && (
-    <button onClick={onMenuClick} className="md:hidden text-2xl">
-    ☰
-  </button>
-  )}
-
-  <img
-    src="/favicon.png"
-    alt="ClassMark"
-    className="w-10 h-10 object-contain"
-  />
-  <span className="text-xl font-bold text-indigo-600">
-    ClassMark
-  </span>
-</div>
-
-
-      {/* CENTER */}
-      {user && (
-        <div className="hidden md:flex gap-8 font-medium text-gray-700">
-          <Link to={user.role === "teacher" ? "/teacher" : "/student"}>
-            Dashboard
-          </Link>
-          <Link to="https://gpmumbai.ac.in/gpmweb/departments/computer-engineering/">
-            Courses
-          </Link>
-          <Link to="#">Assignments</Link>
-          <Link to="https://gpmumbai.ac.in/gpmweb/cdc/odd-sem-2025-26-result/">
-            MIS
-          </Link>
-        </div>
-      )}
-
-      {/* RIGHT */}
-      <div className="flex items-center gap-5">
-        {!user && (
-          <Link
-            to="/login"
-            className="px-5 py-2 rounded-xl bg-indigo-600 text-white"
-          >
-            Login
-          </Link>
-        )}
-
-        {user && (
-          <>
-            {/* 🔔 NOTIFICATIONS */}
-            <div
-              ref={notificationRef}
-              className="relative cursor-pointer"
-              onClick={() => {
-                setOpenNotifications(!openNotifications);
-                markAllAsRead();
-              }}
+          {/* LEFT */}
+          <div className="flex items-center gap-3">
+            <button
+              className="md:hidden text-xl"
+              onClick={() => setOpenSidebar(true)}
             >
-              <span className="text-2xl">🔔</span>
+              ☰
+            </button>
 
-              {notifications.length > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full px-1">
-                  {notifications.length}
-                </span>
-              )}
+            <img src="/favicon.png" alt="logo" className="w-8 h-8 sm:w-9 sm:h-9" />
 
-              {openNotifications && (
-                <div className="absolute right-0 mt-3 w-80 bg-white rounded-xl shadow-xl p-3 z-50">
-                  <h4 className="font-semibold mb-2">
-                    Notifications
-                  </h4>
+            <span className="text-lg sm:text-xl font-bold text-indigo-600">
+              ClassMark
+            </span>
+          </div>
 
-                  {notifications.length === 0 ? (
-                    <p className="text-sm text-gray-500">
-                      No new notifications
-                    </p>
+          {/* DESKTOP NAV */}
+          {user && (
+            <div className="hidden md:flex gap-10 text-slate-700 font-medium">
+              <Link
+                to={user.role === "teacher" ? "/teacher" : "/student"}
+                className="hover:text-indigo-600 transition"
+              >
+                Dashboard
+              </Link>
+
+              <Link
+                to="/lectures"
+                className="hover:text-indigo-600 transition"
+              >
+                Lectures
+              </Link>
+
+              <Link
+                to="/assignments"
+                className="hover:text-indigo-600 transition"
+              >
+                Assignments
+              </Link>
+
+              <Link
+                to="/mis"
+                className="hover:text-indigo-600 transition"
+              >
+                MIS
+              </Link>
+            </div>
+          )}
+
+          {/* RIGHT */}
+          <div className="flex items-center gap-4 sm:gap-6">
+            {!user && (
+              <Link
+                to="/login"
+                className="px-5 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition text-sm"
+              >
+                Login
+              </Link>
+            )}
+
+            {user && (
+              <div ref={dropdownRef} className="relative">
+                <div
+                  onClick={() => setOpenProfile(!openProfile)}
+                  className="w-9 h-9 sm:w-11 sm:h-11 rounded-full border-2 border-indigo-500 bg-white flex items-center justify-center font-semibold text-indigo-600 cursor-pointer overflow-hidden"
+                >
+                  {profileImage ? (
+                    <img
+                      src={profileImage}
+                      alt="profile"
+                      className="w-full h-full object-cover"
+                    />
                   ) : (
-                    notifications.map((n) => (
-                      <div
-                        key={n.id}
-                        className="p-2 rounded-lg hover:bg-gray-100 text-sm"
-                      >
-                        <p className="font-medium">
-                          {n.title}
-                        </p>
-                        <p className="text-gray-500">
-                          {n.message}
-                        </p>
-                      </div>
-                    ))
+                    initials
                   )}
                 </div>
-              )}
-            </div>
 
-            {/* 👤 PROFILE */}
-            <div className="relative" ref={dropdownRef}>
-              <img
-                src={
-                  user.avatar ||
-                  `https://ui-avatars.com/api/?name=${user.name}`
-                }
-                alt="profile"
-                onClick={() =>
-                  setOpenProfile(!openProfile)
-                }
-                className="w-10 h-10 rounded-full border-2 border-indigo-500 cursor-pointer object-cover"
-              />
+                {openProfile && (
+                  <div className="absolute right-0 mt-4 w-72 bg-white shadow-2xl rounded-xl p-6 border">
 
-              {openProfile && (
-                <div className="absolute right-0 mt-3 w-64 bg-white rounded-xl shadow-xl p-4">
-                  <p className="font-semibold">{user.name}</p>
-                  <p className="text-sm text-gray-500 capitalize">
-                    {user.role}
-                  </p>
+                    <div className="flex items-center gap-4">
+                      <div className="w-14 h-14 rounded-full border overflow-hidden">
+                        {profileImage ? (
+                          <img
+                            src={profileImage}
+                            alt="profile"
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-lg font-bold text-indigo-600">
+                            {initials}
+                          </div>
+                        )}
+                      </div>
 
-                  <hr className="my-3" />
+                      <div>
+                        <p className="font-semibold text-slate-800">
+                          {user.name}
+                        </p>
+                        <p className="text-sm text-slate-500 capitalize">
+                          {user.role}
+                        </p>
 
-                  <Link
-                    to={
-                      user.role === "student"
-                        ? "/student/profile"
-                        : "/teacher"
-                    }
-                    className="block px-3 py-2 rounded hover:bg-gray-100"
-                  >
-                    Edit Profile
-                  </Link>
+                        {user.role === "student" && (
+                          <p className="text-sm text-slate-500">
+                            Enrollment: {user.enrollmentNumber}
+                          </p>
+                        )}
+                      </div>
+                    </div>
 
-                  <button
-                    onClick={logout}
-                    className="w-full mt-2 py-2 rounded bg-red-500 text-white"
-                  >
-                    Logout
-                  </button>
-                </div>
-              )}
-            </div>
-          </>
-        )}
-      </div>
-      {/* 🌙 MOBILE SIDEBAR */}
-{openSidebar && (
-  <>
-    {/* Overlay */}
-    <div
-      className="fixed inset-0 bg-black/40 z-40"
-      onClick={() => setOpenSidebar(false)}
-    />
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      accept="image/*"
+                      onChange={handleImageChange}
+                      className="hidden"
+                    />
 
-    {/* Sidebar */}
-    <aside className="fixed top-0 left-0 h-full w-72 bg-white z-50 shadow-2xl p-6 flex flex-col">
-      <div className="flex items-center justify-between mb-6">
-        <span className="text-xl font-bold text-indigo-600">
-          ClassMark
-        </span>
-        <button
-          className="text-xl"
-          onClick={() => setOpenSidebar(false)}
-        >
-          ✕
-        </button>
+                    <button
+                      onClick={() => fileInputRef.current.click()}
+                      className="mt-4 w-full py-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm"
+                    >
+                      Change Profile Photo
+                    </button>
+
+                    <button
+                      onClick={handleLogout}
+                      className="mt-3 w-full py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm"
+                    >
+                      Logout
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </nav>
       </div>
 
-      {/* LINKS */}
-      <nav className="flex flex-col gap-4 font-medium text-gray-700">
-        <Link
-          to={user.role === "teacher" ? "/teacher" : "/student"}
-          onClick={() => setOpenSidebar(false)}
-        >
-          Dashboard
-        </Link>
+      {/* MOBILE SIDEBAR */}
+      {/* MOBILE SIDEBAR */}
+<div
+  className={`fixed inset-0 z-40 md:hidden transition-opacity duration-300 ${
+    openSidebar ? "opacity-100 visible" : "opacity-0 invisible"
+  }`}
+>
+  {/* Overlay */}
+  <div
+    className="absolute inset-0 bg-black/50"
+    onClick={() => setOpenSidebar(false)}
+  />
 
-        <Link
-          to="https://gpmumbai.ac.in/gpmweb/departments/computer-engineering/"
-          onClick={() => setOpenSidebar(false)}
-        >
-          Courses
-        </Link>
+  {/* Drawer */}
+  <div
+    className={`absolute top-0 left-0 h-full w-72 bg-white shadow-2xl p-6 transform transition-transform duration-300 ${
+      openSidebar ? "translate-x-0" : "-translate-x-full"
+    }`}
+  >
+    <div className="flex justify-between items-center mb-8">
+      <span className="text-lg font-bold text-indigo-600">
+        Menu
+      </span>
+      <button onClick={() => setOpenSidebar(false)}>✕</button>
+    </div>
 
-        <Link to="#" onClick={() => setOpenSidebar(false)}>
-          Assignments
-        </Link>
+    <div className="space-y-6 font-medium text-slate-700">
+      <Link
+        to={user?.role === "teacher" ? "/teacher" : "/student"}
+        onClick={() => setOpenSidebar(false)}
+        className="block hover:text-indigo-600"
+      >
+        Dashboard
+      </Link>
 
-        <Link
-          to="https://gpmumbai.ac.in/gpmweb/cdc/odd-sem-2025-26-result/"
-          onClick={() => setOpenSidebar(false)}
-        >
-          MIS
-        </Link>
-      </nav>
+      <Link
+        to="/lectures"
+        onClick={() => setOpenSidebar(false)}
+        className="block hover:text-indigo-600"
+      >
+        Lectures
+      </Link>
 
-      {/* FOOTER */}
+      <Link
+        to="/assignments"
+        onClick={() => setOpenSidebar(false)}
+        className="block hover:text-indigo-600"
+      >
+        Assignments
+      </Link>
 
-    </aside>
-  </>
-)}
+      <Link
+        to="/mis"
+        onClick={() => setOpenSidebar(false)}
+        className="block hover:text-indigo-600"
+      >
+        MIS
+      </Link>
+    </div>
+  </div>
+</div>
 
-    </nav>
-  );
-  
-};
+    </>
+  )
+}
 
-export default Navbar;
+export default Navbar

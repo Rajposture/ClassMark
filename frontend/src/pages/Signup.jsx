@@ -1,139 +1,190 @@
-import { useState } from "react";
+import { useState, useContext } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import Navbar from "../components/common/Navbar";
+import API_BASE from "../config/api";
+import { AuthContext } from "../context/AuthContext";
 
 const Signup = () => {
   const navigate = useNavigate();
+  const { login } = useContext(AuthContext);
 
+  const [role, setRole] = useState("student");
   const [form, setForm] = useState({
+    enrollmentNumber: "",
     name: "",
-    enrollment: "",
     email: "",
     password: "",
-    role: "student",
   });
+
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSignup = (e) => {
+  const handleSignup = async (e) => {
     e.preventDefault();
+    setError("");
+    setLoading(true);
 
-    // 🔒 Validation
-    if (form.role === "student" && !form.enrollment) {
-      alert("Enrollment number is required for students");
-      return;
+    try {
+      const payload =
+        role === "student"
+          ? { ...form, role }
+          : {
+              name: form.name,
+              email: form.email,
+              password: form.password,
+              role,
+            };
+
+      const res = await fetch(`${API_BASE}/api/auth/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.message || "Signup failed");
+        return;
+      }
+
+      login(data.user);
+      navigate(data.user.role === "teacher" ? "/teacher" : "/student");
+    } catch {
+      setError("Unable to connect to server");
+    } finally {
+      setLoading(false);
     }
-
-    const user = {
-      name: form.name,
-      email: form.email,
-      password: form.password,
-      role: form.role,
-      enrollment: form.role === "student" ? form.enrollment : null,
-      avatar: "",
-      createdAt: Date.now(),
-    };
-
-    // Save user
-    localStorage.setItem("classmark_user", JSON.stringify(user));
-
-    // Notify navbar
-    window.dispatchEvent(new Event("userUpdated"));
-
-    // Redirect by role
-    navigate(form.role === "teacher" ? "/teacher" : "/student");
   };
 
   return (
-    <div className="min-h-screen bg-slate-100">
-      <Navbar />
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-900 via-purple-900 to-blue-900 px-4 py-10 relative overflow-hidden">
 
-      <div className="pt-32 flex justify-center px-4">
-        <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8">
-          <h2 className="text-2xl font-bold text-center text-indigo-600">
-            Create Account
-          </h2>
+      {/* Decorative gradient blur circles */}
+      <div className="absolute w-72 h-72 bg-indigo-500 rounded-full blur-3xl opacity-30 top-10 -left-10"></div>
+      <div className="absolute w-72 h-72 bg-purple-500 rounded-full blur-3xl opacity-30 bottom-10 -right-10"></div>
 
-          <p className="text-center text-slate-500 mt-2">
-            Join ClassMark
+      {/* GLASS CARD */}
+      <div className="relative w-full max-w-md backdrop-blur-2xl bg-white/10 border border-white/20 rounded-2xl p-6 sm:p-8 shadow-2xl">
+
+        {/* BRAND */}
+        <div className="text-center mb-6">
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-indigo-300 to-blue-300 bg-clip-text text-transparent">
+            ClassMark
+          </h1>
+          <p className="text-slate-200 text-sm mt-1">
+            Smart Institutional Attendance
           </p>
+        </div>
 
-          <form onSubmit={handleSignup} className="mt-6 space-y-4">
-            {/* Role */}
+        {/* ERROR */}
+        {error && (
+          <div className="text-sm text-red-200 bg-red-500/20 border border-red-400/40 p-3 rounded-lg text-center mb-4">
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSignup} className="space-y-4 text-white">
+
+          {/* ROLE */}
+          <div>
+            <label className="text-sm text-slate-200">
+              Register As
+            </label>
             <select
-              name="role"
-              value={form.role}
-              onChange={handleChange}
-              className="w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-indigo-500"
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+              className="mt-1 w-full px-4 py-3 bg-white/20 border border-white/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 backdrop-blur-md text-white"
             >
-              <option value="student">Student</option>
-              <option value="teacher">Teacher</option>
+              <option value="student" className="text-black">Student</option>
+              <option value="teacher" className="text-black">Teacher</option>
             </select>
+          </div>
 
-            {/* Name */}
+          {/* NAME */}
+          <div>
+            <label className="text-sm text-slate-200">
+              {role === "teacher" ? "Teacher Name" : "Full Name"}
+            </label>
             <input
               type="text"
               name="name"
               required
-              placeholder="Full Name"
               value={form.name}
               onChange={handleChange}
-              className="w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-indigo-500"
+              className="mt-1 w-full px-4 py-3 bg-white/20 border border-white/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 backdrop-blur-md placeholder-slate-300 text-white"
             />
+          </div>
 
-            {/* Enrollment (STUDENT ONLY) */}
-            {form.role === "student" && (
+          {/* ENROLLMENT */}
+          {role === "student" && (
+            <div>
+              <label className="text-sm text-slate-200">
+                Enrollment Number
+              </label>
               <input
                 type="text"
-                name="enrollment"
+                name="enrollmentNumber"
                 required
-                placeholder="Enrollment Number"
-                value={form.enrollment}
+                value={form.enrollmentNumber}
                 onChange={handleChange}
-                className="w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-indigo-500"
+                className="mt-1 w-full px-4 py-3 bg-white/20 border border-white/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 backdrop-blur-md text-white"
               />
-            )}
+            </div>
+          )}
 
-            {/* Email */}
+          {/* EMAIL */}
+          <div>
+            <label className="text-sm text-slate-200">
+              Email Address
+            </label>
             <input
               type="email"
               name="email"
               required
-              placeholder="Email Address"
               value={form.email}
               onChange={handleChange}
-              className="w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-indigo-500"
+              className="mt-1 w-full px-4 py-3 bg-white/20 border border-white/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 backdrop-blur-md text-white"
             />
+          </div>
 
-            {/* Password */}
+          {/* PASSWORD */}
+          <div>
+            <label className="text-sm text-slate-200">
+              Password
+            </label>
             <input
               type="password"
               name="password"
               required
-              placeholder="Password"
               value={form.password}
               onChange={handleChange}
-              className="w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-indigo-500"
+              className="mt-1 w-full px-4 py-3 bg-white/20 border border-white/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 backdrop-blur-md text-white"
             />
+          </div>
 
-            {/* Submit */}
-            <button
-              type="submit"
-              className="w-full py-2 rounded-lg bg-indigo-600 text-white font-semibold hover:bg-indigo-700 transition"
-            >
-              Sign Up
-            </button>
-          </form>
+          {/* BUTTON */}
+          <button
+            disabled={loading}
+            className="w-full py-3 rounded-lg bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-600 hover:to-blue-600 text-white font-semibold shadow-lg transition duration-300 disabled:opacity-50"
+          >
+            {loading ? "Creating account..." : "Create Account"}
+          </button>
+        </form>
 
-          <p className="mt-4 text-center text-sm text-slate-500">
-            Already have an account?{" "}
-            <Link to="/login" className="text-indigo-600 hover:underline">
-              Login
-            </Link>
-          </p>
-        </div>
+        <p className="text-sm text-slate-200 mt-6 text-center">
+          Already have an account?{" "}
+          <Link
+            to="/login"
+            className="text-indigo-300 hover:text-white font-medium"
+          >
+            Sign in
+          </Link>
+        </p>
+
       </div>
     </div>
   );
