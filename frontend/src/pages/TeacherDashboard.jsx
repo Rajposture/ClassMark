@@ -10,36 +10,63 @@ const TeacherDashboard = () => {
   const { user, loading } = useContext(AuthContext);
   const [lectures, setLectures] = useState([]);
   const [activeLecture, setActiveLecture] = useState(null);
+  const [fetchError, setFetchError] = useState("");
   const navigate = useNavigate();
 
   useEffect(() => {
     if (loading) return;
 
     if (!user || user.role !== "teacher") {
-      navigate("/login");
+      navigate("/login", { replace: true });
       return;
     }
 
-    fetch(`${API_BASE}/api/lectures/mine`, {
-      credentials: "include",
-    })
-      .then((res) => res.json())
-      .then((data) => setLectures(data || []))
-      .catch(() => setLectures([]));
+    const loadLectures = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/lectures/mine`, {
+          credentials: "include",
+        });
+
+        if (!res.ok) {
+          setFetchError("Failed to load lectures");
+          return;
+        }
+
+        const data = await res.json();
+        setLectures(Array.isArray(data) ? data : []);
+      } catch {
+        setFetchError("Server error while fetching lectures");
+      }
+    };
+
+    loadLectures();
   }, [user, loading, navigate]);
 
   const handleLectureCreated = async (lectureData) => {
-    const res = await fetch(`${API_BASE}/api/lectures`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify(lectureData),
-    });
+    try {
+      const res = await fetch(`${API_BASE}/api/lectures`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(lectureData),
+      });
 
-    if (!res.ok) return;
+      const data = await res.json();
 
-    const lecture = await res.json();
-    setLectures((prev) => [lecture, ...prev]);
+      if (!res.ok) {
+        alert(data.message || "Failed to create lecture");
+        return false;
+      }
+
+      if (data.lecture) {
+        setLectures((prev) => [data.lecture, ...prev]);
+      }
+
+      return true;
+    } catch {
+      alert("Server error while creating lecture");
+      return false;
+    }
   };
 
   const handleExcelDownload = async (lectureId) => {
@@ -49,7 +76,10 @@ const TeacherDashboard = () => {
         { credentials: "include" }
       );
 
-      if (!res.ok) return;
+      if (!res.ok) {
+        alert("Failed to generate Excel");
+        return;
+      }
 
       const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);
@@ -60,8 +90,9 @@ const TeacherDashboard = () => {
       document.body.appendChild(a);
       a.click();
       a.remove();
-    } catch (err) {
-      console.error(err);
+      window.URL.revokeObjectURL(url);
+    } catch {
+      alert("Server error while downloading Excel");
     }
   };
 
@@ -71,6 +102,7 @@ const TeacherDashboard = () => {
         <h1 className="text-3xl sm:text-4xl font-bold text-slate-800">
           Teacher Dashboard
         </h1>
+
         <p className="text-slate-500 mt-2 mb-8 sm:mb-10">
           Manage your lectures and attendance
         </p>
@@ -84,6 +116,10 @@ const TeacherDashboard = () => {
             <h2 className="text-xl sm:text-2xl font-semibold text-slate-800 mb-6">
               Today’s Lectures
             </h2>
+
+            {fetchError && (
+              <p className="text-red-500 mb-4">{fetchError}</p>
+            )}
 
             {lectures.length === 0 ? (
               <div className="h-40 sm:h-56 flex items-center justify-center text-slate-400 text-base sm:text-lg text-center">
@@ -114,9 +150,7 @@ const TeacherDashboard = () => {
                       </button>
 
                       <button
-                        onClick={() =>
-                          handleExcelDownload(lecture._id)
-                        }
+                        onClick={() => handleExcelDownload(lecture._id)}
                         className="w-full sm:w-auto px-4 py-2 bg-slate-700 hover:bg-slate-800 text-white rounded-lg transition text-sm sm:text-base"
                       >
                         Generate Excel

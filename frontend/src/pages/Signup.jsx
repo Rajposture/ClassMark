@@ -30,7 +30,12 @@ const Signup = () => {
     try {
       const payload =
         role === "student"
-          ? { ...form, role }
+          ? {
+              name: form.name,
+              password: form.password,
+              role,
+              enrollmentNumber: form.enrollmentNumber,
+            }
           : {
               name: form.name,
               email: form.email,
@@ -41,6 +46,7 @@ const Signup = () => {
       const res = await fetch(`${API_BASE}/api/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify(payload),
       });
 
@@ -51,10 +57,16 @@ const Signup = () => {
         return;
       }
 
-      login(data.user);
-      navigate(data.user.role === "teacher" ? "/teacher" : "/student");
+      if (data.user) {
+        login(data.user);
+        setTimeout(() => {
+          navigate(data.user.role === "teacher" ? "/teacher" : "/student");
+        }, 100);
+      } else {
+        navigate("/login");
+      }
     } catch {
-      setError("Unable to connect to server");
+      setError("Server error during signup");
     } finally {
       setLoading(false);
     }
@@ -62,15 +74,10 @@ const Signup = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-900 via-purple-900 to-blue-900 px-4 py-10 relative overflow-hidden">
-
-      {/* Decorative gradient blur circles */}
       <div className="absolute w-72 h-72 bg-indigo-500 rounded-full blur-3xl opacity-30 top-10 -left-10"></div>
       <div className="absolute w-72 h-72 bg-purple-500 rounded-full blur-3xl opacity-30 bottom-10 -right-10"></div>
 
-      {/* GLASS CARD */}
       <div className="relative w-full max-w-md backdrop-blur-2xl bg-white/10 border border-white/20 rounded-2xl p-6 sm:p-8 shadow-2xl">
-
-        {/* BRAND */}
         <div className="text-center mb-6">
           <h1 className="text-3xl font-bold bg-gradient-to-r from-indigo-300 to-blue-300 bg-clip-text text-transparent">
             ClassMark
@@ -80,7 +87,6 @@ const Signup = () => {
           </p>
         </div>
 
-        {/* ERROR */}
         {error && (
           <div className="text-sm text-red-200 bg-red-500/20 border border-red-400/40 p-3 rounded-lg text-center mb-4">
             {error}
@@ -88,8 +94,6 @@ const Signup = () => {
         )}
 
         <form onSubmit={handleSignup} className="space-y-4 text-white">
-
-          {/* ROLE */}
           <div>
             <label className="text-sm text-slate-200">
               Register As
@@ -104,7 +108,6 @@ const Signup = () => {
             </select>
           </div>
 
-          {/* NAME */}
           <div>
             <label className="text-sm text-slate-200">
               {role === "teacher" ? "Teacher Name" : "Full Name"}
@@ -119,7 +122,6 @@ const Signup = () => {
             />
           </div>
 
-          {/* ENROLLMENT */}
           {role === "student" && (
             <div>
               <label className="text-sm text-slate-200">
@@ -136,7 +138,6 @@ const Signup = () => {
             </div>
           )}
 
-          {/* EMAIL */}
           <div>
             <label className="text-sm text-slate-200">
               Email Address
@@ -151,7 +152,6 @@ const Signup = () => {
             />
           </div>
 
-          {/* PASSWORD */}
           <div>
             <label className="text-sm text-slate-200">
               Password
@@ -166,7 +166,6 @@ const Signup = () => {
             />
           </div>
 
-          {/* BUTTON */}
           <button
             disabled={loading}
             className="w-full py-3 rounded-lg bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-600 hover:to-blue-600 text-white font-semibold shadow-lg transition duration-300 disabled:opacity-50"
@@ -184,7 +183,6 @@ const Signup = () => {
             Sign in
           </Link>
         </p>
-
       </div>
     </div>
   );

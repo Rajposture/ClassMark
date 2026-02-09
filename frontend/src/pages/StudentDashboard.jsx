@@ -75,10 +75,7 @@ const StudentDashboard = () => {
               <span className="font-medium">Enrollment:</span>{" "}
               {student.enrollmentNumber}
             </p>
-            <p>
-              <span className="font-medium">Email:</span>{" "}
-              {student.email}
-            </p>
+
           </div>
         </div>
 

@@ -17,6 +17,7 @@ const AppRoutes = () => {
   return (
     <Routes>
 
+      {/* PUBLIC ROUTES */}
       <Route
         path="/"
         element={
@@ -44,15 +45,13 @@ const AppRoutes = () => {
         }
       />
 
+      {/* 🔥 QR Attendance — PUBLIC ACCESS */}
       <Route
         path="/attendance/:lectureId"
-        element={
-          <ProtectedRoute role="student" allowDirectAccess>
-            <AttendanceForm />
-          </ProtectedRoute>
-        }
+        element={<AttendanceForm />}
       />
 
+      {/* STUDENT DASHBOARD */}
       <Route
         path="/student"
         element={
@@ -71,6 +70,7 @@ const AppRoutes = () => {
         }
       />
 
+      {/* TEACHER DASHBOARD */}
       <Route
         path="/teacher"
         element={
@@ -80,6 +80,7 @@ const AppRoutes = () => {
         }
       />
 
+      {/* FALLBACK */}
       <Route path="*" element={<Navigate to="/" replace />} />
 
     </Routes>

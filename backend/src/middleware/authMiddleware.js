@@ -7,7 +7,8 @@ const protect = async (req, res, next) => {
 
     if (req.cookies?.token) {
       token = req.cookies.token;
-    } else if (req.headers.authorization?.startsWith("Bearer")) {
+    } 
+    else if (req.headers.authorization?.startsWith("Bearer")) {
       token = req.headers.authorization.split(" ")[1];
     }
 
@@ -25,6 +26,7 @@ const protect = async (req, res, next) => {
 
     req.user = user;
     next();
+
   } catch {
     return res.status(401).json({ message: "Invalid or expired token" });
   }

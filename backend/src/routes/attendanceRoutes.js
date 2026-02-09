@@ -1,9 +1,9 @@
 import express from "express";
-import protect from "../middleware/authMiddleware.js";
 import { markAttendance } from "../controllers/attendanceController.js";
+import protect from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-router.post("/", protect, markAttendance);
+router.post("/mark", protect, markAttendance);
 
 export default router;

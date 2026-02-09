@@ -4,59 +4,99 @@ import API_BASE from "../../config/api"
 
 const GenerateQR = ({ lecture, onClose }) => {
   const [qrValue, setQrValue] = useState("")
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
+  const [secondsLeft, setSecondsLeft] = useState(600)
+  const [error, setError] = useState("")
+  const [qrSize, setQrSize] = useState(280)
+  const [logoSize, setLogoSize] = useState(45)
 
   useEffect(() => {
-    let interval
+    const handleResize = () => {
+      if (window.innerWidth < 480) {
+        setQrSize(220)
+        setLogoSize(35)
+      } else {
+        setQrSize(280)
+        setLogoSize(45)
+      }
+    }
+
+    handleResize()
+    window.addEventListener("resize", handleResize)
+    return () => window.removeEventListener("resize", handleResize)
+  }, [])
+
+  useEffect(() => {
+    if (!lecture || !lecture._id) return
+
+    let refreshInterval
+    let countdownInterval
 
     const fetchQR = async () => {
       try {
         setLoading(true)
+        setError("")
+        setQrValue("")
 
         const res = await fetch(
           `${API_BASE}/api/lectures/${lecture._id}/qr`,
-          { credentials: "include" }
+          {
+            method: "GET",
+            credentials: "include",
+          }
         )
 
         if (!res.ok) {
-          console.log("QR API failed:", res.status)
-          setQrValue("")
+          const text = await res.text()
+          setError(text || "QR generation failed")
           return
         }
 
         const data = await res.json()
 
-        if (!data.token) {
-          console.log("No token received")
-          setQrValue("")
+        if (!data || !data.token) {
+          setError("Token not received from backend")
           return
         }
 
-        const baseURL = window.location.origin
         const attendanceURL =
-          `${baseURL}/attendance/${lecture._id}?token=${data.token}`
+          `${window.location.origin}/attendance/${lecture._id}?token=${data.token}`
 
-        console.log("QR Generated:", attendanceURL)
+        console.log("QR URL:", attendanceURL)
 
         setQrValue(attendanceURL)
-
+        setSecondsLeft(600)
       } catch (err) {
-        console.log("QR ERROR:", err)
-        setQrValue("")
+        console.log("QR error:", err)
+        setError("Server connection failed")
       } finally {
         setLoading(false)
       }
     }
 
     fetchQR()
-    interval = setInterval(fetchQR, 20000)
 
-    return () => clearInterval(interval)
-  }, [lecture._id])
+    refreshInterval = setInterval(fetchQR, 540000)
+
+    countdownInterval = setInterval(() => {
+      setSecondsLeft(prev => (prev > 0 ? prev - 1 : 0))
+    }, 1000)
+
+    return () => {
+      clearInterval(refreshInterval)
+      clearInterval(countdownInterval)
+    }
+  }, [lecture])
+
+  const formatTime = (seconds) => {
+    const minutes = Math.floor(seconds / 60)
+    const secs = seconds % 60
+    return `${minutes}:${secs < 10 ? "0" : ""}${secs}`
+  }
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl p-8 w-[420px] shadow-2xl relative">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+      <div className="bg-white rounded-2xl p-6 sm:p-8 w-full max-w-md shadow-2xl relative">
 
         <button
           onClick={onClose}
@@ -65,39 +105,39 @@ const GenerateQR = ({ lecture, onClose }) => {
           ✕
         </button>
 
-        <h2 className="text-xl font-semibold text-center mb-2">
+        <h2 className="text-lg sm:text-xl font-semibold text-center mb-2">
           Secure Attendance QR
         </h2>
 
-        <p className="text-sm text-gray-500 text-center mb-6">
-          {lecture.subject}
+        <p className="text-sm text-gray-500 text-center mb-6 truncate">
+          {lecture?.subject || "Lecture"}
         </p>
 
-        <div className="flex justify-center min-h-[300px] items-center">
+        <div className="flex justify-center min-h-[250px] sm:min-h-[300px] items-center">
           {loading && <p className="text-gray-400">Generating QR...</p>}
 
           {!loading && qrValue && (
             <QRCode
               value={qrValue}
-              size={280}
+              size={qrSize}
               ecLevel="H"
               fgColor="#111827"
               bgColor="#ffffff"
               logoImage="/favicon.png"
-              logoWidth={45}
-              logoHeight={45}
-              removeQrCodeBehindLogo={true}
+              logoWidth={logoSize}
+              logoHeight={logoSize}
+              removeQrCodeBehindLogo
               quietZone={12}
             />
           )}
 
-          {!loading && !qrValue && (
-            <p className="text-red-400">Failed to generate QR</p>
+          {!loading && !qrValue && error && (
+            <p className="text-red-500 text-sm text-center">{error}</p>
           )}
         </div>
 
-        <p className="text-xs text-gray-400 text-center mt-6">
-          QR refreshes every 90 seconds
+        <p className="text-xs text-gray-500 text-center mt-6">
+          Expires in: {formatTime(secondsLeft)}
         </p>
 
       </div>

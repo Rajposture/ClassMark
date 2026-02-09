@@ -17,11 +17,21 @@ const attendanceSchema = new mongoose.Schema(
     },
     ipAddress: {
       type: String,
+      default: "",
     },
     deviceInfo: {
       type: String,
+      default: "",
     },
-    time: {
+    latitude: {
+      type: Number,
+      required: true,
+    },
+    longitude: {
+      type: Number,
+      required: true,
+    },
+    markedAt: {
       type: Date,
       default: Date.now,
     },
@@ -60,6 +70,19 @@ const lectureSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    latitude: {
+      type: Number,
+      required: true,
+    },
+    longitude: {
+      type: Number,
+      required: true,
+    },
+    radius: {
+      type: Number,
+      required: true,
+      default: 50,
+    },
     attendance: {
       type: [attendanceSchema],
       default: [],
@@ -70,6 +93,11 @@ const lectureSchema = new mongoose.Schema(
     },
   },
   { timestamps: true }
+);
+
+lectureSchema.index(
+  { _id: 1, "attendance.studentId": 1 },
+  { unique: true, sparse: true }
 );
 
 export default mongoose.model("Lecture", lectureSchema);

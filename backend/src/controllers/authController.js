@@ -2,78 +2,53 @@ import User from "../models/User.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
+const generateToken = (user) => {
+  return jwt.sign(
+    { id: user._id, role: user.role },
+    process.env.JWT_SECRET,
+    { expiresIn: "1d" }
+  );
+};
+
 export const signup = async (req, res) => {
   try {
     const { name, email, password, role, enrollmentNumber } = req.body;
 
-    if (!name || !password || !role) {
+    if (!name || !password || !role)
       return res.status(400).json({ message: "All fields are required" });
-    }
 
-    if (role === "teacher" && !email) {
+    if (!process.env.JWT_SECRET)
+      return res.status(500).json({ message: "JWT secret not configured" });
+
+    if (role === "teacher" && !email)
       return res.status(400).json({ message: "Email is required for teacher" });
-    }
 
-    if (role === "student" && !enrollmentNumber) {
-      return res.status(400).json({ message: "Enrollment number is required for students" });
-    }
+    if (role === "student" && !enrollmentNumber)
+      return res.status(400).json({ message: "Enrollment number required" });
 
     let existingUser;
 
-    if (role === "student") {
+    if (role === "teacher") {
+      existingUser = await User.findOne({ email: email.toLowerCase() });
+    } else {
       existingUser = await User.findOne({ enrollmentNumber });
-    } else {
-      existingUser = await User.findOne({ email });
     }
 
-    if (existingUser) {
+    if (existingUser)
       return res.status(400).json({ message: "User already exists" });
-    }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(password, 12);
 
-    const newUser = await User.create({
+    const userData = {
       name,
-      email: role === "teacher" ? email : undefined,
       password: hashedPassword,
-      role,
-      enrollmentNumber: role === "student" ? enrollmentNumber : undefined,
-    });
+      role
+    };
 
-    res.status(201).json({ message: "Signup successful" });
+    if (email) userData.email = email.toLowerCase();
+    if (role === "student") userData.enrollmentNumber = enrollmentNumber;
 
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-export const login = async (req, res) => {
-  try {
-    const { email, password, role, enrollmentNumber } = req.body;
-
-    let user;
-
-    if (role === "student") {
-      user = await User.findOne({ enrollmentNumber });
-    } else if (role === "teacher") {
-      user = await User.findOne({ email });
-    } else {
-      return res.status(400).json({ message: "Invalid role" });
-    }
-
-    if (!user) {
-      return res.status(401).json({ message: "Invalid credentials" });
-    }
-
-    const isMatch = await bcrypt.compare(password, user.password);
-
-    if (!isMatch) {
-      return res.status(401).json({ message: "Invalid credentials" });
-    }
-
-    if (user.role !== role) {
-      return res.status(403).json({ message: "Role mismatch" });
-    }
+    const user = await User.create(userData);
 
     const token = jwt.sign(
       { id: user._id, role: user.role },
@@ -83,15 +58,86 @@ export const login = async (req, res) => {
 
     res.cookie("token", token, {
       httpOnly: true,
-      secure: false,
+      secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
-      maxAge: 24 * 60 * 60 * 1000,
+      maxAge: 24 * 60 * 60 * 1000
     });
 
-    res.json({ message: "Login successful" });
+    return res.status(201).json({
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email || null,
+        role: user.role,
+        enrollmentNumber: user.enrollmentNumber || null
+      }
+    });
 
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    if (error.code === 11000)
+      return res.status(400).json({ message: "User already exists" });
+
+    return res.status(500).json({ message: error.message || "Server error" });
+  }
+};
+
+
+export const login = async (req, res) => {
+  try {
+    const { email, password, role, enrollmentNumber } = req.body;
+
+    if (!password || !role)
+      return res.status(400).json({ message: "Missing credentials" });
+
+    if (!process.env.JWT_SECRET)
+      return res.status(500).json({ message: "JWT secret not configured" });
+
+    let user;
+
+    if (role === "teacher") {
+      if (!email)
+        return res.status(400).json({ message: "Email required" });
+
+      user = await User.findOne({ email: email.toLowerCase() });
+
+    } else if (role === "student") {
+      if (!enrollmentNumber)
+        return res.status(400).json({ message: "Enrollment number required" });
+
+      user = await User.findOne({ enrollmentNumber });
+
+    } else {
+      return res.status(400).json({ message: "Invalid role" });
+    }
+
+    if (!user)
+      return res.status(401).json({ message: "Invalid credentials" });
+
+    const isMatch = await bcrypt.compare(password, user.password);
+
+    if (!isMatch)
+      return res.status(401).json({ message: "Invalid credentials" });
+
+    const token = generateToken(user);
+
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 24 * 60 * 60 * 1000
+    });
+
+    return res.json({
+      user: {
+        id: user._id,
+        name: user.name,
+        role: user.role,
+        enrollmentNumber: user.enrollmentNumber || null
+      }
+    });
+
+  } catch {
+    return res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -99,22 +145,25 @@ export const getMe = async (req, res) => {
   try {
     const token = req.cookies.token;
 
-    if (!token) {
+    if (!token)
       return res.status(401).json({ message: "Not authenticated" });
-    }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     const user = await User.findById(decoded.id).select("-password");
 
-    if (!user) {
+    if (!user)
       return res.status(404).json({ message: "User not found" });
-    }
 
-    res.json(user);
+    return res.json({
+      id: user._id,
+      name: user.name,
+      role: user.role,
+      enrollmentNumber: user.enrollmentNumber || null
+    });
 
   } catch {
-    res.status(401).json({ message: "Invalid or expired token" });
+    return res.status(401).json({ message: "Invalid or expired token" });
   }
 };
 
@@ -122,8 +171,8 @@ export const logout = async (req, res) => {
   res.clearCookie("token", {
     httpOnly: true,
     sameSite: "lax",
-    secure: false,
+    secure: process.env.NODE_ENV === "production"
   });
 
-  res.json({ message: "Logged out successfully" });
+  return res.json({ message: "Logged out successfully" });
 };

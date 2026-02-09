@@ -1,133 +1,156 @@
 import crypto from "crypto";
-import jwt from "jsonwebtoken";
+import fs from "fs";
+import path from "path";
 import XLSX from "xlsx";
+import jwt from "jsonwebtoken";
 import Lecture from "../models/Lecture.js";
 
 export const createLecture = async (req, res) => {
   try {
-    const { subject, date, startTime, endTime } = req.body;
+    const {
+      subject,
+      date,
+      startTime,
+      endTime,
+      latitude,
+      longitude,
+      radius
+    } = req.body;
 
-    if (!subject || !date || !startTime || !endTime) {
-      return res.status(400).json({ message: "All fields required" });
-    }
+    if (!subject || !date || !startTime || !endTime)
+      return res.status(400).json({ message: "Missing required fields" });
 
     const qrSecret = crypto.randomBytes(32).toString("hex");
 
-    const lecture = await Lecture.create({
+    const lecture = new Lecture({
       subject,
       date,
       startTime,
       endTime,
       teacherId: req.user._id,
       qrSecret,
-      attendance: [],
+      latitude: Number(latitude),
+      longitude: Number(longitude),
+      radius: radius ? Number(radius) : 300,
+      isActive: true,
+      attendance: []
     });
 
-    res.status(201).json(lecture);
+    await lecture.save();
+
+    res.status(201).json({ message: "Lecture created", lecture });
+
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.log(err);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
 export const getMyLectures = async (req, res) => {
   try {
     const lectures = await Lecture.find({
-      teacherId: req.user._id,
+      teacherId: req.user._id
     }).sort({ createdAt: -1 });
 
-    res.json(lectures);
+    res.status(200).json(lectures);
+
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.log(err);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
 export const generateQRToken = async (req, res) => {
   try {
-    const lecture = await Lecture.findOne({
-      _id: req.params.id,
-      teacherId: req.user._id,
-    });
+    const lecture = await Lecture.findById(req.params.id);
 
-    if (!lecture) {
+    if (!lecture)
       return res.status(404).json({ message: "Lecture not found" });
-    }
+
+    if (!lecture.qrSecret)
+      return res.status(400).json({ message: "QR secret missing" });
+
+    if (lecture.teacherId.toString() !== req.user._id.toString())
+      return res.status(403).json({ message: "Unauthorized access" });
 
     const token = jwt.sign(
-      {
-        lectureId: lecture._id.toString(),
-      },
+      { lectureId: lecture._id },
       lecture.qrSecret,
-      { expiresIn: "600s" }
+      { expiresIn: "3h" }
     );
 
-    res.json({ token });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-};
-
-export const deleteLecture = async (req, res) => {
-  try {
-    const lecture = await Lecture.findOneAndDelete({
-      _id: req.params.id,
-      teacherId: req.user._id,
+    res.status(200).json({
+      token,
+      subject: lecture.subject
     });
 
-    if (!lecture) {
-      return res.status(404).json({ message: "Lecture not found" });
-    }
-
-    res.json({ message: "Lecture deleted successfully" });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.log(err);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
 export const generateExcelSheet = async (req, res) => {
   try {
-    const lecture = await Lecture.findOne({
-      _id: req.params.id,
-      teacherId: req.user._id,
-    });
+    const lecture = await Lecture.findById(req.params.id);
 
-    if (!lecture) {
+    if (!lecture)
       return res.status(404).json({ message: "Lecture not found" });
-    }
 
-    const attendanceData = lecture.attendance || [];
+    if (lecture.teacherId.toString() !== req.user._id.toString())
+      return res.status(403).json({ message: "Unauthorized access" });
 
-    const formattedData = attendanceData.map((entry, index) => ({
-      No: index + 1,
-      Name: entry.name,
-      EnrollmentNumber: entry.enrollmentNumber,
-      MarkedAt: entry.markedAt
-        ? new Date(entry.markedAt).toLocaleString()
-        : "",
-      IPAddress: entry.ipAddress || "",
-      Device: entry.deviceInfo || "",
-    }));
-
-    const worksheet = XLSX.utils.json_to_sheet(formattedData);
     const workbook = XLSX.utils.book_new();
+
+  const data = lecture.attendance.map((entry) => ({
+  Name: entry.name,
+  EnrollmentNumber: entry.enrollmentNumber,
+  SubmitTime: new Date(entry.time).toLocaleString(),
+  Device: entry.deviceInfo,
+  Latitude: entry.latitude,
+  Longitude: entry.longitude,
+  IP: entry.ipAddress
+}));
+
+    const worksheet = XLSX.utils.json_to_sheet(data);
+
     XLSX.utils.book_append_sheet(workbook, worksheet, "Attendance");
 
-    const buffer = XLSX.write(workbook, {
-      type: "buffer",
-      bookType: "xlsx",
-    });
+    const folderPath = path.join("uploads");
+    if (!fs.existsSync(folderPath))
+      fs.mkdirSync(folderPath);
 
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename=${lecture.subject}-attendance.xlsx`
+    const filePath = path.join(
+      folderPath,
+      `Lecture_${lecture._id}.xlsx`
     );
 
-    res.setHeader(
-      "Content-Type",
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    );
+    XLSX.writeFile(workbook, filePath);
 
-    res.send(buffer);
+    res.download(filePath);
+
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.log(err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+export const deleteLecture = async (req, res) => {
+  try {
+    const lecture = await Lecture.findById(req.params.id);
+
+    if (!lecture)
+      return res.status(404).json({ message: "Lecture not found" });
+
+    if (lecture.teacherId.toString() !== req.user._id.toString())
+      return res.status(403).json({ message: "Unauthorized access" });
+
+    await Lecture.findByIdAndDelete(req.params.id);
+
+    res.status(200).json({ message: "Lecture deleted" });
+
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ message: "Server error" });
   }
 };
