@@ -15,6 +15,7 @@ const AttendanceForm = () => {
   const [longitude, setLongitude] = useState(null)
   const [message, setMessage] = useState("")
   const [loading, setLoading] = useState(false)
+  const [success, setSuccess] = useState(false)
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -41,58 +42,62 @@ const AttendanceForm = () => {
     )
   }
 
- const submitAttendance = async () => {
-  if (!latitude || !longitude) {
-    setMessage("Please set your location first")
-    return
-  }
-
-  if (!user) {
-    setMessage("Please login again")
-    return
-  }
-
-  setLoading(true)
-
-  try {
-    const res = await fetch(`${API_BASE}/api/attendance/mark`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      credentials: "include",
-      body: JSON.stringify({
-        lectureId,
-        token,
-        latitude,
-        longitude,
-        studentId: user.id,
-        name: user.name,
-        enrollmentNumber: user.enrollmentNumber
-      })
-    })
-
-    const data = await res.json()
-
-    if (!res.ok) {
-      setMessage(data.message)
-    } else {
-      setMessage("Attendance marked successfully ✅")
+  const submitAttendance = async () => {
+    if (!latitude || !longitude) {
+      setMessage("Please set your location first")
+      return
     }
 
-  } catch {
-    setMessage("Server error")
+    if (!user) {
+      setMessage("Please login again")
+      return
+    }
+
+    setLoading(true)
+
+    try {
+      const res = await fetch(`${API_BASE}/api/attendance/mark`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          lectureId,
+          token,
+          latitude,
+          longitude,
+          studentId: user.id,
+          name: user.name,
+          enrollmentNumber: user.enrollmentNumber
+        })
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        setMessage(data.message)
+      } else {
+        setSuccess(true)
+        setMessage("Attendance submitted successfully 🎉")
+
+        setTimeout(() => {
+          navigate("/student", { replace: true })
+        }, 1500)
+      }
+
+    } catch {
+      setMessage("Server error")
+    }
+
+    setLoading(false)
   }
-
-  setLoading(false)
-}
-
 
   if (authLoading) return null
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-100 px-4">
-      <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md">
+      <div className={`bg-white rounded-2xl shadow-xl p-8 w-full max-w-md transition-all duration-500 ${success ? "scale-105" : ""}`}>
 
         <h2 className="text-2xl font-bold text-center mb-6">
           Lecture Attendance
@@ -112,14 +117,16 @@ const AttendanceForm = () => {
 
         <button
           onClick={submitAttendance}
-          disabled={loading}
+          disabled={loading || success}
           className="w-full py-3 bg-indigo-600 text-white rounded-lg disabled:opacity-50"
         >
-          {loading ? "Submitting..." : "Submit Attendance"}
+          {loading ? "Submitting..." : success ? "Redirecting..." : "Submit Attendance"}
         </button>
 
         {message && (
-          <p className="mt-4 text-center text-sm text-red-600">
+          <p className={`mt-4 text-center text-sm font-medium ${
+            success ? "text-green-600 animate-pulse" : "text-red-600"
+          }`}>
             {message}
           </p>
         )}

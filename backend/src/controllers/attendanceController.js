@@ -2,7 +2,7 @@ import jwt from "jsonwebtoken";
 import Lecture from "../models/Lecture.js";
 import fs from "fs";
 import path from "path";
-import XLSX from "xlsx";
+import ExcelJS from "exceljs";
 
 const calculateDistance = (lat1, lon1, lat2, lon2) => {
   const toRad = (value) => (value * Math.PI) / 180;
@@ -56,20 +56,8 @@ export const markAttendance = async (req, res) => {
     if (decoded.lectureId.toString() !== lectureId.toString())
       return res.status(403).json({ message: "Invalid QR" });
 
-    const now = new Date();
-    const lectureStart = new Date(`${lecture.date}T${lecture.startTime}`);
-    const lectureEnd = new Date(`${lecture.date}T${lecture.endTime}`);
-    const bufferBefore = new Date(lectureStart.getTime() - 5 * 60000);
-    const bufferAfter = new Date(lectureEnd.getTime() + 5 * 60000);
-
-    if (now < bufferBefore || now > bufferAfter)
-      return res.status(403).json({ message: "Attendance window closed" });
-
     const studentLat = Number(latitude);
     const studentLon = Number(longitude);
-
-    if (isNaN(studentLat) || isNaN(studentLon))
-      return res.status(400).json({ message: "Invalid location data" });
 
     const distance = calculateDistance(
       Number(lecture.latitude),
@@ -105,39 +93,53 @@ export const markAttendance = async (req, res) => {
     if (!fs.existsSync(folderPath))
       fs.mkdirSync(folderPath, { recursive: true });
 
-    const filePath = path.join(folderPath, `Lecture_${lecture._id}.xlsx`);
+    const safeSubject = (lecture.subject || "Lecture")
+      .replace(/[^a-z0-9]/gi, "_")
+      .toLowerCase();
 
-    let workbook;
-    let sheetData = [];
+    const filePath = path.join(folderPath, `${safeSubject}.xlsx`);
+
+    const workbook = new ExcelJS.Workbook();
+    let worksheet;
 
     if (fs.existsSync(filePath)) {
-      workbook = XLSX.readFile(filePath);
-      const sheetName = workbook.SheetNames[0];
-      sheetData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+      await workbook.xlsx.readFile(filePath);
+      worksheet = workbook.getWorksheet("Attendance");
     } else {
-      workbook = XLSX.utils.book_new();
+      worksheet = workbook.addWorksheet("Attendance");
+
+      worksheet.columns = [
+        { header: "Name", key: "name" },
+        { header: "Enrollment Number", key: "enrollmentNumber" },
+        { header: "Date", key: "date" },
+        { header: "Submit Time", key: "submitTime" },
+        { header: "Device", key: "device" },
+        { header: "Latitude", key: "latitude" },
+        { header: "Longitude", key: "longitude" },
+        { header: "IP Address", key: "ip" }
+      ];
+
+      worksheet.views = [{ state: "frozen", ySplit: 1 }];
+
+      worksheet.getRow(1).font = { bold: true };
+
+      worksheet.columns.forEach(column => {
+        column.width = 20;
+      });
     }
 
-    sheetData.push({
-      Name: name,
-      EnrollmentNumber: enrollmentNumber,
-      Date: lecture.date,
-      SubmitTime: new Date().toLocaleString(),
-      Device: req.headers["user-agent"],
-      Latitude: studentLat,
-      Longitude: studentLon,
-      IP: req.ip || ""
+    worksheet.addRow({
+      name,
+      enrollmentNumber,
+      date: lecture.date,
+      submitTime: new Date().toLocaleString(),
+      device: req.headers["user-agent"] || "",
+      latitude: studentLat,
+      longitude: studentLon,
+      ip: req.ip || ""
     });
 
-    const worksheet = XLSX.utils.json_to_sheet(sheetData);
-
-    if (workbook.SheetNames.length === 0) {
-      XLSX.utils.book_append_sheet(workbook, worksheet, "Attendance");
-    } else {
-      workbook.Sheets[workbook.SheetNames[0]] = worksheet;
-    }
-
-    XLSX.writeFile(workbook, filePath);
+    await workbook.xlsx.writeFile(filePath);
 
     return res.status(201).json({
       message: "Attendance marked successfully"

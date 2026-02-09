@@ -69,32 +69,39 @@ const TeacherDashboard = () => {
     }
   };
 
-  const handleExcelDownload = async (lectureId) => {
-    try {
-      const res = await fetch(
-        `${API_BASE}/api/lectures/${lectureId}/excel`,
-        { credentials: "include" }
-      );
+  const handleExcelDownload = async (lectureId, subject) => {
+  try {
+    const res = await fetch(
+      `${API_BASE}/api/lectures/${lectureId}/excel`,
+      { credentials: "include" }
+    );
 
-      if (!res.ok) {
-        alert("Failed to generate Excel");
-        return;
-      }
-
-      const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
-
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "attendance.xlsx";
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(url);
-    } catch {
-      alert("Server error while downloading Excel");
+    if (!res.ok) {
+      alert("Failed to generate Excel");
+      return;
     }
-  };
+
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+
+    const safeSubject = (subject || "attendance")
+      .replace(/[^a-z0-9]/gi, "_")
+      .toLowerCase();
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${safeSubject}.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+
+    window.URL.revokeObjectURL(url);
+
+  } catch {
+    alert("Server error while downloading Excel");
+  }
+};
+
 
   return (
     <DashboardLayout>
@@ -150,7 +157,8 @@ const TeacherDashboard = () => {
                       </button>
 
                       <button
-                        onClick={() => handleExcelDownload(lecture._id)}
+                        onClick={() => handleExcelDownload(lecture._id, lecture.subject)}
+
                         className="w-full sm:w-auto px-4 py-2 bg-slate-700 hover:bg-slate-800 text-white rounded-lg transition text-sm sm:text-base"
                       >
                         Generate Excel
