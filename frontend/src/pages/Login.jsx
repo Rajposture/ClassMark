@@ -25,7 +25,6 @@ const Login = () => {
       const res = await fetch(`${API_BASE}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({ email, password }),
       });
 
@@ -36,11 +35,14 @@ const Login = () => {
         return;
       }
 
+      // 🔥 Store token in localStorage
+      localStorage.setItem("token", data.token);
+
       await refreshUser();
 
-      const role = data.user.role;
-
-      navigate(role === "teacher" ? "/teacher" : "/student");
+      navigate(
+        data.user.role === "teacher" ? "/teacher" : "/student"
+      );
     } catch {
       setError("Unable to login");
     } finally {
@@ -82,7 +84,6 @@ const Login = () => {
       const res = await fetch(`${API_BASE}/api/auth/reset-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({
           email,
           otp,
@@ -97,11 +98,14 @@ const Login = () => {
         return;
       }
 
+      // 🔥 Store token
+      localStorage.setItem("token", data.token);
+
       await refreshUser();
 
-      const role = data.user.role;
-
-      navigate(role === "teacher" ? "/teacher" : "/student");
+      navigate(
+        data.user.role === "teacher" ? "/teacher" : "/student"
+      );
     } catch {
       setError("Unable to reset password");
     } finally {

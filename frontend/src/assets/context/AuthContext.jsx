@@ -8,22 +8,27 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   const fetchUser = useCallback(async () => {
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      setUser(null);
+      setLoading(false);
+      return;
+    }
+
     try {
       const res = await fetch(`${API_BASE}/api/auth/me`, {
-        credentials: "include",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
-
-      if (!res.ok) {
-        setUser(null);
-        setLoading(false);
-        return;
-      }
 
       const data = await res.json();
 
-      if (data.success) {
+      if (res.ok && data.success) {
         setUser(data.user);
       } else {
+        localStorage.removeItem("token");
         setUser(null);
       }
     } catch {
@@ -41,13 +46,8 @@ export const AuthProvider = ({ children }) => {
     await fetchUser();
   };
 
-  const logout = async () => {
-    try {
-      await fetch(`${API_BASE}/api/auth/logout`, {
-        method: "POST",
-        credentials: "include",
-      });
-    } catch {}
+  const logout = () => {
+    localStorage.removeItem("token");
     setUser(null);
   };
 

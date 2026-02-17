@@ -14,17 +14,6 @@ const generateToken = (user) =>
     expiresIn: "1d",
   });
 
-/* ✅ FINAL COOKIE CONFIG FOR PRODUCTION (VERCEL + RENDER) */
-const setCookie = (res, token) => {
-  res.cookie("token", token, {
-    httpOnly: true,
-    secure: true,
-    sameSite: "none",
-    maxAge: 86400000,
-    path: "/",
-  });
-};
-
 const sendMail = async ({ to, subject, html }) => {
   if (!resend) return;
   await resend.emails.send({
@@ -103,10 +92,10 @@ export const verifyOtp = async (req, res) => {
     await user.save();
 
     const token = generateToken(user);
-    setCookie(res, token);
 
     return res.json({
       success: true,
+      token,
       user: {
         id: user._id,
         name: user.name,
@@ -139,80 +128,10 @@ export const login = async (req, res) => {
       return res.status(401).json({ success: false, message: "Invalid credentials" });
 
     const token = generateToken(user);
-    setCookie(res, token);
 
     return res.json({
       success: true,
-      user: {
-        id: user._id,
-        name: user.name,
-        role: user.role,
-        enrollmentNumber: user.enrollmentNumber || null,
-      },
-    });
-  } catch {
-    return res.status(500).json({ success: false, message: "Server error" });
-  }
-};
-
-export const forgotPassword = async (req, res) => {
-  try {
-    const { email } = req.body;
-
-    if (!email)
-      return res.status(400).json({ success: false, message: "Email required" });
-
-    const user = await User.findOne({ email: email.toLowerCase() });
-
-    if (!user)
-      return res.status(404).json({ success: false, message: "User not found" });
-
-    const otp = generateOtp();
-
-    user.otp = otp;
-    user.otpExpires = null;
-    await user.save();
-
-    try {
-      await sendMail({
-        to: user.email,
-        subject: "ClassMark Password Reset OTP",
-        html: otpEmailTemplate(user.name, otp),
-      });
-    } catch {}
-
-    return res.json({
-      success: true,
-      message: "OTP sent successfully",
-    });
-  } catch {
-    return res.status(500).json({ success: false, message: "Server error" });
-  }
-};
-
-export const resetPassword = async (req, res) => {
-  try {
-    const { email, otp, newPassword } = req.body;
-
-    if (!email || !otp || !newPassword)
-      return res.status(400).json({ success: false, message: "Invalid request" });
-
-    const user = await User.findOne({ email: email.toLowerCase() });
-
-    if (!user || user.otp !== otp)
-      return res.status(400).json({ success: false, message: "Invalid OTP" });
-
-    user.password = await bcrypt.hash(newPassword, 12);
-    user.otp = null;
-    user.otpExpires = null;
-    user.isVerified = true;
-    await user.save();
-
-    const token = generateToken(user);
-    setCookie(res, token);
-
-    return res.json({
-      success: true,
+      token,
       user: {
         id: user._id,
         name: user.name,
@@ -227,16 +146,19 @@ export const resetPassword = async (req, res) => {
 
 export const getMe = async (req, res) => {
   try {
-    const token = req.cookies.token;
+    const authHeader = req.headers.authorization;
 
-    if (!token)
-      return res.status(401).json({ success: false, message: "Not authenticated" });
+    if (!authHeader || !authHeader.startsWith("Bearer "))
+      return res.status(401).json({ success: false });
+
+    const token = authHeader.split(" ")[1];
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
     const user = await User.findById(decoded.id).select("-password");
 
     if (!user)
-      return res.status(404).json({ success: false, message: "User not found" });
+      return res.status(404).json({ success: false });
 
     return res.json({
       success: true,
@@ -248,18 +170,10 @@ export const getMe = async (req, res) => {
       },
     });
   } catch {
-    return res.status(401).json({ success: false, message: "Invalid token" });
+    return res.status(401).json({ success: false });
   }
 };
 
 export const logout = async (req, res) => {
-  res.cookie("token", "", {
-    httpOnly: true,
-    secure: true,
-    sameSite: "none",
-    expires: new Date(0),
-    path: "/",
-  });
-
-  return res.json({ success: true, message: "Logged out successfully" });
+  return res.json({ success: true });
 };

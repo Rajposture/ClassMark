@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext } from "react";
+import { useState, useContext } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 import API_BASE from "../config/api";
@@ -69,7 +69,6 @@ const Signup = () => {
       const res = await fetch(`${API_BASE}/api/auth/verify-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({ email: form.email, otp }),
       });
 
@@ -80,11 +79,14 @@ const Signup = () => {
         return;
       }
 
+      // 🔥 STORE TOKEN
+      localStorage.setItem("token", data.token);
+
       await refreshUser();
 
-      const userRole = data.user.role;
-
-      navigate(userRole === "teacher" ? "/teacher" : "/student");
+      navigate(
+        data.user.role === "teacher" ? "/teacher" : "/student"
+      );
     } catch {
       setError("Server error during OTP verification");
     } finally {
