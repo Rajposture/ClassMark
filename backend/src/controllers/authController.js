@@ -15,7 +15,7 @@ const generateToken = (user) =>
   });
 
 const sendMail = async ({ to, subject, html }) => {
-  if (!resend) throw new Error("Email service not configured");
+  if (!resend) return;
   await resend.emails.send({
     from: "onboarding@resend.dev",
     to,
@@ -41,11 +41,13 @@ export const signup = async (req, res) => {
     const otp = generateOtp();
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    await sendMail({
-      to: email.toLowerCase(),
-      subject: "ClassMark OTP Verification",
-      html: otpEmailTemplate(name, otp),
-    });
+    try {
+      await sendMail({
+        to: email.toLowerCase(),
+        subject: "ClassMark OTP Verification",
+        html: otpEmailTemplate(name, otp),
+      });
+    } catch {}
 
     await User.create({
       name,
@@ -54,13 +56,13 @@ export const signup = async (req, res) => {
       role,
       enrollmentNumber: role === "student" ? enrollmentNumber : null,
       otp,
-     otpExpires: Date.now() + 30 * 60 * 1000,
+      otpExpires: null,
       isVerified: false,
     });
 
     return res.status(201).json({ message: "OTP sent successfully" });
-  } catch (err) {
-    return res.status(500).json({ message: err.message || "Failed to send OTP email" });
+  } catch {
+    return res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -68,15 +70,16 @@ export const verifyOtp = async (req, res) => {
   try {
     const { email, otp } = req.body;
 
-if (!user || String(user.otp) !== String(otp))
-  return res.status(400).json({ message: "Invalid OTP" });
-
+    if (!email || !otp)
+      return res.status(400).json({ message: "Invalid request" });
 
     const user = await User.findOne({ email: email.toLowerCase() });
 
+    if (!user)
+      return res.status(400).json({ message: "User not found" });
 
-    if (!user.otpExpires || user.otpExpires < Date.now())
-      return res.status(400).json({ message: "OTP expired" });
+    if (user.otp !== otp)
+      return res.status(400).json({ message: "Invalid OTP" });
 
     user.isVerified = true;
     user.otp = null;
@@ -97,8 +100,8 @@ if (!user || String(user.otp) !== String(otp))
       role: user.role,
       enrollmentNumber: user.enrollmentNumber || null,
     });
-  } catch (err) {
-    return res.status(500).json({ message: err.message || "Server error" });
+  } catch {
+    return res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -118,6 +121,7 @@ export const login = async (req, res) => {
       return res.status(403).json({ message: "Verify OTP first" });
 
     const isMatch = await bcrypt.compare(password, user.password);
+
     if (!isMatch)
       return res.status(401).json({ message: "Invalid credentials" });
 
@@ -135,8 +139,8 @@ export const login = async (req, res) => {
       role: user.role,
       enrollmentNumber: user.enrollmentNumber || null,
     });
-  } catch (err) {
-    return res.status(500).json({ message: err.message || "Server error" });
+  } catch {
+    return res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -148,24 +152,27 @@ export const forgotPassword = async (req, res) => {
       return res.status(400).json({ message: "Email required" });
 
     const user = await User.findOne({ email: email.toLowerCase() });
+
     if (!user)
       return res.status(404).json({ message: "User not found" });
 
     const otp = generateOtp();
 
     user.otp = otp;
-    user.otpExpires = Date.now() + 15 * 60 * 1000;
+    user.otpExpires = null;
     await user.save();
 
-    await sendMail({
-      to: user.email,
-      subject: "ClassMark Password Reset OTP",
-      html: otpEmailTemplate(user.name, otp),
-    });
+    try {
+      await sendMail({
+        to: user.email,
+        subject: "ClassMark Password Reset OTP",
+        html: otpEmailTemplate(user.name, otp),
+      });
+    } catch {}
 
     return res.json({ message: "OTP sent successfully" });
-  } catch (err) {
-    return res.status(500).json({ message: err.message || "Failed to send OTP email" });
+  } catch {
+    return res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -180,9 +187,6 @@ export const resetPassword = async (req, res) => {
 
     if (!user || user.otp !== otp)
       return res.status(400).json({ message: "Invalid OTP" });
-
-    if (!user.otpExpires || user.otpExpires < Date.now())
-      return res.status(400).json({ message: "OTP expired" });
 
     user.password = await bcrypt.hash(newPassword, 12);
     user.otp = null;
@@ -204,8 +208,8 @@ export const resetPassword = async (req, res) => {
       role: user.role,
       enrollmentNumber: user.enrollmentNumber || null,
     });
-  } catch (err) {
-    return res.status(500).json({ message: err.message || "Server error" });
+  } catch {
+    return res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -217,6 +221,7 @@ export const getMe = async (req, res) => {
       return res.status(401).json({ message: "Not authenticated" });
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
     const user = await User.findById(decoded.id).select("-password");
 
     if (!user)
