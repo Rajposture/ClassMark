@@ -7,18 +7,19 @@ const PublicRoute = ({ children }) => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-gray-500 text-sm">Loading...</div>
+      <div className="min-h-screen flex items-center justify-center bg-slate-950 text-slate-400">
+        Loading...
       </div>
     );
   }
 
-  if (user?.role === "teacher") {
-    return <Navigate to="/teacher" replace />;
-  }
-
-  if (user?.role === "student") {
-    return <Navigate to="/student" replace />;
+  if (user) {
+    return (
+      <Navigate
+        to={user.role === "teacher" ? "/teacher" : "/student"}
+        replace
+      />
+    );
   }
 
   return children;

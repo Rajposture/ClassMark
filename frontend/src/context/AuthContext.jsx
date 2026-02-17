@@ -1,38 +1,41 @@
-import { createContext, useState, useEffect } from "react";
+import { createContext, useState, useEffect, useCallback } from "react";
 import API_BASE from "../config/api";
 
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
+  const [user, setUserState] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchUser = async () => {
+  const fetchUser = useCallback(async () => {
     try {
       const res = await fetch(`${API_BASE}/api/auth/me`, {
         credentials: "include",
       });
 
       if (!res.ok) {
-        setUser(null);
-        return;
+        setUserState(null);
+        return null;
       }
 
       const data = await res.json();
-      setUser(data);
+      setUserState(data);
+      return data;
     } catch {
-      setUser(null);
+      setUserState(null);
+      return null;
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchUser();
-  }, []);
+  }, [fetchUser]);
 
-  const login = (userData) => {
-    setUser(userData);
+  const login = async () => {
+    setLoading(true);
+    return await fetchUser();
   };
 
   const logout = async () => {
@@ -42,18 +45,24 @@ export const AuthProvider = ({ children }) => {
         credentials: "include",
       });
     } catch {}
-    setUser(null);
+    setUserState(null);
+    setLoading(false);
+  };
+
+  const setUser = (data) => {
+    setUserState(data);
+    setLoading(false);
   };
 
   return (
     <AuthContext.Provider
       value={{
         user,
-        setUser,
+        loading,
         login,
         logout,
-        loading,
-        refreshUser: fetchUser
+        refreshUser: fetchUser,
+        setUser,
       }}
     >
       {children}

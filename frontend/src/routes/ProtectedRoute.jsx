@@ -1,19 +1,39 @@
-import { useContext } from "react"
-import { Navigate } from "react-router-dom"
-import { AuthContext } from "../context/AuthContext"
+import { useContext } from "react";
+import { Navigate, useLocation } from "react-router-dom";
+import { AuthContext } from "../context/AuthContext";
 
 const ProtectedRoute = ({ children, role }) => {
-  const { user, loading } = useContext(AuthContext)
+  const { user, loading } = useContext(AuthContext);
+  const location = useLocation();
 
-  if (loading) return null
-
-  if (!user) return <Navigate to="/login" replace />
-
-  if (role && user.role !== role) {
-    return <Navigate to="/" replace />
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-950 text-slate-400">
+        Loading...
+      </div>
+    );
   }
 
-  return children
-}
+  if (!user) {
+    return (
+      <Navigate
+        to="/login"
+        replace
+        state={{ from: location }}
+      />
+    );
+  }
 
-export default ProtectedRoute
+  if (role && user.role !== role) {
+    return (
+      <Navigate
+        to={user.role === "teacher" ? "/teacher" : "/student"}
+        replace
+      />
+    );
+  }
+
+  return children;
+};
+
+export default ProtectedRoute;

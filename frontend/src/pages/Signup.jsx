@@ -1,11 +1,11 @@
-import { useState, useContext } from "react";
+import { useState, useEffect, useContext } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import API_BASE from "../config/api";
 import { AuthContext } from "../context/AuthContext";
+import API_BASE from "../config/api";
 
 const Signup = () => {
   const navigate = useNavigate();
-  const { login } = useContext(AuthContext);
+  const { refreshUser } = useContext(AuthContext);
 
   const [role, setRole] = useState("student");
   const [form, setForm] = useState({
@@ -15,56 +15,54 @@ const Signup = () => {
     password: "",
   });
 
-  const [error, setError] = useState("");
+  const [otp, setOtp] = useState("");
+  const [otpSent, setOtpSent] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (resendCooldown === 0) return;
+    const timer = setInterval(() => {
+      setResendCooldown((t) => t - 1);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [resendCooldown]);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSignup = async (e) => {
+  const sendOtp = async (e) => {
     e.preventDefault();
     setError("");
     setLoading(true);
 
     try {
-      const payload =
-        role === "student"
-          ? {
-              name: form.name,
-              password: form.password,
-              role,
-              enrollmentNumber: form.enrollmentNumber,
-            }
-          : {
-              name: form.name,
-              email: form.email,
-              password: form.password,
-              role,
-            };
+      const payload = {
+        name: form.name,
+        email: form.email,
+        password: form.password,
+        role,
+        enrollmentNumber:
+          role === "student" ? form.enrollmentNumber : undefined,
+      };
 
-      const res = await fetch(`${API_BASE}/api/auth/register`, {
+      const res = await fetch(`${API_BASE}/api/auth/signup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify(payload),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.message || "Signup failed");
+        setError(data.message || "Failed to send OTP");
         return;
       }
 
-      if (data.user) {
-        login(data.user);
-        setTimeout(() => {
-          navigate(data.user.role === "teacher" ? "/teacher" : "/student");
-        }, 100);
-      } else {
-        navigate("/login");
-      }
+      setOtpSent(true);
+      setResendCooldown(30);
     } catch {
       setError("Server error during signup");
     } finally {
@@ -72,11 +70,70 @@ const Signup = () => {
     }
   };
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-900 via-purple-900 to-blue-900 px-4 py-10 relative overflow-hidden">
-      <div className="absolute w-72 h-72 bg-indigo-500 rounded-full blur-3xl opacity-30 top-10 -left-10"></div>
-      <div className="absolute w-72 h-72 bg-purple-500 rounded-full blur-3xl opacity-30 bottom-10 -right-10"></div>
+  const resendOtp = async () => {
+    setError("");
+    setLoading(true);
 
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/resend-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: form.email,
+          enrollmentNumber:
+            role === "student" ? form.enrollmentNumber : undefined,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.message || "Failed to resend OTP");
+        return;
+      }
+
+      setResendCooldown(30);
+    } catch {
+      setError("Unable to resend OTP");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const verifyOtp = async (e) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+
+    try {
+      const verifyRes = await fetch(`${API_BASE}/api/auth/verify-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ email: form.email, otp }),
+      });
+
+      const verifyData = await verifyRes.json();
+
+      if (!verifyRes.ok) {
+        setError(verifyData.message || "Invalid OTP");
+        return;
+      }
+
+      await refreshUser();
+
+      navigate(
+        verifyData.user.role === "teacher" ? "/teacher" : "/student"
+      );
+    } catch {
+      setError("Server error during OTP verification");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-900 via-purple-900 to-blue-900 px-4 py-10">
       <div className="relative w-full max-w-md backdrop-blur-2xl bg-white/10 border border-white/20 rounded-2xl p-6 sm:p-8 shadow-2xl">
         <div className="text-center mb-6">
           <h1 className="text-3xl font-bold bg-gradient-to-r from-indigo-300 to-blue-300 bg-clip-text text-transparent">
@@ -93,93 +150,100 @@ const Signup = () => {
           </div>
         )}
 
-        <form onSubmit={handleSignup} className="space-y-4 text-white">
+        <form className="space-y-4 text-white">
           <div>
-            <label className="text-sm text-slate-200">
-              Register As
-            </label>
+            <label className="text-sm text-slate-200">Register As</label>
             <select
               value={role}
               onChange={(e) => setRole(e.target.value)}
-              className="mt-1 w-full px-4 py-3 bg-white/20 border border-white/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 backdrop-blur-md text-white"
+              className="mt-1 w-full px-4 py-3 bg-white/20 border border-white/30 rounded-lg"
             >
               <option value="student" className="text-black">Student</option>
               <option value="teacher" className="text-black">Teacher</option>
             </select>
           </div>
 
-          <div>
-            <label className="text-sm text-slate-200">
-              {role === "teacher" ? "Teacher Name" : "Full Name"}
-            </label>
-            <input
-              type="text"
-              name="name"
-              required
-              value={form.name}
-              onChange={handleChange}
-              className="mt-1 w-full px-4 py-3 bg-white/20 border border-white/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 backdrop-blur-md placeholder-slate-300 text-white"
-            />
-          </div>
+          <input
+            name="name"
+            placeholder="Full Name"
+            value={form.name}
+            onChange={handleChange}
+            className="w-full px-4 py-3 bg-white/20 border border-white/30 rounded-lg"
+          />
 
           {role === "student" && (
-            <div>
-              <label className="text-sm text-slate-200">
-                Enrollment Number
-              </label>
-              <input
-                type="text"
-                name="enrollmentNumber"
-                required
-                value={form.enrollmentNumber}
-                onChange={handleChange}
-                className="mt-1 w-full px-4 py-3 bg-white/20 border border-white/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 backdrop-blur-md text-white"
-              />
-            </div>
+            <input
+              name="enrollmentNumber"
+              placeholder="Enrollment Number"
+              value={form.enrollmentNumber}
+              onChange={handleChange}
+              className="w-full px-4 py-3 bg-white/20 border border-white/30 rounded-lg"
+            />
           )}
 
-          <div>
-            <label className="text-sm text-slate-200">
-              Email Address
-            </label>
-            <input
-              type="email"
-              name="email"
-              required
-              value={form.email}
-              onChange={handleChange}
-              className="mt-1 w-full px-4 py-3 bg-white/20 border border-white/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 backdrop-blur-md text-white"
-            />
-          </div>
+          <input
+            type="email"
+            name="email"
+            placeholder="Email Address"
+            value={form.email}
+            onChange={handleChange}
+            className="w-full px-4 py-3 bg-white/20 border border-white/30 rounded-lg"
+          />
 
-          <div>
-            <label className="text-sm text-slate-200">
-              Password
-            </label>
-            <input
-              type="password"
-              name="password"
-              required
-              value={form.password}
-              onChange={handleChange}
-              className="mt-1 w-full px-4 py-3 bg-white/20 border border-white/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 backdrop-blur-md text-white"
-            />
-          </div>
+          <input
+            type="password"
+            name="password"
+            placeholder="Password"
+            value={form.password}
+            onChange={handleChange}
+            className="w-full px-4 py-3 bg-white/20 border border-white/30 rounded-lg"
+          />
 
-          <button
-            disabled={loading}
-            className="w-full py-3 rounded-lg bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-600 hover:to-blue-600 text-white font-semibold shadow-lg transition duration-300 disabled:opacity-50"
-          >
-            {loading ? "Creating account..." : "Create Account"}
-          </button>
+          {!otpSent && (
+            <button
+              onClick={sendOtp}
+              disabled={loading}
+              className="w-full py-3 rounded-lg bg-gradient-to-r from-indigo-500 to-blue-500 text-white font-semibold disabled:opacity-50"
+            >
+              {loading ? "Sending OTP..." : "Create Account"}
+            </button>
+          )}
+
+          {otpSent && (
+            <>
+              <input
+                value={otp}
+                onChange={(e) => setOtp(e.target.value)}
+                placeholder="Enter OTP"
+                maxLength={6}
+                className="w-full px-4 py-3 bg-white/20 border border-white/30 rounded-lg text-center tracking-widest"
+              />
+
+              <button
+                onClick={verifyOtp}
+                disabled={loading}
+                className="w-full py-3 rounded-lg bg-gradient-to-r from-indigo-500 to-blue-500 text-white font-semibold"
+              >
+                {loading ? "Verifying..." : "Verify OTP"}
+              </button>
+
+              <button
+                type="button"
+                onClick={resendOtp}
+                disabled={resendCooldown > 0 || loading}
+                className="w-full text-sm text-indigo-300 disabled:opacity-40"
+              >
+                {resendCooldown > 0
+                  ? `Resend OTP in ${resendCooldown}s`
+                  : "Resend OTP"}
+              </button>
+            </>
+          )}
         </form>
 
         <p className="text-sm text-slate-200 mt-6 text-center">
           Already have an account?{" "}
-          <Link
-            to="/login"
-            className="text-indigo-300 hover:text-white font-medium"
-          >
+          <Link to="/login" className="text-indigo-300 hover:text-white font-medium">
             Sign in
           </Link>
         </p>

@@ -1,13 +1,44 @@
 import User from "../models/User.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import nodemailer from "nodemailer";
+import generateOtp from "./generateOtp.js";
+import otpEmailTemplate from "./otpEmailTemplate.js";
 
-const generateToken = (user) => {
-  return jwt.sign(
+const generateToken = (user) =>
+  jwt.sign(
     { id: user._id, role: user.role },
     process.env.JWT_SECRET,
     { expiresIn: "1d" }
   );
+
+const transporter = nodemailer.createTransport({
+  host: "smtp.gmail.com",
+  port: 465,
+  secure: true,
+auth: {
+  user: "classmarkofficial1@gmail.com",
+  pass: "cxfnjbevnqniqkyw",
+},
+});
+
+transporter.verify((error, success) => {
+  if (error) {
+    console.error("SMTP ERROR:", error);
+  } else {
+    console.log("SMTP SERVER READY");
+  }
+});
+
+
+
+const sendOtp = async (email, name, otp) => {
+  return await transporter.sendMail({
+    from: `"ClassMark" <${process.env.EMAIL}>`,
+    to: email,
+    subject: "ClassMark OTP Verification",
+    html: otpEmailTemplate(name, otp),
+  });
 };
 
 export const signup = async (req, res) => {
@@ -15,103 +46,111 @@ export const signup = async (req, res) => {
     const { name, email, password, role, enrollmentNumber } = req.body;
 
     if (!name || !password || !role)
-      return res.status(400).json({ message: "All fields are required" });
+      return res.status(400).json({ message: "All fields required" });
 
-    if (!process.env.JWT_SECRET)
-      return res.status(500).json({ message: "JWT secret not configured" });
-
-    if (role === "teacher" && !email)
-      return res.status(400).json({ message: "Email is required for teacher" });
+    if (!email)
+      return res.status(400).json({ message: "Email required" });
 
     if (role === "student" && !enrollmentNumber)
-      return res.status(400).json({ message: "Enrollment number required" });
+      return res.status(400).json({ message: "Enrollment required" });
 
-    let existingUser;
-
-    if (role === "teacher") {
-      existingUser = await User.findOne({ email: email.toLowerCase() });
-    } else {
-      existingUser = await User.findOne({ enrollmentNumber });
-    }
-
+    const existingUser = await User.findOne({ email: email.toLowerCase() });
     if (existingUser)
       return res.status(400).json({ message: "User already exists" });
 
+    const otp = generateOtp();
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    const userData = {
+    try {
+      await sendOtp(email.toLowerCase(), name, otp);
+    } catch (mailError) {
+      console.error("MAIL ERROR:", mailError);
+      return res.status(500).json({ message: "Failed to send OTP email" });
+    }
+
+    await User.create({
       name,
+      email: email.toLowerCase(),
+      enrollmentNumber: role === "student" ? enrollmentNumber : undefined,
       password: hashedPassword,
-      role
-    };
-
-    if (email) userData.email = email.toLowerCase();
-    if (role === "student") userData.enrollmentNumber = enrollmentNumber;
-
-    const user = await User.create(userData);
-
-    const token = jwt.sign(
-      { id: user._id, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: "1d" }
-    );
-
-    res.cookie("token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 24 * 60 * 60 * 1000
+      role,
+      otp,
+      otpExpires: Date.now() + 5 * 60 * 1000,
+      isVerified: false,
     });
 
-    return res.status(201).json({
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email || null,
-        role: user.role,
-        enrollmentNumber: user.enrollmentNumber || null
-      }
-    });
-
-  } catch (error) {
-    if (error.code === 11000)
-      return res.status(400).json({ message: "User already exists" });
-
-    return res.status(500).json({ message: error.message || "Server error" });
+    return res.status(201).json({ message: "OTP sent successfully" });
+  } catch (err) {
+    console.error("SIGNUP ERROR:", err);
+    return res.status(500).json({ message: "Server error" });
   }
 };
 
+export const verifyOtp = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+
+    if (!email || !otp)
+      return res.status(400).json({ message: "Invalid request" });
+
+    const user = await User.findOne({ email: email.toLowerCase() });
+
+    if (!user || user.otp !== otp)
+      return res.status(400).json({ message: "Invalid OTP" });
+
+    if (user.otpExpires < Date.now())
+      return res.status(400).json({ message: "OTP expired" });
+
+    user.isVerified = true;
+    user.otp = null;
+    user.otpExpires = null;
+
+    await user.save();
+
+    const token = generateToken(user);
+
+    res.cookie("token", token, {
+      httpOnly: true,
+      sameSite: "lax",
+      maxAge: 86400000,
+    });
+
+    return res.json({
+      id: user._id,
+      name: user.name,
+      role: user.role,
+      enrollmentNumber: user.enrollmentNumber || null,
+    });
+  } catch (err) {
+    console.error("VERIFY ERROR:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
 
 export const login = async (req, res) => {
   try {
     const { email, password, role, enrollmentNumber } = req.body;
 
     if (!password || !role)
-      return res.status(400).json({ message: "Missing credentials" });
-
-    if (!process.env.JWT_SECRET)
-      return res.status(500).json({ message: "JWT secret not configured" });
+      return res.status(400).json({ message: "Invalid request" });
 
     let user;
 
     if (role === "teacher") {
       if (!email)
         return res.status(400).json({ message: "Email required" });
-
       user = await User.findOne({ email: email.toLowerCase() });
-
-    } else if (role === "student") {
-      if (!enrollmentNumber)
-        return res.status(400).json({ message: "Enrollment number required" });
-
-      user = await User.findOne({ enrollmentNumber });
-
     } else {
-      return res.status(400).json({ message: "Invalid role" });
+      if (!enrollmentNumber)
+        return res.status(400).json({ message: "Enrollment required" });
+      user = await User.findOne({ enrollmentNumber });
     }
 
     if (!user)
       return res.status(401).json({ message: "Invalid credentials" });
+
+    if (!user.isVerified)
+      return res.status(403).json({ message: "Verify OTP first" });
 
     const isMatch = await bcrypt.compare(password, user.password);
 
@@ -122,21 +161,87 @@ export const login = async (req, res) => {
 
     res.cookie("token", token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
-      maxAge: 24 * 60 * 60 * 1000
+      maxAge: 86400000,
     });
 
     return res.json({
-      user: {
-        id: user._id,
-        name: user.name,
-        role: user.role,
-        enrollmentNumber: user.enrollmentNumber || null
-      }
+      id: user._id,
+      name: user.name,
+      role: user.role,
+      enrollmentNumber: user.enrollmentNumber || null,
+    });
+  } catch (err) {
+    console.error("LOGIN ERROR:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+export const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email)
+      return res.status(400).json({ message: "Email required" });
+
+    const user = await User.findOne({ email: email.toLowerCase() });
+
+    if (!user)
+      return res.status(404).json({ message: "User not found" });
+
+    const otp = generateOtp();
+
+    user.otp = otp;
+    user.otpExpires = Date.now() + 5 * 60 * 1000;
+
+    await user.save();
+
+    await sendOtp(user.email, user.name, otp);
+
+    return res.json({ message: "OTP sent successfully" });
+  } catch (err) {
+    console.error("FORGOT ERROR:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+export const resetPassword = async (req, res) => {
+  try {
+    const { email, otp, newPassword } = req.body;
+
+    if (!email || !otp || !newPassword)
+      return res.status(400).json({ message: "Invalid request" });
+
+    const user = await User.findOne({ email: email.toLowerCase() });
+
+    if (!user || user.otp !== otp)
+      return res.status(400).json({ message: "Invalid OTP" });
+
+    if (user.otpExpires < Date.now())
+      return res.status(400).json({ message: "OTP expired" });
+
+    user.password = await bcrypt.hash(newPassword, 12);
+    user.otp = null;
+    user.otpExpires = null;
+
+    await user.save();
+
+    const token = generateToken(user);
+
+    res.cookie("token", token, {
+      httpOnly: true,
+      sameSite: "lax",
+      maxAge: 86400000,
     });
 
-  } catch {
+    return res.json({
+      id: user._id,
+      name: user.name,
+      role: user.role,
+      enrollmentNumber: user.enrollmentNumber || null,
+    });
+  } catch (err) {
+    console.error("RESET ERROR:", err);
     return res.status(500).json({ message: "Server error" });
   }
 };
@@ -159,20 +264,14 @@ export const getMe = async (req, res) => {
       id: user._id,
       name: user.name,
       role: user.role,
-      enrollmentNumber: user.enrollmentNumber || null
+      enrollmentNumber: user.enrollmentNumber || null,
     });
-
   } catch {
-    return res.status(401).json({ message: "Invalid or expired token" });
+    return res.status(401).json({ message: "Invalid token" });
   }
 };
 
 export const logout = async (req, res) => {
-  res.clearCookie("token", {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production"
-  });
-
-  return res.json({ message: "Logged out successfully" });
+  res.clearCookie("token");
+  return res.json({ message: "Logged out" });
 };
