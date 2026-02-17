@@ -94,11 +94,13 @@ export const verifyOtp = async (req, res) => {
 
     const token = generateToken(user);
 
-    res.cookie("token", token, {
-      httpOnly: true,
-      sameSite: "lax",
-      maxAge: 86400000,
-    });
+  res.cookie("token", token, {
+  httpOnly: true,
+  secure: true,
+  sameSite: "none",
+  maxAge: 86400000,
+});
+
 
     return res.json({
       id: user._id,
@@ -134,11 +136,13 @@ export const login = async (req, res) => {
 
     const token = generateToken(user);
 
-    res.cookie("token", token, {
-      httpOnly: true,
-      sameSite: "lax",
-      maxAge: 86400000,
-    });
+ res.cookie("token", token, {
+  httpOnly: true,
+  secure: true,
+  sameSite: "none",
+  maxAge: 86400000,
+});
+
 
     return res.json({
       id: user._id,
@@ -203,11 +207,13 @@ export const resetPassword = async (req, res) => {
 
     const token = generateToken(user);
 
-    res.cookie("token", token, {
-      httpOnly: true,
-      sameSite: "lax",
-      maxAge: 86400000,
-    });
+res.cookie("token", token, {
+  httpOnly: true,
+  secure: true,
+  sameSite: "none",
+  maxAge: 86400000,
+});
+
 
     return res.json({
       id: user._id,
@@ -246,6 +252,12 @@ export const getMe = async (req, res) => {
 };
 
 export const logout = async (req, res) => {
-  res.clearCookie("token");
+  res.cookie("token", token, {
+  httpOnly: true,
+  secure: true,
+  sameSite: "none",
+  maxAge: 86400000,
+});
+
   return res.json({ message: "Logged out" });
 };
