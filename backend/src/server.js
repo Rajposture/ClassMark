@@ -11,7 +11,7 @@ import lectureRoutes from "./routes/lectureRoutes.js";
 import attendanceRoutes from "./routes/attendanceRoutes.js";
 
 const app = express();
-
+app.set("trust proxy", 1);
 connectDB();
 
 const isProduction = process.env.NODE_ENV === "production";
