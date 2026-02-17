@@ -1,30 +1,23 @@
 import User from "../models/User.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import nodemailer from "nodemailer";
 import generateOtp from "./generateOtp.js";
 import otpEmailTemplate from "./otpEmailTemplate.js";
+import { Resend } from "resend";
+
+const resend = process.env.RESEND_API_KEY
+  ? new Resend(process.env.RESEND_API_KEY)
+  : null;
 
 const generateToken = (user) =>
   jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, {
     expiresIn: "1d",
   });
 
-const createTransporter = () => {
-  return nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-      user: process.env.EMAIL,
-      pass: process.env.EMAIL_PASS,
-    },
-  });
-};
-
-
 const sendMail = async ({ to, subject, html }) => {
-  const transporter = createTransporter();
-  await transporter.sendMail({
-    from: `"ClassMark" <${process.env.EMAIL}>`,
+  if (!resend) throw new Error("Email service not configured");
+  await resend.emails.send({
+    from: "onboarding@resend.dev",
     to,
     subject,
     html,
@@ -35,11 +28,8 @@ export const signup = async (req, res) => {
   try {
     const { name, email, password, role, enrollmentNumber } = req.body;
 
-    if (!name || !password || !role)
+    if (!name || !email || !password || !role)
       return res.status(400).json({ message: "All fields required" });
-
-    if (!email)
-      return res.status(400).json({ message: "Email required" });
 
     if (role === "student" && !enrollmentNumber)
       return res.status(400).json({ message: "Enrollment required" });
@@ -57,7 +47,7 @@ export const signup = async (req, res) => {
       html: otpEmailTemplate(name, otp),
     });
 
-    const userData = {
+    await User.create({
       name,
       email: email.toLowerCase(),
       password: hashedPassword,
@@ -66,13 +56,11 @@ export const signup = async (req, res) => {
       otp,
       otpExpires: Date.now() + 5 * 60 * 1000,
       isVerified: false,
-    };
-
-    await User.create(userData);
+    });
 
     return res.status(201).json({ message: "OTP sent successfully" });
   } catch (err) {
-    return res.status(500).json({ message: err.message || "Server error" });
+    return res.status(500).json({ message: err.message || "Failed to send OTP email" });
   }
 };
 
@@ -131,7 +119,6 @@ export const login = async (req, res) => {
       return res.status(403).json({ message: "Verify OTP first" });
 
     const isMatch = await bcrypt.compare(password, user.password);
-
     if (!isMatch)
       return res.status(401).json({ message: "Invalid credentials" });
 
@@ -162,7 +149,6 @@ export const forgotPassword = async (req, res) => {
       return res.status(400).json({ message: "Email required" });
 
     const user = await User.findOne({ email: email.toLowerCase() });
-
     if (!user)
       return res.status(404).json({ message: "User not found" });
 
@@ -180,7 +166,7 @@ export const forgotPassword = async (req, res) => {
 
     return res.json({ message: "OTP sent successfully" });
   } catch (err) {
-    return res.status(500).json({ message: err.message || "Server error" });
+    return res.status(500).json({ message: err.message || "Failed to send OTP email" });
   }
 };
 
@@ -232,7 +218,6 @@ export const getMe = async (req, res) => {
       return res.status(401).json({ message: "Not authenticated" });
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
     const user = await User.findById(decoded.id).select("-password");
 
     if (!user)
