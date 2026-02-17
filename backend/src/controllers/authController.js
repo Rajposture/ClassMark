@@ -14,17 +14,16 @@ const generateToken = (user) =>
     expiresIn: "1d",
   });
 
+/* ✅ FINAL COOKIE CONFIG FOR PRODUCTION (VERCEL + RENDER) */
 const setCookie = (res, token) => {
-  const isProduction = process.env.NODE_ENV === "production";
-
   res.cookie("token", token, {
     httpOnly: true,
-    secure: isProduction,
-    sameSite: isProduction ? "none" : "lax",
+    secure: true,
+    sameSite: "none",
     maxAge: 86400000,
+    path: "/",
   });
 };
-
 
 const sendMail = async ({ to, subject, html }) => {
   if (!resend) return;
@@ -259,6 +258,7 @@ export const logout = async (req, res) => {
     secure: true,
     sameSite: "none",
     expires: new Date(0),
+    path: "/",
   });
 
   return res.json({ success: true, message: "Logged out successfully" });

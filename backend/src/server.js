@@ -14,14 +14,13 @@ const app = express();
 
 connectDB();
 
-const allowedOrigins = [
-  "http://localhost:5173",
-  "https://class-mark.vercel.app",
-];
+const isProduction = process.env.NODE_ENV === "production";
 
 app.use(
   cors({
-    origin: allowedOrigins,
+    origin: isProduction
+      ? "https://class-mark.vercel.app"
+      : "http://localhost:5173",
     credentials: true,
   })
 );
