@@ -10,16 +10,16 @@ const generateToken = (user) =>
     expiresIn: "1d",
   });
 
-const createTransporter = () =>
-  nodemailer.createTransport({
-    host: "smtp.gmail.com",
-    port: 465,
-    secure: true,
+const createTransporter = () => {
+  return nodemailer.createTransport({
+    service: "gmail",
     auth: {
       user: process.env.EMAIL,
       pass: process.env.EMAIL_PASS,
     },
   });
+};
+
 
 const sendMail = async ({ to, subject, html }) => {
   const transporter = createTransporter();
