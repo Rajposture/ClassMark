@@ -18,12 +18,12 @@ const isProduction = process.env.NODE_ENV === "production";
 
 app.use(
   cors({
-    origin: isProduction
-      ? "https://class-mark.vercel.app"
-      : "http://localhost:5173",
+    origin: "https://class-mark.vercel.app",
     credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE"],
   })
 );
+
 
 app.use(express.json());
 app.use(cookieParser());
