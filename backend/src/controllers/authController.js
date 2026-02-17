@@ -67,12 +67,13 @@ export const signup = async (req, res) => {
     });
 
     try {
-      await sendMail({
-        to: email.toLowerCase(),
-        subject: "ClassMark OTP Verification",
-        html: otpEmailTemplate(name, otp),
-      });
-    } catch {}
+  await sendMail({
+    to: email.toLowerCase(),
+    subject: "ClassMark OTP Verification",
+    html: otpEmailTemplate(name, otp),
+  });
+} catch {}
+
 
     return res.status(201).json({
       success: true,
