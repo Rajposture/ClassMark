@@ -10,9 +10,11 @@ const resend = process.env.RESEND_API_KEY
   : null;
 
 const generateToken = (user) =>
-  jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, {
-    expiresIn: "1d",
-  });
+  jwt.sign(
+    { id: user._id, role: user.role },
+    process.env.JWT_SECRET,
+    { expiresIn: "1d" }
+  );
 
 const sendMail = async ({ to, subject, html }) => {
   if (!resend) return;
@@ -29,14 +31,26 @@ export const signup = async (req, res) => {
     const { name, email, password, role, enrollmentNumber } = req.body;
 
     if (!name || !email || !password || !role)
-      return res.status(400).json({ success: false, message: "All fields required" });
+      return res.status(400).json({
+        success: false,
+        message: "All fields required",
+      });
 
     if (role === "student" && !enrollmentNumber)
-      return res.status(400).json({ success: false, message: "Enrollment required" });
+      return res.status(400).json({
+        success: false,
+        message: "Enrollment required",
+      });
 
-    const existingUser = await User.findOne({ email: email.toLowerCase() });
+    const existingUser = await User.findOne({
+      email: email.toLowerCase(),
+    });
+
     if (existingUser)
-      return res.status(400).json({ success: false, message: "User already exists" });
+      return res.status(400).json({
+        success: false,
+        message: "User already exists",
+      });
 
     const otp = generateOtp();
     const hashedPassword = await bcrypt.hash(password, 12);
@@ -46,9 +60,9 @@ export const signup = async (req, res) => {
       email: email.toLowerCase(),
       password: hashedPassword,
       role,
-      enrollmentNumber: role === "student" ? enrollmentNumber : null,
+      enrollmentNumber:
+        role === "student" ? enrollmentNumber : null,
       otp,
-      otpExpires: null,
       isVerified: false,
     });
 
@@ -64,8 +78,11 @@ export const signup = async (req, res) => {
       success: true,
       message: "OTP sent successfully",
     });
-  } catch {
-    return res.status(500).json({ success: false, message: "Server error" });
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
   }
 };
 
@@ -74,21 +91,23 @@ export const verifyOtp = async (req, res) => {
     const { email, otp } = req.body;
 
     if (!email || !otp)
-      return res.status(400).json({ success: false, message: "Invalid request" });
+      return res.status(400).json({
+        success: false,
+        message: "Invalid request",
+      });
 
     const user = await User.findOne({
       email: email.toLowerCase().trim(),
     });
 
-    if (!user)
-      return res.status(400).json({ success: false, message: "User not found" });
-
-    if (!user.otp || user.otp !== otp.trim())
-      return res.status(400).json({ success: false, message: "Invalid OTP" });
+    if (!user || user.otp !== otp.trim())
+      return res.status(400).json({
+        success: false,
+        message: "Invalid OTP",
+      });
 
     user.isVerified = true;
     user.otp = null;
-    user.otpExpires = null;
     await user.save();
 
     const token = generateToken(user);
@@ -100,11 +119,15 @@ export const verifyOtp = async (req, res) => {
         id: user._id,
         name: user.name,
         role: user.role,
-        enrollmentNumber: user.enrollmentNumber || null,
+        enrollmentNumber:
+          user.enrollmentNumber || null,
       },
     });
   } catch {
-    return res.status(500).json({ success: false, message: "Server error" });
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
   }
 };
 
@@ -113,19 +136,37 @@ export const login = async (req, res) => {
     const { email, password } = req.body;
 
     if (!email || !password)
-      return res.status(400).json({ success: false, message: "Invalid request" });
+      return res.status(400).json({
+        success: false,
+        message: "Invalid request",
+      });
 
-    const user = await User.findOne({ email: email.toLowerCase() });
+    const user = await User.findOne({
+      email: email.toLowerCase(),
+    });
 
     if (!user)
-      return res.status(401).json({ success: false, message: "Invalid credentials" });
+      return res.status(401).json({
+        success: false,
+        message: "Invalid credentials",
+      });
 
     if (!user.isVerified)
-      return res.status(403).json({ success: false, message: "Verify OTP first" });
+      return res.status(403).json({
+        success: false,
+        message: "Verify OTP first",
+      });
 
-    const isMatch = await bcrypt.compare(password, user.password);
+    const isMatch = await bcrypt.compare(
+      password,
+      user.password
+    );
+
     if (!isMatch)
-      return res.status(401).json({ success: false, message: "Invalid credentials" });
+      return res.status(401).json({
+        success: false,
+        message: "Invalid credentials",
+      });
 
     const token = generateToken(user);
 
@@ -136,11 +177,15 @@ export const login = async (req, res) => {
         id: user._id,
         name: user.name,
         role: user.role,
-        enrollmentNumber: user.enrollmentNumber || null,
+        enrollmentNumber:
+          user.enrollmentNumber || null,
       },
     });
   } catch {
-    return res.status(500).json({ success: false, message: "Server error" });
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
   }
 };
 
@@ -153,9 +198,14 @@ export const getMe = async (req, res) => {
 
     const token = authHeader.split(" ")[1];
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(
+      token,
+      process.env.JWT_SECRET
+    );
 
-    const user = await User.findById(decoded.id).select("-password");
+    const user = await User.findById(decoded.id).select(
+      "-password"
+    );
 
     if (!user)
       return res.status(404).json({ success: false });
@@ -166,7 +216,8 @@ export const getMe = async (req, res) => {
         id: user._id,
         name: user.name,
         role: user.role,
-        enrollmentNumber: user.enrollmentNumber || null,
+        enrollmentNumber:
+          user.enrollmentNumber || null,
       },
     });
   } catch {
