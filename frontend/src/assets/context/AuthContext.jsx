@@ -20,7 +20,12 @@ export const AuthProvider = ({ children }) => {
       }
 
       const data = await res.json();
-      setUser(data);
+
+      if (data.success) {
+        setUser(data.user);
+      } else {
+        setUser(null);
+      }
     } catch {
       setUser(null);
     } finally {

@@ -16,18 +16,12 @@ connectDB();
 
 const allowedOrigins = [
   "http://localhost:5173",
-  "https://class-mark.vercel.app"
+  "https://class-mark.vercel.app",
 ];
 
 app.use(
   cors({
-    origin: function (origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS"));
-      }
-    },
+    origin: allowedOrigins,
     credentials: true,
   })
 );
@@ -50,7 +44,6 @@ app.use((req, res) => {
 });
 
 app.use((err, req, res, next) => {
-  console.error("SERVER ERROR:", err);
   res.status(500).json({ message: "Server error" });
 });
 

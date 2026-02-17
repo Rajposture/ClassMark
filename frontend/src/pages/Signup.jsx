@@ -17,17 +17,8 @@ const Signup = () => {
 
   const [otp, setOtp] = useState("");
   const [otpSent, setOtpSent] = useState(false);
-  const [resendCooldown, setResendCooldown] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
-  useEffect(() => {
-    if (resendCooldown === 0) return;
-    const timer = setInterval(() => {
-      setResendCooldown((t) => t - 1);
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [resendCooldown]);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -56,13 +47,12 @@ const Signup = () => {
 
       const data = await res.json();
 
-      if (!res.ok) {
+      if (!res.ok || !data.success) {
         setError(data.message || "Failed to send OTP");
         return;
       }
 
       setOtpSent(true);
-      setResendCooldown(30);
     } catch {
       setError("Server error during signup");
     } finally {
@@ -70,68 +60,37 @@ const Signup = () => {
     }
   };
 
-  const resendOtp = async () => {
+  const verifyOtp = async (e) => {
+    e.preventDefault();
     setError("");
     setLoading(true);
 
     try {
-      const res = await fetch(`${API_BASE}/api/auth/resend-otp`, {
+      const res = await fetch(`${API_BASE}/api/auth/verify-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: form.email,
-          enrollmentNumber:
-            role === "student" ? form.enrollmentNumber : undefined,
-        }),
+        credentials: "include",
+        body: JSON.stringify({ email: form.email, otp }),
       });
 
       const data = await res.json();
 
-      if (!res.ok) {
-        setError(data.message || "Failed to resend OTP");
+      if (!res.ok || !data.success) {
+        setError(data.message || "Invalid OTP");
         return;
       }
 
-      setResendCooldown(30);
+      await refreshUser();
+
+      const userRole = data.user.role;
+
+      navigate(userRole === "teacher" ? "/teacher" : "/student");
     } catch {
-      setError("Unable to resend OTP");
+      setError("Server error during OTP verification");
     } finally {
       setLoading(false);
     }
   };
-
- const verifyOtp = async (e) => {
-  e.preventDefault();
-  setError("");
-  setLoading(true);
-
-  try {
-    const verifyRes = await fetch(`${API_BASE}/api/auth/verify-otp`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({ email: form.email, otp }),
-    });
-
-    const verifyData = await verifyRes.json();
-
-    if (!verifyRes.ok) {
-      setError(verifyData.message || "Invalid OTP");
-      return;
-    }
-
-    await refreshUser();
-
-    navigate(
-      verifyData.role === "teacher" ? "/teacher" : "/student"
-    );
-  } catch {
-    setError("Server error during OTP verification");
-  } finally {
-    setLoading(false);
-  }
-};
-
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-900 via-purple-900 to-blue-900 px-4 py-10">
@@ -159,8 +118,12 @@ const Signup = () => {
               onChange={(e) => setRole(e.target.value)}
               className="mt-1 w-full px-4 py-3 bg-white/20 border border-white/30 rounded-lg"
             >
-              <option value="student" className="text-black">Student</option>
-              <option value="teacher" className="text-black">Teacher</option>
+              <option value="student" className="text-black">
+                Student
+              </option>
+              <option value="teacher" className="text-black">
+                Teacher
+              </option>
             </select>
           </div>
 
@@ -227,24 +190,16 @@ const Signup = () => {
               >
                 {loading ? "Verifying..." : "Verify OTP"}
               </button>
-
-              <button
-                type="button"
-                onClick={resendOtp}
-                disabled={resendCooldown > 0 || loading}
-                className="w-full text-sm text-indigo-300 disabled:opacity-40"
-              >
-                {resendCooldown > 0
-                  ? `Resend OTP in ${resendCooldown}s`
-                  : "Resend OTP"}
-              </button>
             </>
           )}
         </form>
 
         <p className="text-sm text-slate-200 mt-6 text-center">
           Already have an account?{" "}
-          <Link to="/login" className="text-indigo-300 hover:text-white font-medium">
+          <Link
+            to="/login"
+            className="text-indigo-300 hover:text-white font-medium"
+          >
             Sign in
           </Link>
         </p>

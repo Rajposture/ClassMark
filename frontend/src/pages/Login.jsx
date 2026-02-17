@@ -5,10 +5,9 @@ import API_BASE from "../config/api";
 
 const Login = () => {
   const navigate = useNavigate();
-  const { setUser, refreshUser } = useContext(AuthContext);
+  const { refreshUser } = useContext(AuthContext);
 
-  const [role, setRole] = useState("student");
-  const [identifier, setIdentifier] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
   const [mode, setMode] = useState("login");
@@ -23,28 +22,25 @@ const Login = () => {
     setLoading(true);
 
     try {
-      const payload =
-        role === "teacher"
-          ? { email: identifier, password, role }
-          : { enrollmentNumber: identifier, password, role };
-
       const res = await fetch(`${API_BASE}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ email, password }),
       });
 
       const data = await res.json();
 
-      if (!res.ok) {
+      if (!res.ok || !data.success) {
         setError(data.message || "Invalid credentials");
         return;
       }
 
       await refreshUser();
 
-      navigate(data.role === "teacher" ? "/teacher" : "/student");
+      const role = data.user.role;
+
+      navigate(role === "teacher" ? "/teacher" : "/student");
     } catch {
       setError("Unable to login");
     } finally {
@@ -60,12 +56,12 @@ const Login = () => {
       const res = await fetch(`${API_BASE}/api/auth/forgot-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: identifier }),
+        body: JSON.stringify({ email }),
       });
 
       const data = await res.json();
 
-      if (!res.ok) {
+      if (!res.ok || !data.success) {
         setError(data.message || "Failed to send OTP");
         return;
       }
@@ -88,7 +84,7 @@ const Login = () => {
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({
-          email: identifier,
+          email,
           otp,
           newPassword,
         }),
@@ -96,14 +92,16 @@ const Login = () => {
 
       const data = await res.json();
 
-      if (!res.ok) {
+      if (!res.ok || !data.success) {
         setError(data.message || "Password reset failed");
         return;
       }
 
       await refreshUser();
 
-      navigate(data.role === "teacher" ? "/teacher" : "/student");
+      const role = data.user.role;
+
+      navigate(role === "teacher" ? "/teacher" : "/student");
     } catch {
       setError("Unable to reset password");
     } finally {
@@ -125,24 +123,11 @@ const Login = () => {
         )}
 
         <div className="mt-6 space-y-4 text-white">
-          <select
-            value={role}
-            onChange={(e) => setRole(e.target.value)}
-            className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg"
-          >
-            <option value="student">Student</option>
-            <option value="teacher">Teacher</option>
-          </select>
-
           <input
-            type="text"
-            placeholder={
-              role === "teacher"
-                ? "Email Address"
-                : "Enrollment Number"
-            }
-            value={identifier}
-            onChange={(e) => setIdentifier(e.target.value)}
+            type="email"
+            placeholder="Email Address"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
             className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg"
           />
 

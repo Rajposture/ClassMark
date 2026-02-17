@@ -7,19 +7,18 @@ import {
   getMe,
   logout,
   forgotPassword,
-  resetPassword
+  resetPassword,
 } from "../controllers/authController.js";
 
 const router = express.Router();
 
 router.post("/signup", signup);
-router.post("/register", signup);
-
 router.post("/verify-otp", verifyOtp);
-
 router.post("/login", login);
+
 router.get("/me", protect, getMe);
-router.post("/logout", protect, logout);
+
+router.post("/logout", logout);
 
 router.post("/forgot-password", forgotPassword);
 router.post("/reset-password", resetPassword);
