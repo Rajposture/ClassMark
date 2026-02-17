@@ -155,7 +155,7 @@ export const forgotPassword = async (req, res) => {
     const otp = generateOtp();
 
     user.otp = otp;
-    user.otpExpires = Date.now() + 5 * 60 * 1000;
+    user.otpExpires = Date.now() + 15 * 60 * 1000;
     await user.save();
 
     await sendMail({
