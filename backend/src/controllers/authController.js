@@ -68,13 +68,12 @@ export const verifyOtp = async (req, res) => {
   try {
     const { email, otp } = req.body;
 
-    if (!email || !otp)
-      return res.status(400).json({ message: "Invalid request" });
+if (!user || String(user.otp) !== String(otp))
+  return res.status(400).json({ message: "Invalid OTP" });
+
 
     const user = await User.findOne({ email: email.toLowerCase() });
 
-    if (!user || user.otp !== otp)
-      return res.status(400).json({ message: "Invalid OTP" });
 
     if (!user.otpExpires || user.otpExpires < Date.now())
       return res.status(400).json({ message: "OTP expired" });
