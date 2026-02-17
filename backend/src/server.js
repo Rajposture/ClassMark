@@ -12,30 +12,30 @@ import attendanceRoutes from "./routes/attendanceRoutes.js";
 
 const app = express();
 
-
-console.log("EMAIL:", process.env.EMAIL || "undefined");
-console.log(
-  "PASS LENGTH:",
-  process.env.EMAIL_PASS ? process.env.EMAIL_PASS.length : "undefined"
-);
-
 connectDB();
 
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://class-mark.vercel.app"
+];
 
 app.use(
   cors({
-    origin: [
-      "http://localhost:5173",
-      "https://class-mark.vercel.app"
-    ],
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     credentials: true,
   })
 );
 
 app.use(express.json());
 app.use(cookieParser());
-app.use("/uploads", express.static("uploads"));
 
+app.use("/uploads", express.static("uploads"));
 
 app.use("/api/auth", authRoutes);
 app.use("/api/lectures", lectureRoutes);
@@ -45,19 +45,14 @@ app.get("/", (req, res) => {
   res.status(200).send("ClassMark API running");
 });
 
-
 app.use((req, res) => {
   res.status(404).json({ message: "Route not found" });
 });
 
-
 app.use((err, req, res, next) => {
   console.error("SERVER ERROR:", err);
-  res.status(err.status || 500).json({
-    message: err.message || "Server error",
-  });
+  res.status(500).json({ message: "Server error" });
 });
-
 
 const PORT = process.env.PORT || 5001;
 
