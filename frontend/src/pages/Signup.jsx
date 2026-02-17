@@ -100,37 +100,38 @@ const Signup = () => {
     }
   };
 
-  const verifyOtp = async (e) => {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
+ const verifyOtp = async (e) => {
+  e.preventDefault();
+  setError("");
+  setLoading(true);
 
-    try {
-      const verifyRes = await fetch(`${API_BASE}/api/auth/verify-otp`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ email: form.email, otp }),
-      });
+  try {
+    const verifyRes = await fetch(`${API_BASE}/api/auth/verify-otp`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ email: form.email, otp }),
+    });
 
-      const verifyData = await verifyRes.json();
+    const verifyData = await verifyRes.json();
 
-      if (!verifyRes.ok) {
-        setError(verifyData.message || "Invalid OTP");
-        return;
-      }
-
-      await refreshUser();
-
-      navigate(
-        verifyData.user.role === "teacher" ? "/teacher" : "/student"
-      );
-    } catch {
-      setError("Server error during OTP verification");
-    } finally {
-      setLoading(false);
+    if (!verifyRes.ok) {
+      setError(verifyData.message || "Invalid OTP");
+      return;
     }
-  };
+
+    await refreshUser();
+
+    navigate(
+      verifyData.role === "teacher" ? "/teacher" : "/student"
+    );
+  } catch {
+    setError("Server error during OTP verification");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-900 via-purple-900 to-blue-900 px-4 py-10">

@@ -73,17 +73,23 @@ export const verifyOtp = async (req, res) => {
     if (!email || !otp)
       return res.status(400).json({ message: "Invalid request" });
 
-    const user = await User.findOne({ email: email.toLowerCase() });
+    const user = await User.findOne({
+      email: email.toLowerCase().trim(),
+    });
 
     if (!user)
       return res.status(400).json({ message: "User not found" });
 
-    if (user.otp !== otp)
+    if (!user.otp)
+      return res.status(400).json({ message: "No OTP found" });
+
+    if (user.otp !== otp.trim())
       return res.status(400).json({ message: "Invalid OTP" });
 
     user.isVerified = true;
     user.otp = null;
     user.otpExpires = null;
+
     await user.save();
 
     const token = generateToken(user);
@@ -100,10 +106,11 @@ export const verifyOtp = async (req, res) => {
       role: user.role,
       enrollmentNumber: user.enrollmentNumber || null,
     });
-  } catch {
-    return res.status(500).json({ message: "Server error" });
+  } catch (err) {
+    return res.status(500).json({ message: err.message });
   }
 };
+
 
 export const login = async (req, res) => {
   try {
