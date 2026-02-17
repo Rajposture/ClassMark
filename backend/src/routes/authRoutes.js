@@ -4,8 +4,7 @@ import {
   verifyOtp,
   login,
   getMe,
-  logout,
-  resetPassword
+  logout
 } from "../controllers/authController.js";
 
 const router = express.Router();
@@ -13,8 +12,6 @@ const router = express.Router();
 router.post("/signup", signup);
 router.post("/verify-otp", verifyOtp);
 router.post("/login", login);
-
-router.post("/reset-password", resetPassword);
 
 router.get("/me", getMe);
 router.post("/logout", logout);
