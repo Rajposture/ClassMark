@@ -6,38 +6,28 @@ import generateOtp from "./generateOtp.js";
 import otpEmailTemplate from "./otpEmailTemplate.js";
 
 const generateToken = (user) =>
-  jwt.sign(
-    { id: user._id, role: user.role },
-    process.env.JWT_SECRET,
-    { expiresIn: "1d" }
-  );
+  jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, {
+    expiresIn: "1d",
+  });
 
-const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 465,
-  secure: true,
-auth: {
-  user: "classmarkofficial1@gmail.com",
-  pass: "cxfnjbevnqniqkyw",
-},
-});
+const createTransporter = () =>
+  nodemailer.createTransport({
+    host: "smtp.gmail.com",
+    port: 465,
+    secure: true,
+    auth: {
+      user: process.env.EMAIL,
+      pass: process.env.EMAIL_PASS,
+    },
+  });
 
-transporter.verify((error, success) => {
-  if (error) {
-    console.error("SMTP ERROR:", error);
-  } else {
-    console.log("SMTP SERVER READY");
-  }
-});
-
-
-
-const sendOtp = async (email, name, otp) => {
-  return await transporter.sendMail({
+const sendMail = async ({ to, subject, html }) => {
+  const transporter = createTransporter();
+  await transporter.sendMail({
     from: `"ClassMark" <${process.env.EMAIL}>`,
-    to: email,
-    subject: "ClassMark OTP Verification",
-    html: otpEmailTemplate(name, otp),
+    to,
+    subject,
+    html,
   });
 };
 
@@ -61,28 +51,28 @@ export const signup = async (req, res) => {
     const otp = generateOtp();
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    try {
-      await sendOtp(email.toLowerCase(), name, otp);
-    } catch (mailError) {
-      console.error("MAIL ERROR:", mailError);
-      return res.status(500).json({ message: "Failed to send OTP email" });
-    }
+    await sendMail({
+      to: email.toLowerCase(),
+      subject: "ClassMark OTP Verification",
+      html: otpEmailTemplate(name, otp),
+    });
 
-    await User.create({
+    const userData = {
       name,
       email: email.toLowerCase(),
-      enrollmentNumber: role === "student" ? enrollmentNumber : undefined,
       password: hashedPassword,
       role,
+      enrollmentNumber: role === "student" ? enrollmentNumber : null,
       otp,
       otpExpires: Date.now() + 5 * 60 * 1000,
       isVerified: false,
-    });
+    };
+
+    await User.create(userData);
 
     return res.status(201).json({ message: "OTP sent successfully" });
   } catch (err) {
-    console.error("SIGNUP ERROR:", err);
-    return res.status(500).json({ message: "Server error" });
+    return res.status(500).json({ message: err.message || "Server error" });
   }
 };
 
@@ -98,13 +88,12 @@ export const verifyOtp = async (req, res) => {
     if (!user || user.otp !== otp)
       return res.status(400).json({ message: "Invalid OTP" });
 
-    if (user.otpExpires < Date.now())
+    if (!user.otpExpires || user.otpExpires < Date.now())
       return res.status(400).json({ message: "OTP expired" });
 
     user.isVerified = true;
     user.otp = null;
     user.otpExpires = null;
-
     await user.save();
 
     const token = generateToken(user);
@@ -122,29 +111,18 @@ export const verifyOtp = async (req, res) => {
       enrollmentNumber: user.enrollmentNumber || null,
     });
   } catch (err) {
-    console.error("VERIFY ERROR:", err);
-    return res.status(500).json({ message: "Server error" });
+    return res.status(500).json({ message: err.message || "Server error" });
   }
 };
 
 export const login = async (req, res) => {
   try {
-    const { email, password, role, enrollmentNumber } = req.body;
+    const { email, password } = req.body;
 
-    if (!password || !role)
+    if (!email || !password)
       return res.status(400).json({ message: "Invalid request" });
 
-    let user;
-
-    if (role === "teacher") {
-      if (!email)
-        return res.status(400).json({ message: "Email required" });
-      user = await User.findOne({ email: email.toLowerCase() });
-    } else {
-      if (!enrollmentNumber)
-        return res.status(400).json({ message: "Enrollment required" });
-      user = await User.findOne({ enrollmentNumber });
-    }
+    const user = await User.findOne({ email: email.toLowerCase() });
 
     if (!user)
       return res.status(401).json({ message: "Invalid credentials" });
@@ -172,8 +150,7 @@ export const login = async (req, res) => {
       enrollmentNumber: user.enrollmentNumber || null,
     });
   } catch (err) {
-    console.error("LOGIN ERROR:", err);
-    return res.status(500).json({ message: "Server error" });
+    return res.status(500).json({ message: err.message || "Server error" });
   }
 };
 
@@ -193,15 +170,17 @@ export const forgotPassword = async (req, res) => {
 
     user.otp = otp;
     user.otpExpires = Date.now() + 5 * 60 * 1000;
-
     await user.save();
 
-    await sendOtp(user.email, user.name, otp);
+    await sendMail({
+      to: user.email,
+      subject: "ClassMark Password Reset OTP",
+      html: otpEmailTemplate(user.name, otp),
+    });
 
     return res.json({ message: "OTP sent successfully" });
   } catch (err) {
-    console.error("FORGOT ERROR:", err);
-    return res.status(500).json({ message: "Server error" });
+    return res.status(500).json({ message: err.message || "Server error" });
   }
 };
 
@@ -217,13 +196,13 @@ export const resetPassword = async (req, res) => {
     if (!user || user.otp !== otp)
       return res.status(400).json({ message: "Invalid OTP" });
 
-    if (user.otpExpires < Date.now())
+    if (!user.otpExpires || user.otpExpires < Date.now())
       return res.status(400).json({ message: "OTP expired" });
 
     user.password = await bcrypt.hash(newPassword, 12);
     user.otp = null;
     user.otpExpires = null;
-
+    user.isVerified = true;
     await user.save();
 
     const token = generateToken(user);
@@ -241,8 +220,7 @@ export const resetPassword = async (req, res) => {
       enrollmentNumber: user.enrollmentNumber || null,
     });
   } catch (err) {
-    console.error("RESET ERROR:", err);
-    return res.status(500).json({ message: "Server error" });
+    return res.status(500).json({ message: err.message || "Server error" });
   }
 };
 
