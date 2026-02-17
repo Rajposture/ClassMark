@@ -54,7 +54,7 @@ export const signup = async (req, res) => {
       role,
       enrollmentNumber: role === "student" ? enrollmentNumber : null,
       otp,
-      otpExpires: Date.now() + 5 * 60 * 1000,
+     otpExpires: Date.now() + 30 * 60 * 1000,
       isVerified: false,
     });
 
