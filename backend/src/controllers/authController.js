@@ -66,12 +66,18 @@ export const signup = async (req, res) => {
       isVerified: false,
     });
 
+    try {
+  await sendMail({
+    to: email.toLowerCase(),
+    subject: "ClassMark OTP Verification",
+    html: otpEmailTemplate(name, otp),
+  });
+} catch {}
 
 
     return res.status(201).json({
       success: true,
       message: "OTP sent successfully",
-      otp,
     });
   } catch (err) {
     return res.status(500).json({
