@@ -42,10 +42,35 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     fetchUser();
   }, []);
+const refreshUser = async () => {
+  try {
+    const token = localStorage.getItem("token");
 
-  const refreshUser = async () => {
-    await fetchUser();
-  };
+    if (!token) {
+      setUser(null);
+      return;
+    }
+
+    const res = await fetch(`${API_BASE}/api/auth/me`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    const data = await res.json();
+
+    if (res.ok && data.success) {
+      setUser(data.user);
+    } else {
+      localStorage.removeItem("token");
+      setUser(null);
+    }
+  } catch (err) {
+    console.log(err);
+    setUser(null);
+  }
+};
+
 
   const logout = () => {
     localStorage.removeItem("token");
