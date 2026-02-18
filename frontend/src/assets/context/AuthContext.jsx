@@ -41,9 +41,15 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
-  useEffect(() => {
+useEffect(() => {
+  const token = localStorage.getItem("token");
+  if (token) {
     fetchUser();
-  }, [fetchUser]);
+  } else {
+    setLoading(false);
+  }
+}, [fetchUser]);
+
 
   const refreshUser = async () => {
     await fetchUser();

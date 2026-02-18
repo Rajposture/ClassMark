@@ -98,14 +98,15 @@ const Login = () => {
         return;
       }
 
-      // 🔥 Store token
-      localStorage.setItem("token", data.token);
+localStorage.setItem("token", data.token);
 
-      await refreshUser();
+// directly update context user
+refreshUser();
 
-      navigate(
-        data.user.role === "teacher" ? "/teacher" : "/student"
-      );
+navigate(
+  data.user.role === "teacher" ? "/teacher" : "/student"
+);
+
     } catch {
       setError("Unable to reset password");
     } finally {
