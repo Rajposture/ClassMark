@@ -32,7 +32,7 @@ export const AuthProvider = ({ children }) => {
         setUser(null);
       }
     } catch (err) {
-      console.log("FETCH USER ERROR:", err);
+      console.log(err);
       setUser(null);
     } finally {
       setLoading(false);
@@ -42,35 +42,11 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     fetchUser();
   }, []);
-const refreshUser = async () => {
-  try {
-    const token = localStorage.getItem("token");
 
-    if (!token) {
-      setUser(null);
-      return;
-    }
-
-    const res = await fetch(`${API_BASE}/api/auth/me`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    const data = await res.json();
-
-    if (res.ok && data.success) {
-      setUser(data.user);
-    } else {
-      localStorage.removeItem("token");
-      setUser(null);
-    }
-  } catch (err) {
-    console.log(err);
-    setUser(null);
-  }
-};
-
+  const refreshUser = async () => {
+    setLoading(true);
+    await fetchUser();
+  };
 
   const logout = () => {
     localStorage.removeItem("token");
