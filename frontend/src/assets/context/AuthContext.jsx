@@ -10,8 +10,6 @@ export const AuthProvider = ({ children }) => {
   const fetchUser = async () => {
     const token = localStorage.getItem("token");
 
-    console.log("TOKEN FROM LOCALSTORAGE:", token);
-
     if (!token) {
       setUser(null);
       setLoading(false);
@@ -20,15 +18,12 @@ export const AuthProvider = ({ children }) => {
 
     try {
       const res = await fetch(`${API_BASE}/api/auth/me`, {
-        method: "GET",
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
 
       const data = await res.json();
-
-      console.log("ME RESPONSE:", data);
 
       if (res.ok && data.success) {
         setUser(data.user);
@@ -37,11 +32,11 @@ export const AuthProvider = ({ children }) => {
         setUser(null);
       }
     } catch (err) {
-      console.log("FETCH ERROR:", err);
+      console.log("FETCH USER ERROR:", err);
       setUser(null);
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   useEffect(() => {
@@ -58,7 +53,14 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, refreshUser, logout }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        loading,
+        refreshUser,
+        logout,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
