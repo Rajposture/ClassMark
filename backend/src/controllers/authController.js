@@ -3,32 +3,28 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import generateOtp from "./generateOtp.js";
 import otpEmailTemplate from "./otpEmailTemplate.js";
+import nodemailer from "nodemailer";
 import dotenv from "dotenv";
+
 dotenv.config();
 
-import nodemailer from "nodemailer";
-
-
+/* ===============================
+   EMAIL TRANSPORTER (PRODUCTION)
+================================ */
 
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
     user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
+    pass: process.env.EMAIL_PASS, // Gmail App Password
   },
 });
 
+/* ===============================
+   SEND MAIL FUNCTION
+================================ */
 
-
-
-const generateToken = (user) =>
-  jwt.sign(
-    { id: user._id, role: user.role },
-    process.env.JWT_SECRET,
-    { expiresIn: "1d" }
-  );
-
-const sendMail = async (to, subject, html) => {
+const sendMail = async ({ to, subject, html }) => {
   try {
     const info = await transporter.sendMail({
       from: `"ClassMark" <${process.env.EMAIL_USER}>`,
@@ -37,28 +33,54 @@ const sendMail = async (to, subject, html) => {
       html,
     });
 
-    console.log("Email sent:", info.response);
+    console.log("Mail sent:", info.messageId);
+    return true;
   } catch (error) {
-    console.log("Email error:", error);
-    throw error;
+    console.error("Mail error:", error.message);
+    return false;
   }
 };
 
+/* ===============================
+   JWT TOKEN GENERATOR
+================================ */
+
+const generateToken = (user) =>
+  jwt.sign(
+    { id: user._id, role: user.role },
+    process.env.JWT_SECRET,
+    { expiresIn: "1d" }
+  );
+
+/* ===============================
+   SIGNUP
+================================ */
 
 export const signup = async (req, res) => {
   try {
     const { name, email, password, role, enrollmentNumber } = req.body;
 
     if (!name || !email || !password || !role)
-      return res.status(400).json({ success: false, message: "All fields required" });
+      return res.status(400).json({
+        success: false,
+        message: "All fields required",
+      });
 
     if (role === "student" && !enrollmentNumber)
-      return res.status(400).json({ success: false, message: "Enrollment required" });
+      return res.status(400).json({
+        success: false,
+        message: "Enrollment required",
+      });
 
-    const existingUser = await User.findOne({ email: email.toLowerCase() });
+    const existingUser = await User.findOne({
+      email: email.toLowerCase(),
+    });
 
     if (existingUser)
-      return res.status(400).json({ success: false, message: "User already exists" });
+      return res.status(400).json({
+        success: false,
+        message: "User already exists",
+      });
 
     const otp = generateOtp();
     const hashedPassword = await bcrypt.hash(password, 12);
@@ -73,11 +95,18 @@ export const signup = async (req, res) => {
       isVerified: false,
     });
 
-    await sendMail(
-      email.toLowerCase(),
-      "ClassMark OTP Verification",
-      otpEmailTemplate(name, otp)
-    );
+    const mailSent = await sendMail({
+      to: email.toLowerCase(),
+      subject: "ClassMark OTP Verification",
+      html: otpEmailTemplate(name, otp),
+    });
+
+    if (!mailSent) {
+      return res.status(500).json({
+        success: false,
+        message: "Failed to send OTP email",
+      });
+    }
 
     return res.status(201).json({
       success: true,
@@ -92,6 +121,10 @@ export const signup = async (req, res) => {
     });
   }
 };
+
+/* ===============================
+   VERIFY OTP
+================================ */
 
 export const verifyOtp = async (req, res) => {
   try {
@@ -138,6 +171,10 @@ export const verifyOtp = async (req, res) => {
     });
   }
 };
+
+/* ===============================
+   LOGIN
+================================ */
 
 export const login = async (req, res) => {
   try {
@@ -195,6 +232,10 @@ export const login = async (req, res) => {
   }
 };
 
+/* ===============================
+   GET ME
+================================ */
+
 export const getMe = async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
@@ -226,6 +267,10 @@ export const getMe = async (req, res) => {
     return res.status(401).json({ success: false });
   }
 };
+
+/* ===============================
+   LOGOUT
+================================ */
 
 export const logout = async (req, res) => {
   return res.json({ success: true });
