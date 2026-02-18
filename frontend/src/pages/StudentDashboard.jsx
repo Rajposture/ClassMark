@@ -15,12 +15,12 @@ const StudentDashboard = () => {
     if (loading) return;
 
     if (!user) {
-      navigate("/login");
+      navigate("/login", { replace: true });
       return;
     }
 
     if (user.role !== "student") {
-      navigate("/teacher");
+      navigate("/teacher", { replace: true });
       return;
     }
 
@@ -28,32 +28,37 @@ const StudentDashboard = () => {
       try {
         const token = localStorage.getItem("token");
 
+        if (!token) {
+          navigate("/login", { replace: true });
+          return;
+        }
+
         const res = await fetch(`${API_BASE}/api/auth/me`, {
           headers: {
-            Authorization: `Bearer ${token}`,   // ✅ FIXED
+            Authorization: `Bearer ${token}`,   // ✅ fixed
           },
         });
 
         const data = await res.json();
 
         if (res.ok && data.success) {
-          setStudent(data.user);   // ✅ FIXED (you were setting wrong object)
+          setStudent(data.user);   // ✅ correct object
         } else {
           localStorage.removeItem("token");
-          navigate("/login");
+          navigate("/login", { replace: true });
         }
       } catch (err) {
         console.log("Dashboard error:", err);
-        navigate("/login");
+        navigate("/login", { replace: true });
       } finally {
-        setFetching(false);  // ✅ IMPORTANT
+        setFetching(false);
       }
     };
 
     fetchProfile();
   }, [user, loading, navigate]);
 
-  if (loading || fetching) {
+  if (loading || fetching || !student) {
     return (
       <DashboardLayout>
         <div className="text-center text-slate-500 mt-20">
@@ -69,6 +74,7 @@ const StudentDashboard = () => {
         <h1 className="text-3xl font-bold text-slate-800">
           Student Dashboard
         </h1>
+
         <p className="text-slate-500">
           View your profile and attendance
         </p>
@@ -83,13 +89,15 @@ const StudentDashboard = () => {
               <span className="font-medium">Name:</span>{" "}
               {student.name}
             </p>
+
             <p>
               <span className="font-medium">Enrollment:</span>{" "}
               {student.enrollmentNumber || "N/A"}
             </p>
+
             <p>
               <span className="font-medium">Email:</span>{" "}
-              {student.email}
+              {student.email || "N/A"}
             </p>
           </div>
         </div>
@@ -105,7 +113,7 @@ const StudentDashboard = () => {
 
           <button
             onClick={() => navigate("/scan")}
-            className="mt-4 px-5 py-2 bg-indigo-600 text-white rounded-lg"
+            className="mt-4 px-5 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
           >
             Scan QR for Attendance
           </button>

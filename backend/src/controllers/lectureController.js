@@ -5,6 +5,10 @@ import XLSX from "xlsx";
 import jwt from "jsonwebtoken";
 import Lecture from "../models/Lecture.js";
 
+/* =========================================
+   CREATE LECTURE
+========================================= */
+
 export const createLecture = async (req, res) => {
   try {
     const {
@@ -17,8 +21,19 @@ export const createLecture = async (req, res) => {
       radius
     } = req.body;
 
-    if (!subject || !date || !startTime || !endTime)
-      return res.status(400).json({ message: "Missing required fields" });
+    if (!subject || !date || !startTime || !endTime) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing required fields"
+      });
+    }
+
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized"
+      });
+    }
 
     const qrSecret = crypto.randomBytes(32).toString("hex");
 
@@ -38,37 +53,72 @@ export const createLecture = async (req, res) => {
 
     await lecture.save();
 
-    return res.status(201).json({ lecture });
+    return res.status(201).json({
+      success: true,
+      lecture
+    });
 
   } catch (err) {
-    console.log(err);
-    return res.status(500).json({ message: "Server error" });
+    console.log("Create lecture error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Server error"
+    });
   }
 };
 
+/* =========================================
+   GET MY LECTURES
+========================================= */
+
 export const getMyLectures = async (req, res) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized"
+      });
+    }
+
     const lectures = await Lecture.find({
       teacherId: req.user._id
     }).sort({ createdAt: -1 });
 
-    return res.status(200).json(lectures);
+    return res.status(200).json({
+      success: true,
+      lectures
+    });
 
   } catch (err) {
-    console.log(err);
-    return res.status(500).json({ message: "Server error" });
+    console.log("Fetch lectures error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Server error"
+    });
   }
 };
+
+/* =========================================
+   GENERATE QR TOKEN
+========================================= */
 
 export const generateQRToken = async (req, res) => {
   try {
     const lecture = await Lecture.findById(req.params.id);
 
-    if (!lecture)
-      return res.status(404).json({ message: "Lecture not found" });
+    if (!lecture) {
+      return res.status(404).json({
+        success: false,
+        message: "Lecture not found"
+      });
+    }
 
-    if (lecture.teacherId.toString() !== req.user._id.toString())
-      return res.status(403).json({ message: "Unauthorized access" });
+    if (lecture.teacherId.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: "Unauthorized access"
+      });
+    }
 
     const token = jwt.sign(
       { lectureId: lecture._id },
@@ -77,25 +127,41 @@ export const generateQRToken = async (req, res) => {
     );
 
     return res.status(200).json({
+      success: true,
       token,
       subject: lecture.subject
     });
 
   } catch (err) {
-    console.log(err);
-    return res.status(500).json({ message: "Server error" });
+    console.log("QR token error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Server error"
+    });
   }
 };
+
+/* =========================================
+   GENERATE EXCEL SHEET
+========================================= */
 
 export const generateExcelSheet = async (req, res) => {
   try {
     const lecture = await Lecture.findById(req.params.id);
 
-    if (!lecture)
-      return res.status(404).json({ message: "Lecture not found" });
+    if (!lecture) {
+      return res.status(404).json({
+        success: false,
+        message: "Lecture not found"
+      });
+    }
 
-    if (lecture.teacherId.toString() !== req.user._id.toString())
-      return res.status(403).json({ message: "Unauthorized access" });
+    if (lecture.teacherId.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: "Unauthorized access"
+      });
+    }
 
     const workbook = XLSX.utils.book_new();
 
@@ -125,30 +191,6 @@ export const generateExcelSheet = async (req, res) => {
 
     const worksheet = XLSX.utils.json_to_sheet(attendanceData);
 
-    worksheet["!freeze"] = { xSplit: 0, ySplit: 1 };
-
-    const headers = Object.keys(attendanceData[0]);
-
-    headers.forEach((_, colIndex) => {
-      const cellAddress = XLSX.utils.encode_cell({ r: 0, c: colIndex });
-      if (worksheet[cellAddress]) {
-        worksheet[cellAddress].s = {
-          font: { bold: true }
-        };
-      }
-    });
-
-    const colWidths = headers.map((header) => ({
-      wch: Math.max(
-        header.length + 2,
-        ...attendanceData.map(row =>
-          String(row[header] || "").length + 2
-        )
-      )
-    }));
-
-    worksheet["!cols"] = colWidths;
-
     XLSX.utils.book_append_sheet(workbook, worksheet, "Attendance");
 
     const safeSubject = (lecture.subject || "Lecture")
@@ -156,8 +198,9 @@ export const generateExcelSheet = async (req, res) => {
       .toLowerCase();
 
     const folderPath = path.join("uploads");
-    if (!fs.existsSync(folderPath))
+    if (!fs.existsSync(folderPath)) {
       fs.mkdirSync(folderPath, { recursive: true });
+    }
 
     const filePath = path.join(folderPath, `${safeSubject}.xlsx`);
 
@@ -166,27 +209,48 @@ export const generateExcelSheet = async (req, res) => {
     return res.download(filePath, `${safeSubject}.xlsx`);
 
   } catch (err) {
-    console.log(err);
-    return res.status(500).json({ message: "Failed to generate Excel" });
+    console.log("Excel error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to generate Excel"
+    });
   }
 };
+
+/* =========================================
+   DELETE LECTURE
+========================================= */
 
 export const deleteLecture = async (req, res) => {
   try {
     const lecture = await Lecture.findById(req.params.id);
 
-    if (!lecture)
-      return res.status(404).json({ message: "Lecture not found" });
+    if (!lecture) {
+      return res.status(404).json({
+        success: false,
+        message: "Lecture not found"
+      });
+    }
 
-    if (lecture.teacherId.toString() !== req.user._id.toString())
-      return res.status(403).json({ message: "Unauthorized access" });
+    if (lecture.teacherId.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: "Unauthorized access"
+      });
+    }
 
     await Lecture.findByIdAndDelete(req.params.id);
 
-    return res.status(200).json({ message: "Lecture deleted" });
+    return res.status(200).json({
+      success: true,
+      message: "Lecture deleted"
+    });
 
   } catch (err) {
-    console.log(err);
-    return res.status(500).json({ message: "Server error" });
+    console.log("Delete lecture error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Server error"
+    });
   }
 };

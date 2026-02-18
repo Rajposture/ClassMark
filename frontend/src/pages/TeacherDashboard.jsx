@@ -14,6 +14,9 @@ const TeacherDashboard = () => {
   const [fetching, setFetching] = useState(true);
   const navigate = useNavigate();
 
+  /* ===============================
+     LOAD LECTURES
+  ============================== */
   useEffect(() => {
     if (loading) return;
 
@@ -44,11 +47,13 @@ const TeacherDashboard = () => {
 
         const data = await res.json();
 
-        if (res.ok && data.success) {
-          setLectures(data.lectures || []);
-        } else {
+        if (!res.ok) {
           setFetchError(data.message || "Failed to load lectures");
+          return;
         }
+
+        // ✅ Backend returns array directly
+        setLectures(Array.isArray(data) ? data : []);
       } catch (err) {
         console.log("Lecture fetch error:", err);
         setFetchError("Server error while fetching lectures");
@@ -60,6 +65,9 @@ const TeacherDashboard = () => {
     loadLectures();
   }, [user, loading, navigate]);
 
+  /* ===============================
+     CREATE LECTURE
+  ============================== */
   const handleLectureCreated = async (lectureData) => {
     try {
       const token = localStorage.getItem("token");
@@ -75,19 +83,27 @@ const TeacherDashboard = () => {
 
       const data = await res.json();
 
-      if (!res.ok || !data.success) {
+      if (!res.ok) {
         alert(data.message || "Failed to create lecture");
         return false;
       }
 
-      setLectures((prev) => [data.lecture, ...prev]);
+      // ✅ Backend returns { lecture }
+      if (data.lecture) {
+        setLectures((prev) => [data.lecture, ...prev]);
+      }
+
       return true;
-    } catch {
+    } catch (err) {
+      console.log(err);
       alert("Server error while creating lecture");
       return false;
     }
   };
 
+  /* ===============================
+     EXCEL DOWNLOAD
+  ============================== */
   const handleExcelDownload = async (lectureId, subject) => {
     try {
       const token = localStorage.getItem("token");
@@ -126,6 +142,9 @@ const TeacherDashboard = () => {
     }
   };
 
+  /* ===============================
+     LOADING STATE
+  ============================== */
   if (loading || fetching) {
     return (
       <DashboardLayout>
@@ -136,6 +155,9 @@ const TeacherDashboard = () => {
     );
   }
 
+  /* ===============================
+     UI
+  ============================== */
   return (
     <DashboardLayout>
       <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-24 pb-12">
