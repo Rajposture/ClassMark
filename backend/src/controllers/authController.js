@@ -194,22 +194,21 @@ export const getMe = async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
 
-    if (!authHeader || !authHeader.startsWith("Bearer "))
-      return res.status(401).json({ success: false });
+    console.log("Auth header:", authHeader);
+
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({ success: false, message: "No token" });
+    }
 
     const token = authHeader.split(" ")[1];
 
-    const decoded = jwt.verify(
-      token,
-      process.env.JWT_SECRET
-    );
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    const user = await User.findById(decoded.id).select(
-      "-password"
-    );
+    const user = await User.findById(decoded.id).select("-password");
 
-    if (!user)
+    if (!user) {
       return res.status(404).json({ success: false });
+    }
 
     return res.json({
       success: true,
@@ -217,14 +216,15 @@ export const getMe = async (req, res) => {
         id: user._id,
         name: user.name,
         role: user.role,
-        enrollmentNumber:
-          user.enrollmentNumber || null,
+        enrollmentNumber: user.enrollmentNumber || null,
       },
     });
-  } catch {
+  } catch (error) {
+    console.log("JWT error:", error.message);
     return res.status(401).json({ success: false });
   }
 };
+
 
 export const logout = async (req, res) => {
   return res.json({ success: true });
