@@ -3,11 +3,16 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import generateOtp from "./generateOtp.js";
 import otpEmailTemplate from "./otpEmailTemplate.js";
-import { Resend } from "resend";
+import nodemailer from "nodemailer";
 
-const resend = process.env.RESEND_API_KEY
-  ? new Resend(process.env.RESEND_API_KEY)
-  : null;
+// ✅ Gmail transporter (FREE)
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
+});
 
 const generateToken = (user) =>
   jwt.sign(
@@ -16,10 +21,9 @@ const generateToken = (user) =>
     { expiresIn: "1d" }
   );
 
-const sendMail = async ({ to, subject, html }) => {
-  if (!resend) return;
-  await resend.emails.send({
-    from: "onboarding@resend.dev",
+const sendMail = async (to, subject, html) => {
+  await transporter.sendMail({
+    from: `"ClassMark" <${process.env.EMAIL_USER}>`,
     to,
     subject,
     html,
@@ -31,26 +35,15 @@ export const signup = async (req, res) => {
     const { name, email, password, role, enrollmentNumber } = req.body;
 
     if (!name || !email || !password || !role)
-      return res.status(400).json({
-        success: false,
-        message: "All fields required",
-      });
+      return res.status(400).json({ success: false, message: "All fields required" });
 
     if (role === "student" && !enrollmentNumber)
-      return res.status(400).json({
-        success: false,
-        message: "Enrollment required",
-      });
+      return res.status(400).json({ success: false, message: "Enrollment required" });
 
-    const existingUser = await User.findOne({
-      email: email.toLowerCase(),
-    });
+    const existingUser = await User.findOne({ email: email.toLowerCase() });
 
     if (existingUser)
-      return res.status(400).json({
-        success: false,
-        message: "User already exists",
-      });
+      return res.status(400).json({ success: false, message: "User already exists" });
 
     const otp = generateOtp();
     const hashedPassword = await bcrypt.hash(password, 12);
@@ -60,26 +53,24 @@ export const signup = async (req, res) => {
       email: email.toLowerCase(),
       password: hashedPassword,
       role,
-      enrollmentNumber:
-        role === "student" ? enrollmentNumber : null,
+      enrollmentNumber: role === "student" ? enrollmentNumber : null,
       otp,
       isVerified: false,
     });
 
-    try {
-  await sendMail({
-    to: email.toLowerCase(),
-    subject: "ClassMark OTP Verification",
-    html: otpEmailTemplate(name, otp),
-  });
-} catch {}
-
+    await sendMail(
+      email.toLowerCase(),
+      "ClassMark OTP Verification",
+      otpEmailTemplate(name, otp)
+    );
 
     return res.status(201).json({
       success: true,
       message: "OTP sent successfully",
     });
+
   } catch (err) {
+    console.log("Signup error:", err);
     return res.status(500).json({
       success: false,
       message: "Server error",
@@ -120,11 +111,12 @@ export const verifyOtp = async (req, res) => {
         id: user._id,
         name: user.name,
         role: user.role,
-        enrollmentNumber:
-          user.enrollmentNumber || null,
+        enrollmentNumber: user.enrollmentNumber || null,
       },
     });
-  } catch {
+
+  } catch (err) {
+    console.log("Verify OTP error:", err);
     return res.status(500).json({
       success: false,
       message: "Server error",
@@ -158,10 +150,7 @@ export const login = async (req, res) => {
         message: "Verify OTP first",
       });
 
-    const isMatch = await bcrypt.compare(
-      password,
-      user.password
-    );
+    const isMatch = await bcrypt.compare(password, user.password);
 
     if (!isMatch)
       return res.status(401).json({
@@ -178,11 +167,12 @@ export const login = async (req, res) => {
         id: user._id,
         name: user.name,
         role: user.role,
-        enrollmentNumber:
-          user.enrollmentNumber || null,
+        enrollmentNumber: user.enrollmentNumber || null,
       },
     });
-  } catch {
+
+  } catch (err) {
+    console.log("Login error:", err);
     return res.status(500).json({
       success: false,
       message: "Server error",
@@ -194,11 +184,8 @@ export const getMe = async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
 
-    console.log("Auth header:", authHeader);
-
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return res.status(401).json({ success: false, message: "No token" });
-    }
+    if (!authHeader || !authHeader.startsWith("Bearer "))
+      return res.status(401).json({ success: false });
 
     const token = authHeader.split(" ")[1];
 
@@ -206,9 +193,8 @@ export const getMe = async (req, res) => {
 
     const user = await User.findById(decoded.id).select("-password");
 
-    if (!user) {
+    if (!user)
       return res.status(404).json({ success: false });
-    }
 
     return res.json({
       success: true,
@@ -219,12 +205,12 @@ export const getMe = async (req, res) => {
         enrollmentNumber: user.enrollmentNumber || null,
       },
     });
-  } catch (error) {
-    console.log("JWT error:", error.message);
+
+  } catch (err) {
+    console.log("JWT error:", err.message);
     return res.status(401).json({ success: false });
   }
 };
-
 
 export const logout = async (req, res) => {
   return res.json({ success: true });

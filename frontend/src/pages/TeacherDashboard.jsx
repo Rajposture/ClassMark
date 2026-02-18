@@ -17,8 +17,13 @@ const TeacherDashboard = () => {
   useEffect(() => {
     if (loading) return;
 
-    if (!user || user.role !== "teacher") {
+    if (!user) {
       navigate("/login", { replace: true });
+      return;
+    }
+
+    if (user.role !== "teacher") {
+      navigate("/student", { replace: true });
       return;
     }
 
@@ -26,16 +31,21 @@ const TeacherDashboard = () => {
       try {
         const token = localStorage.getItem("token");
 
+        if (!token) {
+          navigate("/login");
+          return;
+        }
+
         const res = await fetch(`${API_BASE}/api/lectures/mine`, {
           headers: {
-            Authorization: `Bearer ${token}`,   // ✅ FIXED
+            Authorization: `Bearer ${token}`,
           },
         });
 
         const data = await res.json();
 
-        if (res.ok) {
-          setLectures(Array.isArray(data) ? data : data.lectures || []);
+        if (res.ok && data.success) {
+          setLectures(data.lectures || []);
         } else {
           setFetchError(data.message || "Failed to load lectures");
         }
@@ -58,22 +68,19 @@ const TeacherDashboard = () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,   // ✅ FIXED
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(lectureData),
       });
 
       const data = await res.json();
 
-      if (!res.ok) {
+      if (!res.ok || !data.success) {
         alert(data.message || "Failed to create lecture");
         return false;
       }
 
-      if (data.lecture) {
-        setLectures((prev) => [data.lecture, ...prev]);
-      }
-
+      setLectures((prev) => [data.lecture, ...prev]);
       return true;
     } catch {
       alert("Server error while creating lecture");
@@ -89,7 +96,7 @@ const TeacherDashboard = () => {
         `${API_BASE}/api/lectures/${lectureId}/excel`,
         {
           headers: {
-            Authorization: `Bearer ${token}`,  // ✅ FIXED
+            Authorization: `Bearer ${token}`,
           },
         }
       );
@@ -140,6 +147,10 @@ const TeacherDashboard = () => {
           Manage your lectures and attendance
         </p>
 
+        {fetchError && (
+          <p className="text-red-500 mb-6">{fetchError}</p>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
           <div>
             <CreateLecture onCreate={handleLectureCreated} />
@@ -150,53 +161,47 @@ const TeacherDashboard = () => {
               Today’s Lectures
             </h2>
 
-            {fetchError && (
-              <p className="text-red-500 mb-4">{fetchError}</p>
-            )}
-
             {lectures.length === 0 ? (
-              <div className="h-40 sm:h-56 flex items-center justify-center text-slate-400 text-base sm:text-lg text-center">
+              <div className="h-40 flex items-center justify-center text-slate-400">
                 No lectures scheduled yet
               </div>
             ) : (
-              <div className="space-y-5 sm:space-y-6">
-                {lectures.map((lecture) => (
-                  <div
-                    key={lecture._id}
-                    className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border rounded-xl p-4 sm:p-6 hover:shadow-md transition"
-                  >
-                    <div>
-                      <h3 className="font-semibold text-base sm:text-lg text-slate-800">
-                        {lecture.subject}
-                      </h3>
-                      <p className="text-slate-500 mt-1 sm:mt-2 text-sm sm:text-base">
-                        {lecture.date} • {lecture.startTime} – {lecture.endTime}
-                      </p>
-                    </div>
-
-                    <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 w-full sm:w-auto">
-                      <button
-                        onClick={() => setActiveLecture(lecture)}
-                        className="w-full sm:w-auto px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition text-sm sm:text-base"
-                      >
-                        Generate QR
-                      </button>
-
-                      <button
-                        onClick={() =>
-                          handleExcelDownload(
-                            lecture._id,
-                            lecture.subject
-                          )
-                        }
-                        className="w-full sm:w-auto px-4 py-2 bg-slate-700 hover:bg-slate-800 text-white rounded-lg transition text-sm sm:text-base"
-                      >
-                        Generate Excel
-                      </button>
-                    </div>
+              lectures.map((lecture) => (
+                <div
+                  key={lecture._id}
+                  className="flex justify-between items-center border rounded-xl p-4 mb-4"
+                >
+                  <div>
+                    <h3 className="font-semibold">
+                      {lecture.subject}
+                    </h3>
+                    <p className="text-sm text-slate-500">
+                      {lecture.date} • {lecture.startTime} – {lecture.endTime}
+                    </p>
                   </div>
-                ))}
-              </div>
+
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setActiveLecture(lecture)}
+                      className="px-4 py-2 bg-indigo-600 text-white rounded-lg"
+                    >
+                      Generate QR
+                    </button>
+
+                    <button
+                      onClick={() =>
+                        handleExcelDownload(
+                          lecture._id,
+                          lecture.subject
+                        )
+                      }
+                      className="px-4 py-2 bg-slate-700 text-white rounded-lg"
+                    >
+                      Excel
+                    </button>
+                  </div>
+                </div>
+              ))
             )}
           </div>
         </div>
