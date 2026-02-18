@@ -11,6 +11,7 @@ const TeacherDashboard = () => {
   const [lectures, setLectures] = useState([]);
   const [activeLecture, setActiveLecture] = useState(null);
   const [fetchError, setFetchError] = useState("");
+  const [fetching, setFetching] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -23,19 +24,26 @@ const TeacherDashboard = () => {
 
     const loadLectures = async () => {
       try {
+        const token = localStorage.getItem("token");
+
         const res = await fetch(`${API_BASE}/api/lectures/mine`, {
-          credentials: "include",
+          headers: {
+            Authorization: `Bearer ${token}`,   // ✅ FIXED
+          },
         });
 
-        if (!res.ok) {
-          setFetchError("Failed to load lectures");
-          return;
-        }
-
         const data = await res.json();
-        setLectures(Array.isArray(data) ? data : []);
-      } catch {
+
+        if (res.ok) {
+          setLectures(Array.isArray(data) ? data : data.lectures || []);
+        } else {
+          setFetchError(data.message || "Failed to load lectures");
+        }
+      } catch (err) {
+        console.log("Lecture fetch error:", err);
         setFetchError("Server error while fetching lectures");
+      } finally {
+        setFetching(false);
       }
     };
 
@@ -44,10 +52,14 @@ const TeacherDashboard = () => {
 
   const handleLectureCreated = async (lectureData) => {
     try {
+      const token = localStorage.getItem("token");
+
       const res = await fetch(`${API_BASE}/api/lectures`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,   // ✅ FIXED
+        },
         body: JSON.stringify(lectureData),
       });
 
@@ -70,38 +82,52 @@ const TeacherDashboard = () => {
   };
 
   const handleExcelDownload = async (lectureId, subject) => {
-  try {
-    const res = await fetch(
-      `${API_BASE}/api/lectures/${lectureId}/excel`,
-      { credentials: "include" }
-    );
+    try {
+      const token = localStorage.getItem("token");
 
-    if (!res.ok) {
-      alert("Failed to generate Excel");
-      return;
+      const res = await fetch(
+        `${API_BASE}/api/lectures/${lectureId}/excel`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,  // ✅ FIXED
+          },
+        }
+      );
+
+      if (!res.ok) {
+        alert("Failed to generate Excel");
+        return;
+      }
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+
+      const safeSubject = (subject || "attendance")
+        .replace(/[^a-z0-9]/gi, "_")
+        .toLowerCase();
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${safeSubject}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+
+      window.URL.revokeObjectURL(url);
+    } catch {
+      alert("Server error while downloading Excel");
     }
+  };
 
-    const blob = await res.blob();
-    const url = window.URL.createObjectURL(blob);
-
-    const safeSubject = (subject || "attendance")
-      .replace(/[^a-z0-9]/gi, "_")
-      .toLowerCase();
-
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${safeSubject}.xlsx`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-
-    window.URL.revokeObjectURL(url);
-
-  } catch {
-    alert("Server error while downloading Excel");
+  if (loading || fetching) {
+    return (
+      <DashboardLayout>
+        <div className="text-center text-slate-500 mt-20">
+          Loading dashboard...
+        </div>
+      </DashboardLayout>
+    );
   }
-};
-
 
   return (
     <DashboardLayout>
@@ -157,8 +183,12 @@ const TeacherDashboard = () => {
                       </button>
 
                       <button
-                        onClick={() => handleExcelDownload(lecture._id, lecture.subject)}
-
+                        onClick={() =>
+                          handleExcelDownload(
+                            lecture._id,
+                            lecture.subject
+                          )
+                        }
                         className="w-full sm:w-auto px-4 py-2 bg-slate-700 hover:bg-slate-800 text-white rounded-lg transition text-sm sm:text-base"
                       >
                         Generate Excel

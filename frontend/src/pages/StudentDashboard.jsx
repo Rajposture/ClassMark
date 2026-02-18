@@ -9,6 +9,7 @@ const StudentDashboard = () => {
   const navigate = useNavigate();
 
   const [student, setStudent] = useState(null);
+  const [fetching, setFetching] = useState(true);
 
   useEffect(() => {
     if (loading) return;
@@ -25,23 +26,34 @@ const StudentDashboard = () => {
 
     const fetchProfile = async () => {
       try {
+        const token = localStorage.getItem("token");
+
         const res = await fetch(`${API_BASE}/api/auth/me`, {
-          credentials: "include",
+          headers: {
+            Authorization: `Bearer ${token}`,   // ✅ FIXED
+          },
         });
 
-        if (!res.ok) throw new Error();
-
         const data = await res.json();
-        setStudent(data);
-      } catch {
-        setStudent(null);
+
+        if (res.ok && data.success) {
+          setStudent(data.user);   // ✅ FIXED (you were setting wrong object)
+        } else {
+          localStorage.removeItem("token");
+          navigate("/login");
+        }
+      } catch (err) {
+        console.log("Dashboard error:", err);
+        navigate("/login");
+      } finally {
+        setFetching(false);  // ✅ IMPORTANT
       }
     };
 
     fetchProfile();
   }, [user, loading, navigate]);
 
-  if (loading || !student) {
+  if (loading || fetching) {
     return (
       <DashboardLayout>
         <div className="text-center text-slate-500 mt-20">
@@ -73,9 +85,12 @@ const StudentDashboard = () => {
             </p>
             <p>
               <span className="font-medium">Enrollment:</span>{" "}
-              {student.enrollmentNumber}
+              {student.enrollmentNumber || "N/A"}
             </p>
-
+            <p>
+              <span className="font-medium">Email:</span>{" "}
+              {student.email}
+            </p>
           </div>
         </div>
 
