@@ -5,14 +5,13 @@ import generateOtp from "./generateOtp.js";
 import otpEmailTemplate from "./otpEmailTemplate.js";
 import nodemailer from "nodemailer";
 
-// ✅ Gmail transporter (FREE)
 const transporter = nodemailer.createTransport({
   host: "smtp.gmail.com",
   port: 587,
   secure: false,
   auth: {
-    user: "classmarkofficial1@gmail.com",
-    pass: "wfrkvahpuzxozvym",
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
   },
 });
 
@@ -25,13 +24,21 @@ const generateToken = (user) =>
   );
 
 const sendMail = async (to, subject, html) => {
-  await transporter.sendMail({
-    from: `"ClassMark" <${process.env.EMAIL_USER}>`,
-    to,
-    subject,
-    html,
-  });
+  try {
+    const info = await transporter.sendMail({
+      from: `"ClassMark" <${process.env.EMAIL_USER}>`,
+      to,
+      subject,
+      html,
+    });
+
+    console.log("Email sent:", info.response);
+  } catch (error) {
+    console.log("Email error:", error);
+    throw error;
+  }
 };
+
 
 export const signup = async (req, res) => {
   try {
