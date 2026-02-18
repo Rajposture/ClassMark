@@ -3,21 +3,17 @@ import { Link, useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 import API_BASE from "../config/api";
 
-
 const Login = () => {
   const navigate = useNavigate();
-
-  // ✅ Get setUser from context at TOP LEVEL
-  const { setUser } = useContext(AuthContext);
+  const { setUser } = useContext(AuthContext); // ✅ correct position
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   const loginUser = async (e) => {
-    e.preventDefault(); // ✅ prevent page reload
+    e.preventDefault(); // ✅ stop reload
 
     setError("");
     setLoading(true);
@@ -36,16 +32,22 @@ const Login = () => {
         return;
       }
 
-localStorage.setItem("token", data.token);
-setUser(data.user);
+      // ✅ Save token
+      localStorage.setItem("token", data.token);
 
-navigate(
-  data.user.role === "teacher" ? "/teacher" : "/student"
-);
+      // ✅ Immediately update context
+      setUser(data.user);
 
+      // ✅ Redirect properly
+      if (data.user.role === "teacher") {
+        navigate("/teacher");
+      } else {
+        navigate("/student");
+      }
 
     } catch (err) {
-      setError("Unable to login");
+      console.error("LOGIN ERROR:", err);
+      setError("Unable to login. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -65,7 +67,6 @@ navigate(
           </div>
         )}
 
-        {/* ✅ FORM wrapper prevents reload */}
         <form onSubmit={loginUser} className="mt-6 space-y-4 text-white">
 
           <input

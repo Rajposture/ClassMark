@@ -2,10 +2,12 @@ import { useState, useContext } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 import API_BASE from "../config/api";
-const { setUser } = useContext(AuthContext);
+
 const Signup = () => {
   const navigate = useNavigate();
-  const { refreshUser } = useContext(AuthContext);
+
+  // ✅ MUST be inside component
+  const { setUser } = useContext(AuthContext);
 
   const [role, setRole] = useState("student");
   const [form, setForm] = useState({
@@ -53,7 +55,7 @@ const Signup = () => {
       }
 
       setOtpSent(true);
-    } catch {
+    } catch (err) {
       setError("Server error during signup");
     } finally {
       setLoading(false);
@@ -79,14 +81,18 @@ const Signup = () => {
         return;
       }
 
-localStorage.setItem("token", data.token);
-setUser(data.user);
+      // ✅ Save token
+      localStorage.setItem("token", data.token);
 
-navigate(
-  data.user.role === "teacher" ? "/teacher" : "/student"
-);
+      // ✅ Immediately authenticate
+      setUser(data.user);
 
-    } catch {
+      // ✅ Redirect directly to dashboard
+      navigate(
+        data.user.role === "teacher" ? "/teacher" : "/student"
+      );
+
+    } catch (err) {
       setError("Server error during OTP verification");
     } finally {
       setLoading(false);
@@ -96,6 +102,7 @@ navigate(
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-900 via-purple-900 to-blue-900 px-4 py-10">
       <div className="relative w-full max-w-md backdrop-blur-2xl bg-white/10 border border-white/20 rounded-2xl p-6 sm:p-8 shadow-2xl">
+
         <div className="text-center mb-6">
           <h1 className="text-3xl font-bold bg-gradient-to-r from-indigo-300 to-blue-300 bg-clip-text text-transparent">
             ClassMark
@@ -112,6 +119,7 @@ navigate(
         )}
 
         <form className="space-y-4 text-white">
+
           <div>
             <label className="text-sm text-slate-200">Register As</label>
             <select
@@ -119,12 +127,8 @@ navigate(
               onChange={(e) => setRole(e.target.value)}
               className="mt-1 w-full px-4 py-3 bg-white/20 border border-white/30 rounded-lg"
             >
-              <option value="student" className="text-black">
-                Student
-              </option>
-              <option value="teacher" className="text-black">
-                Teacher
-              </option>
+              <option value="student" className="text-black">Student</option>
+              <option value="teacher" className="text-black">Teacher</option>
             </select>
           </div>
 
@@ -134,6 +138,7 @@ navigate(
             value={form.name}
             onChange={handleChange}
             className="w-full px-4 py-3 bg-white/20 border border-white/30 rounded-lg"
+            required
           />
 
           {role === "student" && (
@@ -143,6 +148,7 @@ navigate(
               value={form.enrollmentNumber}
               onChange={handleChange}
               className="w-full px-4 py-3 bg-white/20 border border-white/30 rounded-lg"
+              required
             />
           )}
 
@@ -153,6 +159,7 @@ navigate(
             value={form.email}
             onChange={handleChange}
             className="w-full px-4 py-3 bg-white/20 border border-white/30 rounded-lg"
+            required
           />
 
           <input
@@ -162,6 +169,7 @@ navigate(
             value={form.password}
             onChange={handleChange}
             className="w-full px-4 py-3 bg-white/20 border border-white/30 rounded-lg"
+            required
           />
 
           {!otpSent && (
@@ -182,6 +190,7 @@ navigate(
                 placeholder="Enter OTP"
                 maxLength={6}
                 className="w-full px-4 py-3 bg-white/20 border border-white/30 rounded-lg text-center tracking-widest"
+                required
               />
 
               <button
@@ -193,6 +202,7 @@ navigate(
               </button>
             </>
           )}
+
         </form>
 
         <p className="text-sm text-slate-200 mt-6 text-center">
@@ -204,6 +214,7 @@ navigate(
             Sign in
           </Link>
         </p>
+
       </div>
     </div>
   );
