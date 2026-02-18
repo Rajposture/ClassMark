@@ -2,7 +2,7 @@ import { useState, useContext } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 import API_BASE from "../config/api";
-const { setUser } = useContext(AuthContext);
+
 
 const Login = () => {
   const navigate = useNavigate();
