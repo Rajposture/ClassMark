@@ -18,8 +18,10 @@ export const AuthProvider = ({ children }) => {
 
     try {
       const res = await fetch(`${API_BASE}/api/auth/me`, {
+        method: "GET",
         headers: {
           Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
       });
 
@@ -31,7 +33,8 @@ export const AuthProvider = ({ children }) => {
         localStorage.removeItem("token");
         setUser(null);
       }
-    } catch {
+    } catch (err) {
+      console.error(err);
       setUser(null);
     } finally {
       setLoading(false);
@@ -58,7 +61,6 @@ export const AuthProvider = ({ children }) => {
         loading,
         refreshUser,
         logout,
-        setUser,
       }}
     >
       {children}
