@@ -7,38 +7,36 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchUser = async () => {
+  useEffect(() => {
     const token = localStorage.getItem("token");
 
     if (!token) {
-      setUser(null);
       setLoading(false);
       return;
     }
 
-    try {
-      const res = await fetch(`${API_BASE}/api/auth/me`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+    const fetchUser = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/auth/me`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
 
-      const data = await res.json();
+        const data = await res.json();
 
-      if (res.ok && data.success) {
-        setUser(data.user);
-      } else {
+        if (res.ok && data.success) {
+          setUser(data.user);
+        } else {
+          localStorage.removeItem("token");
+        }
+      } catch (err) {
         localStorage.removeItem("token");
-        setUser(null);
+      } finally {
+        setLoading(false);
       }
-    } catch {
-      setUser(null);
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
 
-  useEffect(() => {
     fetchUser();
   }, []);
 
@@ -48,14 +46,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        setUser,
-        loading,
-        logout,
-      }}
-    >
+    <AuthContext.Provider value={{ user, setUser, loading, logout }}>
       {children}
     </AuthContext.Provider>
   );

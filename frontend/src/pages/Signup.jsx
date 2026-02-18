@@ -2,7 +2,7 @@ import { useState, useContext } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 import API_BASE from "../config/api";
-
+const { setUser } = useContext(AuthContext);
 const Signup = () => {
   const navigate = useNavigate();
   const { refreshUser } = useContext(AuthContext);
@@ -79,14 +79,13 @@ const Signup = () => {
         return;
       }
 
-      // 🔥 STORE TOKEN
-      localStorage.setItem("token", data.token);
+localStorage.setItem("token", data.token);
+setUser(data.user);
 
-      await refreshUser();
+navigate(
+  data.user.role === "teacher" ? "/teacher" : "/student"
+);
 
-      navigate(
-        data.user.role === "teacher" ? "/teacher" : "/student"
-      );
     } catch {
       setError("Server error during OTP verification");
     } finally {
