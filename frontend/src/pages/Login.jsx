@@ -2,6 +2,7 @@ import { useState, useContext } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 import API_BASE from "../config/api";
+const { setUser } = useContext(AuthContext);
 
 const Login = () => {
   const navigate = useNavigate();
@@ -35,14 +36,13 @@ const Login = () => {
         return;
       }
 
-      // ✅ Store token
-      localStorage.setItem("token", data.token);
+localStorage.setItem("token", data.token);
+setUser(data.user);
 
-      // ✅ Immediately authenticate user
-      setUser(data.user);
+navigate(
+  data.user.role === "teacher" ? "/teacher" : "/student"
+);
 
-      // ✅ Redirect via central dashboard route
-      navigate("/dashboard", { replace: true });
 
     } catch (err) {
       setError("Unable to login");
