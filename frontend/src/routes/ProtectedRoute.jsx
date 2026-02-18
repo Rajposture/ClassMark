@@ -1,62 +1,27 @@
-import { createContext, useState, useEffect } from "react";
-import API_BASE from "../config/api";
+import { useContext } from "react";
+import { Navigate } from "react-router-dom";
+import { AuthContext } from "../context/AuthContext";
 
-export const AuthContext = createContext();
+const ProtectedRoute = ({ children, role }) => {
+  const { user, loading } = useContext(AuthContext);
 
-export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  // ⏳ Wait until auth check completes
+  if (loading) {
+    return null;
+  }
 
-  const fetchUser = async () => {
-    const token = localStorage.getItem("token");
+  // ❌ Not logged in → go to login
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
 
-    if (!token) {
-      setUser(null);
-      setLoading(false);
-      return;
-    }
+  // ❌ Wrong role → send to correct dashboard
+  if (role && user.role !== role) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
-    try {
-      const res = await fetch(`${API_BASE}/api/auth/me`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      const data = await res.json();
-
-      if (res.ok && data.success) {
-        setUser(data.user);
-      } else {
-        localStorage.removeItem("token");
-        setUser(null);
-      }
-    } catch {
-      setUser(null);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchUser();
-  }, []);
-
-  const logout = () => {
-    localStorage.removeItem("token");
-    setUser(null);
-  };
-
-  return (
-    <AuthContext.Provider
-      value={{
-        user,
-        setUser,
-        loading,
-        logout,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
-  );
+  // ✅ Allowed
+  return children;
 };
+
+export default ProtectedRoute;
