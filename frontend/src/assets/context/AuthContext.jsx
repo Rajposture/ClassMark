@@ -1,4 +1,4 @@
-import { createContext, useState, useEffect, useCallback } from "react";
+import { createContext, useState, useEffect } from "react";
 import API_BASE from "../config/api";
 
 export const AuthContext = createContext();
@@ -7,8 +7,10 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchUser = useCallback(async () => {
+  const fetchUser = async () => {
     const token = localStorage.getItem("token");
+
+    console.log("TOKEN FROM LOCALSTORAGE:", token);
 
     if (!token) {
       setUser(null);
@@ -21,11 +23,12 @@ export const AuthProvider = ({ children }) => {
         method: "GET",
         headers: {
           Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
         },
       });
 
       const data = await res.json();
+
+      console.log("ME RESPONSE:", data);
 
       if (res.ok && data.success) {
         setUser(data.user);
@@ -34,22 +37,16 @@ export const AuthProvider = ({ children }) => {
         setUser(null);
       }
     } catch (err) {
-      console.error(err);
+      console.log("FETCH ERROR:", err);
       setUser(null);
-    } finally {
-      setLoading(false);
     }
-  }, []);
 
-useEffect(() => {
-  const token = localStorage.getItem("token");
-  if (token) {
-    fetchUser();
-  } else {
     setLoading(false);
-  }
-}, [fetchUser]);
+  };
 
+  useEffect(() => {
+    fetchUser();
+  }, []);
 
   const refreshUser = async () => {
     await fetchUser();
@@ -61,14 +58,7 @@ useEffect(() => {
   };
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        loading,
-        refreshUser,
-        logout,
-      }}
-    >
+    <AuthContext.Provider value={{ user, loading, refreshUser, logout }}>
       {children}
     </AuthContext.Provider>
   );
