@@ -16,6 +16,7 @@ const transporter = nodemailer.createTransport({
 });
 
 
+
 const generateToken = (user) =>
   jwt.sign(
     { id: user._id, role: user.role },
