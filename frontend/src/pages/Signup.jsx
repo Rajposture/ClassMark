@@ -5,7 +5,7 @@ import API_BASE from "../config/api";
 
 const Signup = () => {
   const navigate = useNavigate();
-  const { refreshUser } = useContext(AuthContext);
+  const { setUser } = useContext(AuthContext); // ✅ get setter
 
   const [role, setRole] = useState("student");
   const [form, setForm] = useState({
@@ -69,7 +69,10 @@ const Signup = () => {
       const res = await fetch(`${API_BASE}/api/auth/verify-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: form.email, otp }),
+        body: JSON.stringify({
+          email: form.email,
+          otp,
+        }),
       });
 
       const data = await res.json();
@@ -79,14 +82,17 @@ const Signup = () => {
         return;
       }
 
-      // 🔥 STORE TOKEN
+      // ✅ Save token
       localStorage.setItem("token", data.token);
 
-      await refreshUser();
+      // ✅ Instantly authenticate
+      setUser(data.user);
 
+      // ✅ Direct redirect (NO LOGIN PAGE)
       navigate(
         data.user.role === "teacher" ? "/teacher" : "/student"
       );
+
     } catch {
       setError("Server error during OTP verification");
     } finally {
@@ -96,9 +102,10 @@ const Signup = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-900 via-purple-900 to-blue-900 px-4 py-10">
-      <div className="relative w-full max-w-md backdrop-blur-2xl bg-white/10 border border-white/20 rounded-2xl p-6 sm:p-8 shadow-2xl">
+      <div className="w-full max-w-md backdrop-blur-2xl bg-white/10 border border-white/20 rounded-2xl p-6 shadow-2xl">
+
         <div className="text-center mb-6">
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-indigo-300 to-blue-300 bg-clip-text text-transparent">
+          <h1 className="text-3xl font-bold text-white">
             ClassMark
           </h1>
           <p className="text-slate-200 text-sm mt-1">
@@ -113,21 +120,19 @@ const Signup = () => {
         )}
 
         <form className="space-y-4 text-white">
-          <div>
-            <label className="text-sm text-slate-200">Register As</label>
-            <select
-              value={role}
-              onChange={(e) => setRole(e.target.value)}
-              className="mt-1 w-full px-4 py-3 bg-white/20 border border-white/30 rounded-lg"
-            >
-              <option value="student" className="text-black">
-                Student
-              </option>
-              <option value="teacher" className="text-black">
-                Teacher
-              </option>
-            </select>
-          </div>
+
+          <select
+            value={role}
+            onChange={(e) => setRole(e.target.value)}
+            className="w-full px-4 py-3 bg-white/20 border border-white/30 rounded-lg"
+          >
+            <option value="student" className="text-black">
+              Student
+            </option>
+            <option value="teacher" className="text-black">
+              Teacher
+            </option>
+          </select>
 
           <input
             name="name"
@@ -169,7 +174,7 @@ const Signup = () => {
             <button
               onClick={sendOtp}
               disabled={loading}
-              className="w-full py-3 rounded-lg bg-gradient-to-r from-indigo-500 to-blue-500 text-white font-semibold disabled:opacity-50"
+              className="w-full py-3 rounded-lg bg-indigo-600"
             >
               {loading ? "Sending OTP..." : "Create Account"}
             </button>
@@ -182,29 +187,31 @@ const Signup = () => {
                 onChange={(e) => setOtp(e.target.value)}
                 placeholder="Enter OTP"
                 maxLength={6}
-                className="w-full px-4 py-3 bg-white/20 border border-white/30 rounded-lg text-center tracking-widest"
+                className="w-full px-4 py-3 bg-white/20 border border-white/30 rounded-lg text-center"
               />
 
               <button
                 onClick={verifyOtp}
                 disabled={loading}
-                className="w-full py-3 rounded-lg bg-gradient-to-r from-indigo-500 to-blue-500 text-white font-semibold"
+                className="w-full py-3 rounded-lg bg-green-600"
               >
                 {loading ? "Verifying..." : "Verify OTP"}
               </button>
             </>
           )}
+
         </form>
 
         <p className="text-sm text-slate-200 mt-6 text-center">
           Already have an account?{" "}
           <Link
             to="/login"
-            className="text-indigo-300 hover:text-white font-medium"
+            className="text-indigo-300 hover:text-white"
           >
             Sign in
           </Link>
         </p>
+
       </div>
     </div>
   );
