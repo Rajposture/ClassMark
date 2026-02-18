@@ -5,13 +5,7 @@ import { AuthContext } from "../context/AuthContext";
 const PublicRoute = ({ children }) => {
   const { user, loading } = useContext(AuthContext);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-950 text-slate-400">
-        Loading...
-      </div>
-    );
-  }
+  if (loading) return null;
 
   if (user) {
     return (

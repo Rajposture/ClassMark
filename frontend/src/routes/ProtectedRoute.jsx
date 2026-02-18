@@ -1,39 +1,62 @@
-import { useContext } from "react";
-import { Navigate, useLocation } from "react-router-dom";
-import { AuthContext } from "../context/AuthContext";
+import { createContext, useState, useEffect } from "react";
+import API_BASE from "../config/api";
 
-const ProtectedRoute = ({ children, role }) => {
-  const { user, loading } = useContext(AuthContext);
-  const location = useLocation();
+export const AuthContext = createContext();
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-950 text-slate-400">
-        Loading...
-      </div>
-    );
-  }
+export const AuthProvider = ({ children }) => {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  if (!user) {
-    return (
-      <Navigate
-        to="/login"
-        replace
-        state={{ from: location }}
-      />
-    );
-  }
+  const fetchUser = async () => {
+    const token = localStorage.getItem("token");
 
-  if (role && user.role !== role) {
-    return (
-      <Navigate
-        to={user.role === "teacher" ? "/teacher" : "/student"}
-        replace
-      />
-    );
-  }
+    if (!token) {
+      setUser(null);
+      setLoading(false);
+      return;
+    }
 
-  return children;
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/me`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        setUser(data.user);
+      } else {
+        localStorage.removeItem("token");
+        setUser(null);
+      }
+    } catch {
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchUser();
+  }, []);
+
+  const logout = () => {
+    localStorage.removeItem("token");
+    setUser(null);
+  };
+
+  return (
+    <AuthContext.Provider
+      value={{
+        user,
+        setUser,
+        loading,
+        logout,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
 };
-
-export default ProtectedRoute;
