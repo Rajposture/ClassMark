@@ -3,22 +3,16 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import generateOtp from "./generateOtp.js";
 import otpEmailTemplate from "./otpEmailTemplate.js";
-import nodemailer from "nodemailer";
+import { Resend } from "resend";
 import dotenv from "dotenv";
 
 dotenv.config();
 
 /* ===============================
-   EMAIL TRANSPORTER (PRODUCTION)
+   RESEND CONFIG
 ================================ */
 
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: "classmarkofficial1@gmail.com",
-    pass: "wfrkvahpuzxozvym", // Gmail App Password
-  },
-});
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 /* ===============================
    SEND MAIL FUNCTION
@@ -26,23 +20,23 @@ const transporter = nodemailer.createTransport({
 
 const sendMail = async ({ to, subject, html }) => {
   try {
-    const info = await transporter.sendMail({
-      from: `"ClassMark" <${process.env.EMAIL_USER}>`,
+    const response = await resend.emails.send({
+      from: "ClassMark <onboarding@resend.dev>", // default resend domain
       to,
       subject,
       html,
     });
 
-    console.log("Mail sent:", info.messageId);
+    console.log("Mail sent:", response);
     return true;
   } catch (error) {
-    console.error("Mail error:", error.message);
+    console.error("Resend error:", error);
     return false;
   }
 };
 
 /* ===============================
-   JWT TOKEN GENERATOR
+   JWT TOKEN
 ================================ */
 
 const generateToken = (user) =>
@@ -180,12 +174,6 @@ export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    if (!email || !password)
-      return res.status(400).json({
-        success: false,
-        message: "Invalid request",
-      });
-
     const user = await User.findOne({
       email: email.toLowerCase(),
     });
@@ -267,10 +255,6 @@ export const getMe = async (req, res) => {
     return res.status(401).json({ success: false });
   }
 };
-
-/* ===============================
-   LOGOUT
-================================ */
 
 export const logout = async (req, res) => {
   return res.json({ success: true });
