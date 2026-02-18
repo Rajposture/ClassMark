@@ -35,15 +35,16 @@ const Login = () => {
         return;
       }
 
-      // 🔥 Store token in localStorage
-      localStorage.setItem("token", data.token);
+const { setUser } = useContext(AuthContext);
 
-      await refreshUser();
+localStorage.setItem("token", data.token);
+setUser(data.user);
 
-      navigate(
-        data.user.role === "teacher" ? "/teacher" : "/student"
-      );
-    } catch {
+navigate(
+  data.user.role === "teacher" ? "/teacher" : "/student"
+);
+
+    } catch (err) {
       setError("Unable to login");
     } finally {
       setLoading(false);
