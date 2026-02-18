@@ -38,11 +38,11 @@ const Login = () => {
 const { setUser } = useContext(AuthContext);
 
 localStorage.setItem("token", data.token);
-setUser(data.user);
-
+setUser(data.user);   // ✅ instant auth
 navigate(
   data.user.role === "teacher" ? "/teacher" : "/student"
 );
+
 
     } catch (err) {
       setError("Unable to login");
