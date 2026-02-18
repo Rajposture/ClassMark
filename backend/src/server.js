@@ -10,6 +10,7 @@ import authRoutes from "./routes/authRoutes.js";
 import lectureRoutes from "./routes/lectureRoutes.js";
 import attendanceRoutes from "./routes/attendanceRoutes.js";
 
+
 const app = express();
 app.set("trust proxy", 1);
 connectDB();
@@ -57,3 +58,4 @@ const PORT = process.env.PORT || 5001;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+
