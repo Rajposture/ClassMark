@@ -12,13 +12,23 @@ const AttendanceForm = () => {
   const [longitude, setLongitude] = useState(null);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
 
+  /* WAIT for auth to finish */
   useEffect(() => {
     if (!authLoading && !user) {
-      navigate(`/login?redirect=/attendance/${lectureId}`, { replace: true });
+      navigate("/login");
     }
-  }, [authLoading, user, navigate, lectureId]);
+  }, [authLoading, user, navigate]);
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        Loading...
+      </div>
+    );
+  }
+
+  if (!user) return null;
 
   const handleSetLocation = () => {
     if (!navigator.geolocation) {
@@ -45,39 +55,35 @@ const AttendanceForm = () => {
       return;
     }
 
-    if (!user) {
-      setMessage("Please login again");
-      return;
-    }
-
     setLoading(true);
 
     try {
+      const token = localStorage.getItem("token");
+
       const res = await fetch(`${API_BASE}/api/attendance/mark`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
+          Authorization: `Bearer ${token}`
         },
         body: JSON.stringify({
           lectureId,
           latitude,
-          longitude,
-        }),
+          longitude
+        })
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        setMessage(data.message || "Failed to mark attendance");
+        setMessage(data.message);
       } else {
-        setSuccess(true);
         setMessage("Attendance submitted successfully 🎉");
-
         setTimeout(() => {
-          navigate("/student", { replace: true });
+          navigate("/student");
         }, 1500);
       }
+
     } catch {
       setMessage("Server error");
     }
@@ -85,53 +91,34 @@ const AttendanceForm = () => {
     setLoading(false);
   };
 
-  if (authLoading) return null;
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-100 px-4">
-      <div
-        className={`bg-white rounded-2xl shadow-xl p-8 w-full max-w-md transition-all duration-500 ${
-          success ? "scale-105" : ""
-        }`}
-      >
+      <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md">
         <h2 className="text-2xl font-bold text-center mb-6">
-          Lecture Attendance
+          Mark Attendance
         </h2>
 
-        <div className="mb-6 bg-slate-50 p-4 rounded-lg text-sm">
-          <p>
-            <strong>Name:</strong> {user?.name}
-          </p>
-          <p>
-            <strong>Enrollment No:</strong> {user?.enrollmentNumber}
-          </p>
-        </div>
+        <p className="mb-4 text-sm text-slate-600">
+          Name: {user.name}
+        </p>
 
         <button
           onClick={handleSetLocation}
-          className="w-full mb-4 py-3 bg-slate-700 text-white rounded-lg"
+          className="w-full mb-4 py-3 bg-slate-800 text-white rounded-lg"
         >
           Set Current Location
         </button>
 
         <button
           onClick={submitAttendance}
-          disabled={loading || success}
-          className="w-full py-3 bg-indigo-600 text-white rounded-lg disabled:opacity-50"
+          disabled={loading}
+          className="w-full py-3 bg-indigo-600 text-white rounded-lg"
         >
-          {loading
-            ? "Submitting..."
-            : success
-            ? "Redirecting..."
-            : "Submit Attendance"}
+          {loading ? "Submitting..." : "Submit Attendance"}
         </button>
 
         {message && (
-          <p
-            className={`mt-4 text-center text-sm font-medium ${
-              success ? "text-green-600 animate-pulse" : "text-red-600"
-            }`}
-          >
+          <p className="mt-4 text-center text-sm text-red-600">
             {message}
           </p>
         )}

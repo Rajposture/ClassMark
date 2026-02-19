@@ -23,38 +23,22 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
 
 export const markAttendance = async (req, res) => {
   try {
-    const {
-      lectureId,
-      token,
-      latitude,
-      longitude,
-      studentId,
-      name,
-      enrollmentNumber
-    } = req.body;
+    const { lectureId, latitude, longitude } = req.body;
 
-    if (!lectureId || !token)
-      return res.status(400).json({ message: "Missing lectureId or token" });
-
-    if (!studentId || !name)
-      return res.status(400).json({ message: "Student information missing" });
+    if (!lectureId)
+      return res.status(400).json({ message: "Lecture ID required" });
 
     if (latitude == null || longitude == null)
       return res.status(400).json({ message: "Location not detected" });
 
+    if (!req.user || !req.user.id)
+      return res.status(401).json({ message: "Unauthorized" });
+
+    const studentId = req.user.id;
+
     const lecture = await Lecture.findById(lectureId);
     if (!lecture)
       return res.status(404).json({ message: "Lecture not found" });
-
-    let decoded;
-    try {
-      decoded = jwt.verify(token, lecture.qrSecret);
-    } catch {
-      return res.status(403).json({ message: "QR expired or invalid" });
-    }
-
-    if (decoded.lectureId.toString() !== lectureId.toString())
-      return res.status(403).json({ message: "Invalid QR" });
 
     const studentLat = Number(latitude);
     const studentLon = Number(longitude);
@@ -67,7 +51,9 @@ export const markAttendance = async (req, res) => {
     );
 
     if (distance > Number(lecture.radius))
-      return res.status(403).json({ message: "You are outside classroom radius" });
+      return res
+        .status(403)
+        .json({ message: "You are outside classroom radius" });
 
     const alreadyMarked = lecture.attendance.some(
       (entry) => entry.studentId.toString() === studentId.toString()
@@ -78,8 +64,6 @@ export const markAttendance = async (req, res) => {
 
     lecture.attendance.push({
       studentId,
-      name,
-      enrollmentNumber,
       latitude: studentLat,
       longitude: studentLon,
       ipAddress: req.ip || "",
@@ -93,7 +77,7 @@ export const markAttendance = async (req, res) => {
     if (!fs.existsSync(folderPath))
       fs.mkdirSync(folderPath, { recursive: true });
 
-    const safeSubject = (lecture.subject || "Lecture")
+    const safeSubject = (lecture.subject || "lecture")
       .replace(/[^a-z0-9]/gi, "_")
       .toLowerCase();
 
@@ -109,8 +93,7 @@ export const markAttendance = async (req, res) => {
       worksheet = workbook.addWorksheet("Attendance");
 
       worksheet.columns = [
-        { header: "Name", key: "name" },
-        { header: "Enrollment Number", key: "enrollmentNumber" },
+        { header: "Student ID", key: "studentId" },
         { header: "Date", key: "date" },
         { header: "Submit Time", key: "submitTime" },
         { header: "Device", key: "device" },
@@ -120,17 +103,14 @@ export const markAttendance = async (req, res) => {
       ];
 
       worksheet.views = [{ state: "frozen", ySplit: 1 }];
-
       worksheet.getRow(1).font = { bold: true };
-
-      worksheet.columns.forEach(column => {
-        column.width = 20;
+      worksheet.columns.forEach((column) => {
+        column.width = 22;
       });
     }
 
     worksheet.addRow({
-      name,
-      enrollmentNumber,
+      studentId,
       date: lecture.date,
       submitTime: new Date().toLocaleString(),
       device: req.headers["user-agent"] || "",
@@ -142,10 +122,14 @@ export const markAttendance = async (req, res) => {
     await workbook.xlsx.writeFile(filePath);
 
     return res.status(201).json({
+      success: true,
       message: "Attendance marked successfully"
     });
 
   } catch (error) {
+    console.log(error);
     return res.status(500).json({ message: "Server error" });
   }
 };
+
+
