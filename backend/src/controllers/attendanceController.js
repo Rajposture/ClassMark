@@ -35,10 +35,8 @@ export const markAttendance = async (req, res) => {
     if (latitude == null || longitude == null)
       return res.status(400).json({ message: "Location not detected" });
 
-    if (!req.user || !req.user._id)
+    if (!req.user)
       return res.status(401).json({ message: "Unauthorized" });
-
-    const studentId = req.user._id;
 
     const lecture = await Lecture.findById(lectureId);
     if (!lecture)
@@ -55,19 +53,23 @@ export const markAttendance = async (req, res) => {
     );
 
     if (distance > Number(lecture.radius))
-      return res
-        .status(403)
-        .json({ message: "You are outside classroom radius" });
+      return res.status(403).json({
+        message: "You are outside classroom radius"
+      });
 
     const alreadyMarked = lecture.attendance.some(
-      (entry) => entry.studentId.toString() === studentId.toString()
+      (entry) => entry.studentId.toString() === req.user._id.toString()
     );
 
     if (alreadyMarked)
-      return res.status(400).json({ message: "Attendance already marked" });
+      return res.status(400).json({
+        message: "Attendance already marked"
+      });
 
     lecture.attendance.push({
-      studentId,
+      studentId: req.user._id,
+      name: req.user.name,
+      enrollmentNumber: req.user.enrollmentNumber,
       latitude: studentLat,
       longitude: studentLon,
       ipAddress: req.ip || "",
@@ -83,9 +85,8 @@ export const markAttendance = async (req, res) => {
     });
 
   } catch (error) {
-    console.log("Attendance Error:", error);
-    return res.status(500).json({
-      message: "Server error"
-    });
+    console.log("Mark attendance error:", error);
+    return res.status(500).json({ message: "Server error" });
   }
 };
+
