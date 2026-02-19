@@ -1,4 +1,4 @@
-const otpEmailTemplate = (name, otp) => {
+const resetPasswordTemplate = (name, resetLink) => {
   return `
   <div style="margin:0;padding:0;background-color:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
     
@@ -14,59 +14,64 @@ const otpEmailTemplate = (name, otp) => {
                   ClassMark
                 </h1>
                 <p style="margin:6px 0 0;color:#6b7280;font-size:13px;">
-                  Smart Attendance & Classroom Management
+                  Secure Password Reset
                 </p>
-              </td>
-            </tr>
-
-            <tr>
-              <td style="padding-top:10px;">
-                <p style="font-size:16px;color:#111827;margin:0 0 10px;">
-                  Hi ${name || "there"},
-                </p>
-
-                <p style="font-size:14px;color:#374151;line-height:1.6;margin:0 0 20px;">
-                  Welcome to <strong>ClassMark</strong> 🎉  
-                  To complete your registration, please verify your email using the One-Time Password below.
-                </p>
-              </td>
-            </tr>
-
-            <tr>
-              <td align="center" style="padding:30px 0;">
-                <div style="
-                  display:inline-block;
-                  padding:18px 32px;
-                  font-size:32px;
-                  font-weight:700;
-                  letter-spacing:8px;
-                  color:#1e3a8a;
-                  background:linear-gradient(135deg,#eef2ff,#e0e7ff);
-                  border-radius:12px;
-                  border:1px solid #c7d2fe;
-                ">
-                  ${otp}
-                </div>
               </td>
             </tr>
 
             <tr>
               <td>
-                <p style="font-size:14px;color:#374151;margin:0 0 10px;">
-                  This OTP is valid for <strong>5 minutes</strong>.
+                <p style="font-size:16px;color:#111827;margin:0 0 10px;">
+                  Hi ${name || "there"},
                 </p>
 
-                <p style="font-size:13px;color:#dc2626;margin:0;">
-                  For security reasons, do not share this code with anyone.
+                <p style="font-size:14px;color:#374151;line-height:1.6;margin:0 0 20px;">
+                  We received a request to reset your password for your 
+                  <strong>ClassMark</strong> account.
+                </p>
+
+                <p style="font-size:14px;color:#374151;line-height:1.6;margin:0 0 25px;">
+                  Click the button below to set a new password.
                 </p>
               </td>
             </tr>
 
             <tr>
-              <td style="padding-top:30px;">
+              <td align="center" style="padding:10px 0 30px 0;">
+                <a href="${resetLink}" 
+                   style="
+                     display:inline-block;
+                     padding:14px 30px;
+                     font-size:15px;
+                     font-weight:600;
+                     color:#ffffff;
+                     text-decoration:none;
+                     background:linear-gradient(135deg,#4f46e5,#6366f1);
+                     border-radius:10px;
+                     box-shadow:0 6px 15px rgba(79,70,229,0.4);
+                   ">
+                   Reset Password
+                </a>
+              </td>
+            </tr>
+
+            <tr>
+              <td>
+                <p style="font-size:13px;color:#374151;margin:0 0 8px;">
+                  This link will expire in <strong>10 minutes</strong>.
+                </p>
+
+                <p style="font-size:13px;color:#dc2626;margin:0 0 20px;">
+                  If you didn’t request a password reset, please ignore this email.
+                </p>
+              </td>
+            </tr>
+
+            <tr>
+              <td style="padding-top:20px;">
                 <hr style="border:none;border-top:1px solid #e5e7eb;margin:0 0 20px;" />
                 <p style="font-size:12px;color:#9ca3af;text-align:center;margin:0;">
-                  If you didn’t request this email, you can safely ignore it.
+                  For security reasons, never share your password with anyone.
                 </p>
                 <p style="font-size:12px;color:#9ca3af;text-align:center;margin:8px 0 0;">
                   © ${new Date().getFullYear()} ClassMark. All rights reserved.
@@ -84,4 +89,4 @@ const otpEmailTemplate = (name, otp) => {
   `;
 };
 
-export default otpEmailTemplate;
+export default resetPasswordTemplate;

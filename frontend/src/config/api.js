@@ -1,3 +1,6 @@
-const API_BASE = "https://classmark-8if4.onrender.com";
+const API_BASE =
+  import.meta.env.MODE === "production"
+    ? "https://classmark-8if4.onrender.com"
+    : "http://localhost:5001";
 
 export default API_BASE;

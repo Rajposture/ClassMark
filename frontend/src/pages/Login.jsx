@@ -1,11 +1,12 @@
 import { useState, useContext } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
 import { AuthContext } from "../context/AuthContext";
 import API_BASE from "../config/api";
 
 const Login = () => {
   const navigate = useNavigate();
-  const { setUser } = useContext(AuthContext); // ✅ correct position
+  const { setUser } = useContext(AuthContext);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -13,8 +14,7 @@ const Login = () => {
   const [error, setError] = useState("");
 
   const loginUser = async (e) => {
-    e.preventDefault(); // ✅ stop reload
-
+    e.preventDefault();
     setError("");
     setLoading(true);
 
@@ -22,89 +22,115 @@ const Login = () => {
       const res = await fetch(`${API_BASE}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({
+          email: email.toLowerCase(),
+          password,
+        }),
       });
 
       const data = await res.json();
 
       if (!res.ok || !data.success) {
-        setError(data.message || "Invalid credentials");
+        setError(data.message || "Login failed");
         return;
       }
 
-      // ✅ Save token
       localStorage.setItem("token", data.token);
-
-      // ✅ Immediately update context
       setUser(data.user);
 
-      // ✅ Redirect properly
-      if (data.user.role === "teacher") {
-        navigate("/teacher");
-      } else {
-        navigate("/student");
-      }
+      navigate(data.user.role === "teacher" ? "/teacher" : "/student");
 
-    } catch (err) {
-      console.error("LOGIN ERROR:", err);
-      setError("Unable to login. Please try again.");
+    } catch {
+      setError("Something went wrong. Try again.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-950 via-indigo-950 to-black px-4">
-      <div className="w-full max-w-md bg-slate-900/90 border border-slate-800 rounded-2xl p-6 shadow-2xl">
+    <div className="min-h-screen flex items-center justify-center bg-[#f5f5f7] px-4">
 
-        <h2 className="text-2xl font-semibold text-white text-center">
-          Sign In
-        </h2>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+        className="w-full max-w-sm sm:max-w-md bg-white rounded-3xl shadow-xl border border-gray-200 p-8"
+      >
+
+        <div className="text-center mb-8">
+          <h2 className="text-2xl font-semibold text-gray-900">
+            Sign in to ClassMark
+          </h2>
+          <p className="text-gray-500 text-sm mt-2">
+            Enter your credentials to continue
+          </p>
+        </div>
 
         {error && (
-          <div className="mt-4 text-sm text-red-400 bg-red-900/30 border border-red-800 p-3 rounded-lg text-center">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="mb-5 text-sm text-red-600 bg-red-50 border border-red-200 p-3 rounded-xl text-center"
+          >
             {error}
-          </div>
+          </motion.div>
         )}
 
-        <form onSubmit={loginUser} className="mt-6 space-y-4 text-white">
+        <form onSubmit={loginUser} className="space-y-5">
 
-          <input
-            type="email"
-            placeholder="Email Address"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg"
-            required
-          />
+          <div>
+            <input
+              type="email"
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full px-4 py-3 bg-gray-100 rounded-xl border border-gray-200 focus:bg-white focus:border-gray-400 focus:ring-0 outline-none transition"
+              required
+            />
+          </div>
 
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg"
-            required
-          />
+          <div>
+            <input
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full px-4 py-3 bg-gray-100 rounded-xl border border-gray-200 focus:bg-white focus:border-gray-400 focus:ring-0 outline-none transition"
+              required
+            />
+          </div>
 
-          <button
+          <motion.button
+            whileTap={{ scale: 0.97 }}
             type="submit"
             disabled={loading}
-            className="w-full py-3 rounded-lg bg-indigo-600 hover:bg-indigo-700"
+            className="w-full py-3 rounded-xl bg-black text-white font-medium hover:bg-gray-900 transition disabled:opacity-60"
           >
-            {loading ? "Logging in..." : "Login"}
-          </button>
+            {loading ? "Signing in..." : "Sign In"}
+          </motion.button>
 
         </form>
 
-        <p className="text-sm text-slate-400 mt-6 text-center">
+        <div className="mt-6 text-center">
+          <Link
+            to="/forgot-password"
+            className="text-sm text-gray-600 hover:text-black transition"
+          >
+            Forgot Password?
+          </Link>
+        </div>
+
+        <p className="text-sm text-gray-500 mt-8 text-center">
           Don’t have an account?{" "}
-          <Link to="/signup" className="text-indigo-400 hover:text-indigo-300">
+          <Link
+            to="/signup"
+            className="text-black font-medium hover:underline"
+          >
             Create one
           </Link>
         </p>
 
-      </div>
+      </motion.div>
     </div>
   );
 };

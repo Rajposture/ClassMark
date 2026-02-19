@@ -1,43 +1,43 @@
 import User from "../models/User.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
 import generateOtp from "./generateOtp.js";
 import otpEmailTemplate from "./otpEmailTemplate.js";
-import { Resend } from "resend";
+import resetPasswordTemplate from "./resetPasswordTemplate.js";
+
+import nodemailer from "nodemailer";
 import dotenv from "dotenv";
+
+
+
 
 dotenv.config();
 
-/* ===============================
-   RESEND CONFIG
-================================ */
+const pendingUsers = new Map();
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
-/* ===============================
-   SEND MAIL FUNCTION
-================================ */
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
+});
 
 const sendMail = async ({ to, subject, html }) => {
   try {
-    const response = await resend.emails.send({
-      from: "ClassMark <onboarding@resend.dev>", // default resend domain
+    await transporter.sendMail({
+      from: `"ClassMark" <${process.env.EMAIL_USER}>`,
       to,
       subject,
       html,
     });
-
-    console.log("Mail sent:", response);
     return true;
   } catch (error) {
-    console.error("Resend error:", error);
+    console.log(error);
     return false;
   }
 };
-
-/* ===============================
-   JWT TOKEN
-================================ */
 
 const generateToken = (user) =>
   jwt.sign(
@@ -46,47 +46,32 @@ const generateToken = (user) =>
     { expiresIn: "1d" }
   );
 
-/* ===============================
-   SIGNUP
-================================ */
-
 export const signup = async (req, res) => {
   try {
     const { name, email, password, role, enrollmentNumber } = req.body;
 
     if (!name || !email || !password || !role)
-      return res.status(400).json({
-        success: false,
-        message: "All fields required",
-      });
+      return res.status(400).json({ success: false, message: "All fields required" });
 
     if (role === "student" && !enrollmentNumber)
-      return res.status(400).json({
-        success: false,
-        message: "Enrollment required",
-      });
+      return res.status(400).json({ success: false, message: "Enrollment required" });
 
-    const existingUser = await User.findOne({
-      email: email.toLowerCase(),
-    });
+    const existingUser = await User.findOne({ email: email.toLowerCase() });
 
     if (existingUser)
-      return res.status(400).json({
-        success: false,
-        message: "User already exists",
-      });
+      return res.status(400).json({ success: false, message: "User already exists" });
 
     const otp = generateOtp();
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    await User.create({
+    pendingUsers.set(email.toLowerCase(), {
       name,
       email: email.toLowerCase(),
       password: hashedPassword,
       role,
       enrollmentNumber: role === "student" ? enrollmentNumber : null,
       otp,
-      isVerified: false,
+      createdAt: Date.now(),
     });
 
     const mailSent = await sendMail({
@@ -95,108 +80,70 @@ export const signup = async (req, res) => {
       html: otpEmailTemplate(name, otp),
     });
 
-    if (!mailSent) {
-      return res.status(500).json({
-        success: false,
-        message: "Failed to send OTP email",
-      });
-    }
+    if (!mailSent)
+      return res.status(500).json({ success: false, message: "Failed to send OTP email" });
 
-    return res.status(201).json({
-      success: true,
-      message: "OTP sent successfully",
-    });
-
-  } catch (err) {
-    console.log("Signup error:", err);
-    return res.status(500).json({
-      success: false,
-      message: "Server error",
-    });
+    return res.json({ success: true, message: "OTP sent successfully" });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({ success: false, message: "Server error" });
   }
 };
-
-/* ===============================
-   VERIFY OTP
-================================ */
 
 export const verifyOtp = async (req, res) => {
   try {
     const { email, otp } = req.body;
 
     if (!email || !otp)
-      return res.status(400).json({
-        success: false,
-        message: "Invalid request",
-      });
+      return res.status(400).json({ success: false, message: "Invalid request" });
 
-    const user = await User.findOne({
-      email: email.toLowerCase().trim(),
+    const pendingUser = pendingUsers.get(email.toLowerCase());
+
+    if (!pendingUser || pendingUser.otp !== otp.trim())
+      return res.status(400).json({ success: false, message: "Invalid OTP" });
+
+    const newUser = await User.create({
+      name: pendingUser.name,
+      email: pendingUser.email,
+      password: pendingUser.password,
+      role: pendingUser.role,
+      enrollmentNumber: pendingUser.enrollmentNumber,
+      isVerified: true,
     });
 
-    if (!user || user.otp !== otp.trim())
-      return res.status(400).json({
-        success: false,
-        message: "Invalid OTP",
-      });
+    pendingUsers.delete(email.toLowerCase());
 
-    user.isVerified = true;
-    user.otp = null;
-    await user.save();
-
-    const token = generateToken(user);
+    const token = generateToken(newUser);
 
     return res.json({
       success: true,
       token,
       user: {
-        id: user._id,
-        name: user.name,
-        role: user.role,
-        enrollmentNumber: user.enrollmentNumber || null,
+        id: newUser._id,
+        name: newUser.name,
+        role: newUser.role,
+        enrollmentNumber: newUser.enrollmentNumber || null,
       },
     });
-
-  } catch (err) {
-    console.log("Verify OTP error:", err);
-    return res.status(500).json({
-      success: false,
-      message: "Server error",
-    });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({ success: false, message: "Server error" });
   }
 };
-
-/* ===============================
-   LOGIN
-================================ */
 
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    const user = await User.findOne({
-      email: email.toLowerCase(),
-    });
+    const user = await User.findOne({ email: email.toLowerCase() });
 
     if (!user)
-      return res.status(401).json({
-        success: false,
-        message: "Invalid credentials",
-      });
-
-    if (!user.isVerified)
-      return res.status(403).json({
-        success: false,
-        message: "Verify OTP first",
-      });
+      return res.status(401).json({ success: false, message: "Invalid credentials" });
 
     const isMatch = await bcrypt.compare(password, user.password);
 
     if (!isMatch)
-      return res.status(401).json({
-        success: false,
-        message: "Invalid credentials",
-      });
+      return res.status(401).json({ success: false, message: "Invalid credentials" });
 
     const token = generateToken(user);
 
@@ -210,19 +157,89 @@ export const login = async (req, res) => {
         enrollmentNumber: user.enrollmentNumber || null,
       },
     });
-
-  } catch (err) {
-    console.log("Login error:", err);
-    return res.status(500).json({
-      success: false,
-      message: "Server error",
-    });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
-/* ===============================
-   GET ME
-================================ */
+export const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email)
+      return res.status(400).json({ success: false, message: "Email required" });
+
+    const user = await User.findOne({ email: email.toLowerCase() });
+
+    if (!user)
+      return res.status(404).json({ success: false, message: "User not found" });
+
+    const resetToken = crypto.randomBytes(32).toString("hex");
+
+    user.resetPasswordToken = crypto
+      .createHash("sha256")
+      .update(resetToken)
+      .digest("hex");
+
+    user.resetPasswordExpire = Date.now() + 10 * 60 * 1000;
+
+    await user.save({ validateBeforeSave: false });
+
+const resetLink =
+  process.env.NODE_ENV === "production"
+    ? `https://class-mark.vercel.app/reset-password/${resetToken}`
+    : `http://localhost:5173/reset-password/${resetToken}`;
+
+    const mailSent = await sendMail({
+      to: user.email,
+      subject: "Reset Your ClassMark Password",
+      html: resetPasswordTemplate(user.name, resetLink),
+    });
+
+    if (!mailSent)
+      return res.status(500).json({ success: false, message: "Failed to send reset email" });
+
+    return res.json({ success: true, message: "Reset email sent successfully" });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+export const resetPassword = async (req, res) => {
+  try {
+    const { token } = req.params;
+    const { password } = req.body;
+
+    if (!password)
+      return res.status(400).json({ success: false, message: "Password required" });
+
+    const hashedToken = crypto
+      .createHash("sha256")
+      .update(token)
+      .digest("hex");
+
+    const user = await User.findOne({
+      resetPasswordToken: hashedToken,
+      resetPasswordExpire: { $gt: Date.now() },
+    });
+
+    if (!user)
+      return res.status(400).json({ success: false, message: "Invalid or expired token" });
+
+    user.password = await bcrypt.hash(password, 12);
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpire = undefined;
+
+    await user.save();
+
+    return res.json({ success: true, message: "Password reset successful" });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+};
 
 export const getMe = async (req, res) => {
   try {
@@ -232,7 +249,6 @@ export const getMe = async (req, res) => {
       return res.status(401).json({ success: false });
 
     const token = authHeader.split(" ")[1];
-
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     const user = await User.findById(decoded.id).select("-password");
@@ -249,9 +265,8 @@ export const getMe = async (req, res) => {
         enrollmentNumber: user.enrollmentNumber || null,
       },
     });
-
-  } catch (err) {
-    console.log("JWT error:", err.message);
+  } catch (error) {
+    console.log(error);
     return res.status(401).json({ success: false });
   }
 };

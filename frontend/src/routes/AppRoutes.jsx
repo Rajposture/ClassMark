@@ -4,6 +4,8 @@ import { useContext } from "react";
 import Landing from "../pages/Landing";
 import Login from "../pages/Login";
 import Signup from "../pages/Signup";
+import ForgotPassword from "../pages/ForgotPassword";
+import ResetPassword from "../pages/ResetPassword";
 
 import TeacherDashboard from "../pages/TeacherDashboard";
 import StudentDashboard from "../pages/StudentDashboard";
@@ -34,6 +36,7 @@ const AppRoutes = () => {
   return (
     <Routes>
 
+      {/* PUBLIC ROUTES */}
       <Route
         path="/"
         element={
@@ -62,6 +65,25 @@ const AppRoutes = () => {
       />
 
       <Route
+        path="/forgot-password"
+        element={
+          <PublicRoute>
+            <ForgotPassword />
+          </PublicRoute>
+        }
+      />
+
+      <Route
+        path="/reset-password/:token"
+        element={
+          <PublicRoute>
+            <ResetPassword />
+          </PublicRoute>
+        }
+      />
+
+      {/* PROTECTED ROUTES */}
+      <Route
         path="/dashboard"
         element={
           <ProtectedRoute>
@@ -75,16 +97,14 @@ const AppRoutes = () => {
         element={<AttendanceForm />}
       />
 
-<Route
-  path="/student"
-  element={
-    <ProtectedRoute role="student">
-      <StudentDashboard />
-    </ProtectedRoute>
-  }
-/>
-
-      
+      <Route
+        path="/student"
+        element={
+          <ProtectedRoute role="student">
+            <StudentDashboard />
+          </ProtectedRoute>
+        }
+      />
 
       <Route
         path="/scan"
@@ -104,6 +124,7 @@ const AppRoutes = () => {
         }
       />
 
+      {/* FALLBACK */}
       <Route path="*" element={<Navigate to="/" replace />} />
 
     </Routes>

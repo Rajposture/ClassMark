@@ -5,9 +5,6 @@ import XLSX from "xlsx";
 import jwt from "jsonwebtoken";
 import Lecture from "../models/Lecture.js";
 
-/* =========================================
-   CREATE LECTURE
-========================================= */
 
 export const createLecture = async (req, res) => {
   try {
@@ -67,9 +64,6 @@ export const createLecture = async (req, res) => {
   }
 };
 
-/* =========================================
-   GET MY LECTURES
-========================================= */
 
 export const getMyLectures = async (req, res) => {
   try {
@@ -98,9 +92,6 @@ export const getMyLectures = async (req, res) => {
   }
 };
 
-/* =========================================
-   GENERATE QR TOKEN
-========================================= */
 
 export const generateQRToken = async (req, res) => {
   try {
@@ -141,9 +132,6 @@ export const generateQRToken = async (req, res) => {
   }
 };
 
-/* =========================================
-   GENERATE EXCEL SHEET
-========================================= */
 
 export const generateExcelSheet = async (req, res) => {
   try {
@@ -216,10 +204,6 @@ export const generateExcelSheet = async (req, res) => {
     });
   }
 };
-
-/* =========================================
-   DELETE LECTURE
-========================================= */
 
 export const deleteLecture = async (req, res) => {
   try {

@@ -158,85 +158,99 @@ const TeacherDashboard = () => {
   /* ===============================
      UI
   ============================== */
-  return (
-    <DashboardLayout>
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-24 pb-12">
+return (
+  <DashboardLayout>
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-24 pb-12">
+
+      {/* Header */}
+      <div className="mb-10">
         <h1 className="text-3xl sm:text-4xl font-bold text-slate-800">
           Teacher Dashboard
         </h1>
-
-        <p className="text-slate-500 mt-2 mb-8 sm:mb-10">
+        <p className="text-slate-500 mt-2">
           Manage your lectures and attendance
         </p>
+      </div>
 
-        {fetchError && (
-          <p className="text-red-500 mb-6">{fetchError}</p>
-        )}
+      {fetchError && (
+        <p className="text-red-500 mb-6">{fetchError}</p>
+      )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
-          <div>
-            <CreateLecture onCreate={handleLectureCreated} />
-          </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
-          <div className="lg:col-span-2 bg-white rounded-2xl shadow-lg p-5 sm:p-8">
-            <h2 className="text-xl sm:text-2xl font-semibold text-slate-800 mb-6">
-              Today’s Lectures
-            </h2>
-
-            {lectures.length === 0 ? (
-              <div className="h-40 flex items-center justify-center text-slate-400">
-                No lectures scheduled yet
-              </div>
-            ) : (
-              lectures.map((lecture) => (
-                <div
-                  key={lecture._id}
-                  className="flex justify-between items-center border rounded-xl p-4 mb-4"
-                >
-                  <div>
-                    <h3 className="font-semibold">
-                      {lecture.subject}
-                    </h3>
-                    <p className="text-sm text-slate-500">
-                      {lecture.date} • {lecture.startTime} – {lecture.endTime}
-                    </p>
-                  </div>
-
-                  <div className="flex gap-3">
-                    <button
-                      onClick={() => setActiveLecture(lecture)}
-                      className="px-4 py-2 bg-indigo-600 text-white rounded-lg"
-                    >
-                      Generate QR
-                    </button>
-
-                    <button
-                      onClick={() =>
-                        handleExcelDownload(
-                          lecture._id,
-                          lecture.subject
-                        )
-                      }
-                      className="px-4 py-2 bg-slate-700 text-white rounded-lg"
-                    >
-                      Excel
-                    </button>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
+        {/* Create Lecture Card */}
+        <div className="bg-gradient-to-br from-indigo-50 to-white rounded-3xl shadow-lg p-6 transition hover:shadow-2xl">
+          <CreateLecture onCreate={handleLectureCreated} />
         </div>
 
-        {activeLecture && (
-          <GenerateQR
-            lecture={activeLecture}
-            onClose={() => setActiveLecture(null)}
-          />
-        )}
+        {/* Lectures Section */}
+        <div className="lg:col-span-2 bg-white rounded-3xl shadow-xl p-6 sm:p-8 transition hover:shadow-2xl">
+
+          <h2 className="text-2xl font-semibold text-slate-800 mb-6">
+            Today’s Lectures
+          </h2>
+
+          {lectures.length === 0 ? (
+            <div className="h-40 flex items-center justify-center text-slate-400">
+              No lectures scheduled yet
+            </div>
+          ) : (
+            lectures.map((lecture) => (
+              <div
+                key={lecture._id}
+                className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 border border-slate-200 rounded-2xl p-5 mb-5 bg-slate-50 hover:bg-indigo-50 transition duration-200"
+              >
+                <div>
+                  <h3 className="font-semibold text-slate-800 text-lg">
+                    {lecture.subject}
+                  </h3>
+                  <p className="text-sm text-slate-500 mt-1">
+                    {lecture.date} • {lecture.startTime} – {lecture.endTime}
+                  </p>
+                </div>
+
+                <div className="flex gap-3">
+
+                  {/* Generate QR */}
+                  <button
+                    onClick={() => setActiveLecture(lecture)}
+                    className="px-4 py-2 rounded-xl bg-indigo-600 text-white font-medium hover:bg-indigo-700 active:scale-95 transition"
+                  >
+                    Generate QR
+                  </button>
+
+                  {/* Excel */}
+                  <button
+                    onClick={() =>
+                      handleExcelDownload(
+                        lecture._id,
+                        lecture.subject
+                      )
+                    }
+                    className="px-4 py-2 rounded-xl bg-slate-800 text-white font-medium hover:bg-slate-900 active:scale-95 transition"
+                  >
+                    Excel
+                  </button>
+
+                </div>
+              </div>
+            ))
+          )}
+
+        </div>
       </div>
-    </DashboardLayout>
-  );
+
+      {/* QR Modal */}
+      {activeLecture && (
+        <GenerateQR
+          lecture={activeLecture}
+          onClose={() => setActiveLecture(null)}
+        />
+      )}
+    </div>
+  </DashboardLayout>
+);
+
 };
 
 export default TeacherDashboard;

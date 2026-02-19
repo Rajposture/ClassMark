@@ -10,28 +10,19 @@ import authRoutes from "./routes/authRoutes.js";
 import lectureRoutes from "./routes/lectureRoutes.js";
 import attendanceRoutes from "./routes/attendanceRoutes.js";
 
-
 const app = express();
-app.set("trust proxy", 1);
-connectDB();
 
-const isProduction = process.env.NODE_ENV === "production";
+connectDB();
 
 app.use(
   cors({
-    origin: [
-      "http://localhost:5173",
-      "https://class-mark.vercel.app"
-    ],
-    methods: ["GET", "POST", "PUT", "DELETE"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+    origin:
+      process.env.NODE_ENV === "production"
+        ? ["https://class-mark.vercel.app"]
+        : ["http://localhost:5173"],
     credentials: true,
   })
 );
-
-
-
-
 app.use(express.json());
 app.use(cookieParser());
 
@@ -42,7 +33,7 @@ app.use("/api/lectures", lectureRoutes);
 app.use("/api/attendance", attendanceRoutes);
 
 app.get("/", (req, res) => {
-  res.status(200).send("ClassMark API running");
+  res.json({ message: "ClassMark API running" });
 });
 
 app.use((req, res) => {
@@ -58,4 +49,3 @@ const PORT = process.env.PORT || 5001;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
-

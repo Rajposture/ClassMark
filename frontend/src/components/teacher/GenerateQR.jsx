@@ -1,124 +1,64 @@
-import { useEffect, useState } from "react";
-import { QRCode } from "react-qrcode-logo";
-import API_BASE from "../../config/api";
+import { motion, AnimatePresence } from "framer-motion";
+import QRCode from "react-qr-code";
 
 const GenerateQR = ({ lecture, onClose }) => {
-  const [qrValue, setQrValue] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [secondsLeft, setSecondsLeft] = useState(600);
-  const [error, setError] = useState("");
+  if (!lecture?._id) return null;
 
-  useEffect(() => {
-    if (!lecture?._id) return;
+  const FRONTEND_URL =
+    import.meta.env.MODE === "production"
+      ? "https://class-mark.vercel.app"
+      : "http://localhost:5173";
 
-    let refreshInterval;
-    let countdownInterval;
-
-    const fetchQR = async () => {
-      try {
-        setLoading(true);
-        setError("");
-
-        const token = localStorage.getItem("token");
-
-        if (!token) {
-          setError("Not authenticated");
-          return;
-        }
-
-        const res = await fetch(
-          `${API_BASE}/api/lectures/${lecture._id}/qr`,
-          {
-            method: "GET",
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-
-        const data = await res.json();
-
-        if (!res.ok || !data.token) {
-          setError(data.message || "QR generation failed");
-          return;
-        }
-
-        const attendanceURL =
-          `${window.location.origin}/attendance/${lecture._id}?token=${data.token}`;
-
-        setQrValue(attendanceURL);
-        setSecondsLeft(600);
-      } catch (err) {
-        console.log("QR error:", err);
-        setError("Server connection failed");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchQR();
-
-    refreshInterval = setInterval(fetchQR, 540000);
-
-    countdownInterval = setInterval(() => {
-      setSecondsLeft(prev => (prev > 0 ? prev - 1 : 0));
-    }, 1000);
-
-    return () => {
-      clearInterval(refreshInterval);
-      clearInterval(countdownInterval);
-    };
-  }, [lecture]);
-
-  const formatTime = (seconds) => {
-    const minutes = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${minutes}:${secs < 10 ? "0" : ""}${secs}`;
-  };
+  const attendanceUrl = `${FRONTEND_URL}/attendance/${lecture._id}`;
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
-      <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl relative">
-
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 text-gray-400 hover:text-black text-xl"
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+      >
+        <motion.div
+          initial={{ scale: 0.92, y: 30 }}
+          animate={{ scale: 1, y: 0 }}
+          exit={{ scale: 0.92 }}
+          transition={{ duration: 0.25 }}
+          className="relative w-[92%] max-w-md bg-white rounded-3xl shadow-2xl p-8 text-center"
         >
-          ✕
-        </button>
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 text-gray-400 hover:text-black text-xl transition"
+          >
+            ✕
+          </button>
 
-        <h2 className="text-lg font-semibold text-center mb-2">
-          Secure Attendance QR
-        </h2>
+          <h2 className="text-xl font-semibold mb-2 text-gray-800">
+            Scan to Mark Attendance
+          </h2>
 
-        <p className="text-sm text-gray-500 text-center mb-6 truncate">
-          {lecture?.subject}
-        </p>
+          <p className="text-sm text-gray-500 mb-6">
+            {lecture.subject}
+          </p>
 
-        <div className="flex justify-center min-h-[250px] items-center">
-          {loading && <p>Generating QR...</p>}
+          <div className="flex justify-center">
+            <div className="bg-white p-4 rounded-2xl shadow-inner border">
+              <QRCode
+                value={attendanceUrl}
+                size={260}
+                level="H"
+                bgColor="#ffffff"
+                fgColor="#111827"
+              />
+            </div>
+          </div>
 
-          {!loading && qrValue && (
-            <QRCode
-              value={qrValue}
-              size={260}
-              ecLevel="H"
-              fgColor="#111827"
-              bgColor="#ffffff"
-              quietZone={10}
-            />
-          )}
-
-          {!loading && error && (
-            <p className="text-red-500 text-sm text-center">{error}</p>
-          )}
-        </div>
-
-        <p className="text-xs text-gray-500 text-center mt-6">
-          Expires in: {formatTime(secondsLeft)}
-        </p>
-      </div>
-    </div>
+          <p className="mt-5 text-xs text-gray-500 break-all">
+            {attendanceUrl}
+          </p>
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
   );
 };
 

@@ -14,7 +14,6 @@ const userSchema = new mongoose.Schema(
       trim: true,
       lowercase: true,
       unique: true,
-      sparse: true,
     },
 
     password: {
@@ -38,24 +37,15 @@ const userSchema = new mongoose.Schema(
       },
     },
 
-    otp: {
+    resetPasswordToken: {
       type: String,
-      default: null,
     },
 
-    otpExpires: {
+    resetPasswordExpire: {
       type: Date,
-      default: null,
-    },
-
-    isVerified: {
-      type: Boolean,
-      default: false,
     },
   },
   { timestamps: true }
 );
-
-userSchema.index({ email: 1 });
 
 export default mongoose.model("User", userSchema);
