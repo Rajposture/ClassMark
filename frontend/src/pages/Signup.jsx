@@ -16,8 +16,6 @@ const Signup = () => {
     password: "",
   });
 
-  const [otp, setOtp] = useState("");
-  const [otpSent, setOtpSent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -25,7 +23,7 @@ const Signup = () => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const sendOtp = async (e) => {
+  const handleSignup = async (e) => {
     e.preventDefault();
     setError("");
     setLoading(true);
@@ -46,57 +44,10 @@ const Signup = () => {
         body: JSON.stringify(payload),
       });
 
-      let data;
-      try {
-        data = await res.json();
-      } catch {
-        throw new Error("Invalid server response");
-      }
+      const data = await res.json();
 
-      if (!res.ok) {
+      if (!res.ok || !data.success) {
         throw new Error(data?.message || "Signup failed");
-      }
-
-      if (!data.success) {
-        throw new Error(data.message || "Failed to send OTP");
-      }
-
-      setOtpSent(true);
-    } catch (err) {
-      setError(err.message || "Server error during signup");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const verifyOtp = async (e) => {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
-
-    try {
-      const res = await fetch(`${API_BASE}/api/auth/verify-otp`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: form.email.toLowerCase(),
-          otp,
-        }),
-      });
-
-      let data;
-      try {
-        data = await res.json();
-      } catch {
-        throw new Error("Invalid server response");
-      }
-
-      if (!res.ok) {
-        throw new Error(data?.message || "OTP verification failed");
-      }
-
-      if (!data.success) {
-        throw new Error(data.message || "Invalid OTP");
       }
 
       localStorage.setItem("token", data.token);
@@ -104,7 +55,7 @@ const Signup = () => {
 
       navigate(data.user.role === "teacher" ? "/teacher" : "/student");
     } catch (err) {
-      setError(err.message || "Server error during OTP verification");
+      setError(err.message || "Server error during signup");
     } finally {
       setLoading(false);
     }
@@ -137,7 +88,7 @@ const Signup = () => {
           </motion.div>
         )}
 
-        <form className="space-y-4 text-white">
+        <form onSubmit={handleSignup} className="space-y-4 text-white">
           <div>
             <label className="text-sm text-slate-400">Register As</label>
             <select
@@ -190,42 +141,14 @@ const Signup = () => {
             required
           />
 
-          {!otpSent && (
-            <motion.button
-              whileTap={{ scale: 0.96 }}
-              onClick={sendOtp}
-              disabled={loading}
-              className="w-full py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 transition-all font-semibold disabled:opacity-50"
-            >
-              {loading ? "Sending OTP..." : "Create Account"}
-            </motion.button>
-          )}
-
-          {otpSent && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="space-y-4"
-            >
-              <input
-                value={otp}
-                onChange={(e) => setOtp(e.target.value)}
-                placeholder="Enter OTP"
-                maxLength={6}
-                className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-center tracking-widest focus:ring-2 focus:ring-indigo-600 focus:outline-none"
-                required
-              />
-
-              <motion.button
-                whileTap={{ scale: 0.96 }}
-                onClick={verifyOtp}
-                disabled={loading}
-                className="w-full py-3 rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 transition-all font-semibold"
-              >
-                {loading ? "Verifying..." : "Verify OTP"}
-              </motion.button>
-            </motion.div>
-          )}
+          <motion.button
+            whileTap={{ scale: 0.96 }}
+            type="submit"
+            disabled={loading}
+            className="w-full py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 transition-all font-semibold disabled:opacity-50"
+          >
+            {loading ? "Creating Account..." : "Create Account"}
+          </motion.button>
         </form>
 
         <p className="text-sm text-slate-400 mt-6 text-center">
