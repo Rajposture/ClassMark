@@ -2,19 +2,11 @@ import User from "../models/User.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
-import generateOtp from "./generateOtp.js";
-import otpEmailTemplate from "./otpEmailTemplate.js";
 import resetPasswordTemplate from "./resetPasswordTemplate.js";
-
 import nodemailer from "nodemailer";
 import dotenv from "dotenv";
 
-
-
-
 dotenv.config();
-
-const pendingUsers = new Map();
 
 const transporter = nodemailer.createTransport({
   host: "smtp.gmail.com",
@@ -25,7 +17,6 @@ const transporter = nodemailer.createTransport({
     pass: process.env.EMAIL_PASS,
   },
 });
-
 
 const sendMail = async ({ to, subject, html }) => {
   try {
@@ -64,70 +55,29 @@ export const signup = async (req, res) => {
     if (existingUser)
       return res.status(400).json({ success: false, message: "User already exists" });
 
-    const otp = generateOtp();
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    pendingUsers.set(email.toLowerCase(), {
+    const user = await User.create({
       name,
       email: email.toLowerCase(),
       password: hashedPassword,
       role,
       enrollmentNumber: role === "student" ? enrollmentNumber : null,
-      otp,
-      createdAt: Date.now(),
     });
 
-    const mailSent = await sendMail({
-      to: email.toLowerCase(),
-      subject: "ClassMark OTP Verification",
-      html: otpEmailTemplate(name, otp),
-    });
+    const token = generateToken(user);
 
-    if (!mailSent)
-      return res.status(500).json({ success: false, message: "Failed to send OTP email" });
-
-    return res.json({ success: true, message: "OTP sent successfully" });
-  } catch (error) {
-    console.log(error);
-    return res.status(500).json({ success: false, message: "Server error" });
-  }
-};
-
-export const verifyOtp = async (req, res) => {
-  try {
-    const { email, otp } = req.body;
-
-    if (!email || !otp)
-      return res.status(400).json({ success: false, message: "Invalid request" });
-
-    const pendingUser = pendingUsers.get(email.toLowerCase());
-
-    if (!pendingUser || pendingUser.otp !== otp.trim())
-      return res.status(400).json({ success: false, message: "Invalid OTP" });
-
-    const newUser = await User.create({
-      name: pendingUser.name,
-      email: pendingUser.email,
-      password: pendingUser.password,
-      role: pendingUser.role,
-      enrollmentNumber: pendingUser.enrollmentNumber,
-      isVerified: true,
-    });
-
-    pendingUsers.delete(email.toLowerCase());
-
-    const token = generateToken(newUser);
-
-    return res.json({
+    return res.status(201).json({
       success: true,
       token,
       user: {
-        id: newUser._id,
-        name: newUser.name,
-        role: newUser.role,
-        enrollmentNumber: newUser.enrollmentNumber || null,
+        id: user._id,
+        name: user.name,
+        role: user.role,
+        enrollmentNumber: user.enrollmentNumber || null,
       },
     });
+
   } catch (error) {
     console.log(error);
     return res.status(500).json({ success: false, message: "Server error" });
@@ -160,6 +110,7 @@ export const login = async (req, res) => {
         enrollmentNumber: user.enrollmentNumber || null,
       },
     });
+
   } catch (error) {
     console.log(error);
     return res.status(500).json({ success: false, message: "Server error" });
@@ -189,10 +140,10 @@ export const forgotPassword = async (req, res) => {
 
     await user.save({ validateBeforeSave: false });
 
-const resetLink =
-  process.env.NODE_ENV === "production"
-    ? `https://class-mark.vercel.app/reset-password/${resetToken}`
-    : `http://localhost:5173/reset-password/${resetToken}`;
+    const resetLink =
+      process.env.NODE_ENV === "production"
+        ? `https://class-mark.vercel.app/reset-password/${resetToken}`
+        : `http://localhost:5173/reset-password/${resetToken}`;
 
     const mailSent = await sendMail({
       to: user.email,
@@ -204,6 +155,7 @@ const resetLink =
       return res.status(500).json({ success: false, message: "Failed to send reset email" });
 
     return res.json({ success: true, message: "Reset email sent successfully" });
+
   } catch (error) {
     console.log(error);
     return res.status(500).json({ success: false, message: "Server error" });
@@ -238,6 +190,7 @@ export const resetPassword = async (req, res) => {
     await user.save();
 
     return res.json({ success: true, message: "Password reset successful" });
+
   } catch (error) {
     console.log(error);
     return res.status(500).json({ success: false, message: "Server error" });
@@ -268,6 +221,7 @@ export const getMe = async (req, res) => {
         enrollmentNumber: user.enrollmentNumber || null,
       },
     });
+
   } catch (error) {
     console.log(error);
     return res.status(401).json({ success: false });
