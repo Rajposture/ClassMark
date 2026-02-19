@@ -1,10 +1,49 @@
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import QRCode from "react-qr-code";
+import API_BASE from "../../config/api";
 
 const GenerateQR = ({ lecture, onClose }) => {
-  if (!lecture?._id) return null;
+  const [qrUrl, setQrUrl] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
 
-  const attendanceUrl = `${window.location.origin}/attendance/${lecture._id}`;
+  useEffect(() => {
+    const fetchQR = async () => {
+      try {
+        setLoading(true);
+const res = await fetch(
+  `${API_BASE}/api/lectures/${lecture._id}/qr`,
+  {
+    headers: {
+      Authorization: `Bearer ${localStorage.getItem("token")}`
+    }
+  }
+);
+
+        const data = await res.json();
+
+        if (!res.ok || !data.success) {
+          setError(data.message || "Failed to generate QR");
+          return;
+        }
+
+        const url = `${window.location.origin}/attendance/${data.token}`;
+        setQrUrl(url);
+
+      } catch (err) {
+        setError("Server error");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (lecture?._id) {
+      fetchQR();
+    }
+  }, [lecture]);
+
+  if (!lecture?._id) return null;
 
   return (
     <AnimatePresence>
@@ -19,43 +58,34 @@ const GenerateQR = ({ lecture, onClose }) => {
           animate={{ scale: 1, y: 0 }}
           exit={{ scale: 0.9 }}
           transition={{ duration: 0.3 }}
-          className="relative w-full max-w-md bg-gradient-to-br from-white to-gray-50 rounded-3xl shadow-2xl p-6 sm:p-8 text-center border border-gray-200"
+          className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl p-6 text-center"
         >
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 text-gray-400 hover:text-black text-xl transition"
+            className="absolute top-4 right-4 text-gray-400 hover:text-black text-xl"
           >
             ✕
           </button>
 
-          <div className="mb-6">
-            <h2 className="text-2xl font-semibold text-gray-800">
-              Mark Attendance
-            </h2>
-            <p className="text-sm text-gray-500 mt-2">
-              {lecture.subject}
-            </p>
-          </div>
+          <h2 className="text-2xl font-semibold mb-4">Mark Attendance</h2>
 
-          <div className="flex justify-center">
-            <div className="bg-white p-5 rounded-2xl shadow-lg border border-gray-200">
-              <QRCode
-                value={attendanceUrl}
-                size={220}
-                level="H"
-                bgColor="#ffffff"
-                fgColor="#111827"
-              />
-            </div>
-          </div>
+          {loading && <p>Generating QR...</p>}
 
-          <div className="mt-6 bg-gray-100 rounded-xl p-3 text-xs text-gray-600 break-all">
-            {attendanceUrl}
-          </div>
+          {error && (
+            <p className="text-red-500 text-sm">{error}</p>
+          )}
 
-          <div className="mt-5 text-xs text-gray-400">
-            QR valid only for active session
-          </div>
+          {!loading && qrUrl && (
+            <>
+              <div className="flex justify-center mt-4">
+                <QRCode value={qrUrl} size={220} />
+              </div>
+
+              <div className="mt-4 text-xs break-all">
+                {qrUrl}
+              </div>
+            </>
+          )}
         </motion.div>
       </motion.div>
     </AnimatePresence>

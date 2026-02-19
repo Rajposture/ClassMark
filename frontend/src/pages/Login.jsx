@@ -1,15 +1,15 @@
 import { useState, useContext } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { AuthContext } from "../context/AuthContext";
 import API_BASE from "../config/api";
-import { useLocation } from "react-router-dom";
+
 const Login = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { setUser } = useContext(AuthContext);
-  const [searchParams] = useSearchParams();
-const location = useLocation();
-  const redirect = searchParams.get("redirect");
+
+  const from = location.state?.from || null;
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -41,14 +41,13 @@ const location = useLocation();
       localStorage.setItem("token", data.token);
       setUser(data.user);
 
-const redirectPath = location.state?.from;
-
-if (redirectPath) {
-  navigate(redirectPath);
-} else {
-  navigate(data.user.role === "teacher" ? "/teacher" : "/student");
-}
-
+      if (from) {
+        navigate(from, { replace: true });
+      } else {
+        navigate(data.user.role === "teacher" ? "/teacher" : "/student", {
+          replace: true,
+        });
+      }
 
     } catch {
       setError("Something went wrong. Try again.");

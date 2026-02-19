@@ -18,10 +18,13 @@ const AttendanceForm = () => {
   useEffect(() => {
     if (authLoading) return
 
-    if (!user) {
-      navigate("/login")
-      return
-    }
+if (!user) {
+  navigate("/login", {
+    state: { from: `/attendance/${token}` }
+  })
+  return
+}
+
 
     if (!token) {
       navigate("/student")
