@@ -122,10 +122,7 @@ const Navbar = () => {
 
           {user && (
             <div className="hidden md:flex gap-8 text-slate-700 font-medium text-sm">
-              <Link
-                to={user.role === "teacher" ? "/teacher" : "/student"}
-                className="hover:text-black transition"
-              >
+              <Link to={user.role === "teacher" ? "/teacher" : "/student"} className="hover:text-black transition">
                 Dashboard
               </Link>
               <Link to="/lectures" className="hover:text-black transition">
@@ -167,8 +164,21 @@ const Navbar = () => {
                   </button>
 
                   {openNotifications && (
-                    <div className="absolute right-0 mt-4 w-80 max-h-96 overflow-y-auto backdrop-blur-xl bg-white/90 border border-white/40 shadow-2xl rounded-2xl p-4">
-                      
+                    <div
+                      className="
+                        absolute md:right-0 md:w-80
+                        left-0 right-0 md:left-auto
+                        mt-4
+                        w-full md:max-h-96
+                        max-h-[70vh]
+                        overflow-y-auto
+                        backdrop-blur-xl bg-white/90
+                        border border-white/40
+                        shadow-2xl
+                        rounded-2xl
+                        p-4
+                      "
+                    >
                       <div className="flex justify-between items-center mb-4">
                         <h3 className="font-semibold text-slate-800">
                           Notifications
@@ -246,15 +256,10 @@ const Navbar = () => {
 
                   {openProfile && (
                     <div className="absolute right-0 mt-4 w-72 backdrop-blur-xl bg-white/80 border border-white/40 shadow-2xl rounded-2xl p-6">
-
                       <div className="flex items-center gap-4">
                         <div className="w-14 h-14 rounded-full border overflow-hidden">
                           {profileImage ? (
-                            <img
-                              src={profileImage}
-                              alt="profile"
-                              className="w-full h-full object-cover"
-                            />
+                            <img src={profileImage} alt="profile" className="w-full h-full object-cover" />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center text-lg font-semibold text-slate-700">
                               {initials}
@@ -269,11 +274,6 @@ const Navbar = () => {
                           <p className="text-sm text-slate-500 capitalize">
                             {user.role}
                           </p>
-                          {user.role === "student" && (
-                            <p className="text-xs text-slate-500">
-                              {user.enrollmentNumber}
-                            </p>
-                          )}
                         </div>
                       </div>
 
@@ -333,35 +333,16 @@ const Navbar = () => {
           </div>
 
           <div className="space-y-6 text-slate-700 font-medium text-sm">
-            <Link
-              to={user?.role === "teacher" ? "/teacher" : "/student"}
-              onClick={() => setOpenSidebar(false)}
-              className="block hover:text-black transition"
-            >
+            <Link to={user?.role === "teacher" ? "/teacher" : "/student"} onClick={() => setOpenSidebar(false)} className="block hover:text-black transition">
               Dashboard
             </Link>
-
-            <Link
-              to="/lectures"
-              onClick={() => setOpenSidebar(false)}
-              className="block hover:text-black transition"
-            >
+            <Link to="/lectures" onClick={() => setOpenSidebar(false)} className="block hover:text-black transition">
               Lectures
             </Link>
-
-            <Link
-              to="/assignments"
-              onClick={() => setOpenSidebar(false)}
-              className="block hover:text-black transition"
-            >
+            <Link to="/assignments" onClick={() => setOpenSidebar(false)} className="block hover:text-black transition">
               Assignments
             </Link>
-
-            <Link
-              to="https://lssimss.com/GPMMIS/jsp/userlogin.action"
-              onClick={() => setOpenSidebar(false)}
-              className="block hover:text-black transition"
-            >
+            <Link to="https://lssimss.com/GPMMIS/jsp/userlogin.action" onClick={() => setOpenSidebar(false)} className="block hover:text-black transition">
               MIS
             </Link>
           </div>
