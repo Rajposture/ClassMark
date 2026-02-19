@@ -1,39 +1,39 @@
-import { Routes, Route, Navigate } from "react-router-dom";
-import { useContext } from "react";
+import { Routes, Route, Navigate } from "react-router-dom"
+import { useContext } from "react"
 
-import Landing from "../pages/Landing";
-import Login from "../pages/Login";
-import Signup from "../pages/Signup";
-import ForgotPassword from "../pages/ForgotPassword";
-import ResetPassword from "../pages/ResetPassword";
+import Landing from "../pages/Landing"
+import Login from "../pages/Login"
+import Signup from "../pages/Signup"
+import ForgotPassword from "../pages/ForgotPassword"
+import ResetPassword from "../pages/ResetPassword"
 
-import TeacherDashboard from "../pages/TeacherDashboard";
-import StudentDashboard from "../pages/StudentDashboard";
+import TeacherDashboard from "../pages/TeacherDashboard"
+import StudentDashboard from "../pages/StudentDashboard"
 
-import QRScanner from "../components/student/QRScanner";
-import AttendanceForm from "../pages/AttendanceForm";
+import QRScanner from "../components/student/QRScanner"
+import AttendanceForm from "../pages/AttendanceForm"
 
-import ProtectedRoute from "./ProtectedRoute";
-import PublicRoute from "./PublicRoute";
-import { AuthContext } from "../context/AuthContext";
+import ProtectedRoute from "./ProtectedRoute"
+import PublicRoute from "./PublicRoute"
+import { AuthContext } from "../context/AuthContext"
 
-import Assignments from "../pages/Assignments";
-import AssignmentDetail from "../pages/AssignmentDetail";
+import Assignments from "../pages/Assignments"
+import AssignmentDetail from "../pages/AssignmentDetail"
 
 const DashboardRedirect = () => {
-  const { user, loading } = useContext(AuthContext);
+  const { user, loading } = useContext(AuthContext)
 
-  if (loading) return null;
+  if (loading) return null
 
-  if (!user) return <Navigate to="/login" replace />;
+  if (!user) return <Navigate to="/login" replace />
 
   return (
     <Navigate
       to={user.role === "teacher" ? "/teacher" : "/student"}
       replace
     />
-  );
-};
+  )
+}
 
 const AppRoutes = () => {
   return (
@@ -92,14 +92,15 @@ const AppRoutes = () => {
           </ProtectedRoute>
         }
       />
-<Route
-  path="/attendance"
-  element={
-    <ProtectedRoute role="student">
-      <AttendanceForm />
-    </ProtectedRoute>
-  }
-/>
+
+      <Route
+        path="/attendance/:token"
+        element={
+          <ProtectedRoute role="student">
+            <AttendanceForm />
+          </ProtectedRoute>
+        }
+      />
 
       <Route
         path="/student"
@@ -149,7 +150,7 @@ const AppRoutes = () => {
       <Route path="*" element={<Navigate to="/" replace />} />
 
     </Routes>
-  );
-};
+  )
+}
 
-export default AppRoutes;
+export default AppRoutes
