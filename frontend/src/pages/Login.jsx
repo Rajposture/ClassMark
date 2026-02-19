@@ -1,5 +1,5 @@
 import { useState, useContext } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { AuthContext } from "../context/AuthContext";
 import API_BASE from "../config/api";
@@ -7,6 +7,9 @@ import API_BASE from "../config/api";
 const Login = () => {
   const navigate = useNavigate();
   const { setUser } = useContext(AuthContext);
+  const [searchParams] = useSearchParams();
+
+  const redirect = searchParams.get("redirect");
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -38,7 +41,11 @@ const Login = () => {
       localStorage.setItem("token", data.token);
       setUser(data.user);
 
-      navigate(data.user.role === "teacher" ? "/teacher" : "/student");
+      if (redirect) {
+        navigate(redirect, { replace: true });
+      } else {
+        navigate(data.user.role === "teacher" ? "/teacher" : "/student");
+      }
 
     } catch {
       setError("Something went wrong. Try again.");
@@ -49,14 +56,12 @@ const Login = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#f5f5f7] px-4">
-
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
         className="w-full max-w-sm sm:max-w-md bg-white rounded-3xl shadow-xl border border-gray-200 p-8"
       >
-
         <div className="text-center mb-8">
           <h2 className="text-2xl font-semibold text-gray-900">
             Sign in to ClassMark
@@ -77,28 +82,23 @@ const Login = () => {
         )}
 
         <form onSubmit={loginUser} className="space-y-5">
+          <input
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="w-full px-4 py-3 bg-gray-100 rounded-xl border border-gray-200 focus:bg-white focus:border-gray-400 outline-none transition"
+            required
+          />
 
-          <div>
-            <input
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 bg-gray-100 rounded-xl border border-gray-200 focus:bg-white focus:border-gray-400 focus:ring-0 outline-none transition"
-              required
-            />
-          </div>
-
-          <div>
-            <input
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 bg-gray-100 rounded-xl border border-gray-200 focus:bg-white focus:border-gray-400 focus:ring-0 outline-none transition"
-              required
-            />
-          </div>
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="w-full px-4 py-3 bg-gray-100 rounded-xl border border-gray-200 focus:bg-white focus:border-gray-400 outline-none transition"
+            required
+          />
 
           <motion.button
             whileTap={{ scale: 0.97 }}
@@ -108,7 +108,6 @@ const Login = () => {
           >
             {loading ? "Signing in..." : "Sign In"}
           </motion.button>
-
         </form>
 
         <div className="mt-6 text-center">
@@ -129,7 +128,6 @@ const Login = () => {
             Create one
           </Link>
         </p>
-
       </motion.div>
     </div>
   );
