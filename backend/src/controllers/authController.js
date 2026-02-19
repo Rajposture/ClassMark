@@ -27,8 +27,7 @@ const sendMail = async ({ to, subject, html }) => {
       html,
     });
     return true;
-  } catch (error) {
-    console.log(error);
+  } catch {
     return false;
   }
 };
@@ -77,9 +76,7 @@ export const signup = async (req, res) => {
         enrollmentNumber: user.enrollmentNumber || null,
       },
     });
-
-  } catch (error) {
-    console.log(error);
+  } catch {
     return res.status(500).json({ success: false, message: "Server error" });
   }
 };
@@ -110,9 +107,7 @@ export const login = async (req, res) => {
         enrollmentNumber: user.enrollmentNumber || null,
       },
     });
-
-  } catch (error) {
-    console.log(error);
+  } catch {
     return res.status(500).json({ success: false, message: "Server error" });
   }
 };
@@ -155,9 +150,7 @@ export const forgotPassword = async (req, res) => {
       return res.status(500).json({ success: false, message: "Failed to send reset email" });
 
     return res.json({ success: true, message: "Reset email sent successfully" });
-
-  } catch (error) {
-    console.log(error);
+  } catch {
     return res.status(500).json({ success: false, message: "Server error" });
   }
 };
@@ -190,9 +183,7 @@ export const resetPassword = async (req, res) => {
     await user.save();
 
     return res.json({ success: true, message: "Password reset successful" });
-
-  } catch (error) {
-    console.log(error);
+  } catch {
     return res.status(500).json({ success: false, message: "Server error" });
   }
 };
@@ -221,9 +212,7 @@ export const getMe = async (req, res) => {
         enrollmentNumber: user.enrollmentNumber || null,
       },
     });
-
-  } catch (error) {
-    console.log(error);
+  } catch {
     return res.status(401).json({ success: false });
   }
 };
