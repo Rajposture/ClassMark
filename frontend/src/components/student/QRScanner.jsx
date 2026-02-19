@@ -1,56 +1,60 @@
 import { Html5Qrcode } from "html5-qrcode"
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import Navbar from "../common/Navbar"
 
 const QRScanner = () => {
   const navigate = useNavigate()
   const scannerRef = useRef(null)
-  const isStartedRef = useRef(false)
+  const [error, setError] = useState("")
 
   useEffect(() => {
-    const scanner = new Html5Qrcode("qr-reader")
-    scannerRef.current = scanner
-
-    const handleScan = (decodedText) => {
+    const startScanner = async () => {
       try {
-        if (!decodedText) return
+        const devices = await Html5Qrcode.getCameras()
 
-        scanner.stop().catch(() => {})
-        isStartedRef.current = false
+        if (!devices || devices.length === 0) {
+          setError("No camera found")
+          return
+        }
 
-        navigate("/attendance", {
-          state: { token: decodedText }
-        })
-      } catch {
-        console.log("Invalid QR format")
+        const backCamera =
+          devices.find((device) =>
+            device.label.toLowerCase().includes("back")
+          ) || devices[0]
+
+        const scanner = new Html5Qrcode("qr-reader")
+        scannerRef.current = scanner
+
+        await scanner.start(
+          backCamera.id,
+          {
+            fps: 15,
+            qrbox: { width: 280, height: 280 },
+            aspectRatio: 1.0
+          },
+          (decodedText) => {
+            if (!decodedText) return
+
+            scanner.stop().catch(() => {})
+
+            navigate("/attendance", {
+              state: { token: decodedText }
+            })
+          },
+          () => {}
+        )
+      } catch (err) {
+        console.error("Camera error:", err)
+        setError("Camera permission denied or unavailable")
       }
     }
 
-    scanner
-      .start(
-        {
-          facingMode: "environment",
-          width: { ideal: 1920 },
-          height: { ideal: 1080 }
-        },
-        {
-          fps: 15,
-          qrbox: { width: 280, height: 280 }
-        },
-        handleScan
-      )
-      .then(() => {
-        isStartedRef.current = true
-      })
-      .catch((err) => {
-        console.error("QR start error:", err)
-      })
+    startScanner()
 
     return () => {
-      if (scannerRef.current && isStartedRef.current) {
+      if (scannerRef.current) {
         scannerRef.current.stop().catch(() => {})
-        isStartedRef.current = false
       }
     }
   }, [navigate])
@@ -59,10 +63,17 @@ const QRScanner = () => {
     <>
       <Navbar />
       <div className="min-h-screen flex items-center justify-center bg-gray-100">
-        <div
-          id="qr-reader"
-          className="w-[320px] h-[320px] bg-black rounded-xl shadow-lg"
-        />
+        <div className="flex flex-col items-center">
+          <div
+            id="qr-reader"
+            className="w-[320px] h-[320px] bg-black rounded-xl shadow-lg"
+          />
+          {error && (
+            <p className="mt-4 text-sm text-red-600 text-center">
+              {error}
+            </p>
+          )}
+        </div>
       </div>
     </>
   )
