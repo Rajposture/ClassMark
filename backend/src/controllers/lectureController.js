@@ -1,6 +1,4 @@
 import crypto from "crypto";
-import fs from "fs";
-import path from "path";
 import XLSX from "xlsx";
 import jwt from "jsonwebtoken";
 import Lecture from "../models/Lecture.js";
@@ -95,23 +93,19 @@ export const generateQRToken = async (req, res) => {
   try {
     const lecture = await Lecture.findById(req.params.id);
 
-    if (!lecture) {
+    if (!lecture)
       return res.status(404).json({
         success: false,
         message: "Lecture not found"
       });
-    }
 
-    if (lecture.teacherId.toString() !== req.user._id.toString()) {
+    if (lecture.teacherId.toString() !== req.user._id.toString())
       return res.status(403).json({
         success: false,
         message: "Unauthorized access"
       });
-    }
 
-    const expiresInMinutes = 10;
-    const expiresAt = new Date(Date.now() + expiresInMinutes * 60 * 1000);
-
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
     lecture.qrExpiresAt = expiresAt;
     await lecture.save();
 
@@ -141,64 +135,57 @@ export const generateExcelSheet = async (req, res) => {
   try {
     const lecture = await Lecture.findById(req.params.id);
 
-    if (!lecture) {
+    if (!lecture)
       return res.status(404).json({
         success: false,
         message: "Lecture not found"
       });
-    }
 
-    if (lecture.teacherId.toString() !== req.user._id.toString()) {
+    if (lecture.teacherId.toString() !== req.user._id.toString())
       return res.status(403).json({
         success: false,
         message: "Unauthorized access"
       });
-    }
+
+    const attendanceData = lecture.attendance.map((entry) => ({
+      Name: entry.name || "",
+      EnrollmentNumber: entry.enrollmentNumber || "",
+      SubmitTime: entry.time
+        ? new Date(entry.time).toLocaleString()
+        : "",
+      Device: entry.deviceInfo || "",
+      Latitude: entry.latitude || "",
+      Longitude: entry.longitude || "",
+      IP: entry.ipAddress || ""
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(
+      attendanceData.length ? attendanceData : [{}]
+    );
 
     const workbook = XLSX.utils.book_new();
-
-    const attendanceData = lecture.attendance.length
-      ? lecture.attendance.map((entry) => ({
-          Name: entry.name || "",
-          EnrollmentNumber: entry.enrollmentNumber || "",
-          SubmitTime: entry.time
-            ? new Date(entry.time).toLocaleString()
-            : "",
-          Device: entry.deviceInfo || "",
-          Latitude: entry.latitude || "",
-          Longitude: entry.longitude || "",
-          IP: entry.ipAddress || ""
-        }))
-      : [
-          {
-            Name: "",
-            EnrollmentNumber: "",
-            SubmitTime: "",
-            Device: "",
-            Latitude: "",
-            Longitude: "",
-            IP: ""
-          }
-        ];
-
-    const worksheet = XLSX.utils.json_to_sheet(attendanceData);
-
     XLSX.utils.book_append_sheet(workbook, worksheet, "Attendance");
 
-    const safeSubject = (lecture.subject || "Lecture")
+    const buffer = XLSX.write(workbook, {
+      type: "buffer",
+      bookType: "xlsx"
+    });
+
+    const safeSubject = (lecture.subject || "attendance")
       .replace(/[^a-z0-9]/gi, "_")
       .toLowerCase();
 
-    const folderPath = path.join("uploads");
-    if (!fs.existsSync(folderPath)) {
-      fs.mkdirSync(folderPath, { recursive: true });
-    }
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=${safeSubject}.xlsx`
+    );
 
-    const filePath = path.join(folderPath, `${safeSubject}.xlsx`);
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
 
-    XLSX.writeFile(workbook, filePath);
-
-    return res.download(filePath, `${safeSubject}.xlsx`);
+    return res.send(buffer);
 
   } catch (err) {
     console.log("Excel error:", err);
@@ -213,19 +200,17 @@ export const deleteLecture = async (req, res) => {
   try {
     const lecture = await Lecture.findById(req.params.id);
 
-    if (!lecture) {
+    if (!lecture)
       return res.status(404).json({
         success: false,
         message: "Lecture not found"
       });
-    }
 
-    if (lecture.teacherId.toString() !== req.user._id.toString()) {
+    if (lecture.teacherId.toString() !== req.user._id.toString())
       return res.status(403).json({
         success: false,
         message: "Unauthorized access"
       });
-    }
 
     await Lecture.findByIdAndDelete(req.params.id);
 
