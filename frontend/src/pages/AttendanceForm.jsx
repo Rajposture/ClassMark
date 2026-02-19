@@ -16,8 +16,11 @@ const AttendanceForm = () => {
   const [success, setSuccess] = useState(false)
 
   useEffect(() => {
-    if (!authLoading && !user) {
+    if (authLoading) return
+
+    if (!user) {
       navigate("/login")
+      return
     }
 
     if (!token) {
@@ -25,15 +28,13 @@ const AttendanceForm = () => {
     }
   }, [authLoading, user, navigate, token])
 
-  if (authLoading) {
+  if (authLoading || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         Loading...
       </div>
     )
   }
-
-  if (!user) return null
 
   const handleSetLocation = () => {
     if (!navigator.geolocation) {
@@ -63,14 +64,12 @@ const AttendanceForm = () => {
     setLoading(true)
 
     try {
-      const authToken = localStorage.getItem("token")
-
       const res = await fetch(`${API_BASE}/api/attendance/mark`, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${authToken}`
+          "Content-Type": "application/json"
         },
+        credentials: "include",
         body: JSON.stringify({
           token,
           latitude,
@@ -90,7 +89,6 @@ const AttendanceForm = () => {
           navigate("/student")
         }, 1800)
       }
-
     } catch {
       setMessage("Server error")
     }
@@ -100,7 +98,6 @@ const AttendanceForm = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 px-4">
-
       <motion.div
         initial={{ opacity: 0, y: 40 }}
         animate={{ opacity: 1, y: 0 }}
@@ -109,7 +106,6 @@ const AttendanceForm = () => {
           success ? "scale-105" : ""
         }`}
       >
-
         <h2 className="text-2xl font-semibold text-center text-gray-900 mb-6">
           Mark Attendance
         </h2>
@@ -163,7 +159,6 @@ const AttendanceForm = () => {
             </motion.p>
           )}
         </AnimatePresence>
-
       </motion.div>
     </div>
   )

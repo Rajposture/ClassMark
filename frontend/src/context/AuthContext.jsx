@@ -8,6 +8,7 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   const fetchUser = useCallback(async () => {
+    setLoading(true);
     try {
       const res = await fetch(`${API_BASE}/api/auth/me`, {
         credentials: "include",
@@ -34,7 +35,6 @@ export const AuthProvider = ({ children }) => {
   }, [fetchUser]);
 
   const login = async () => {
-    setLoading(true);
     return await fetchUser();
   };
 
