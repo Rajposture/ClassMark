@@ -8,20 +8,30 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   const fetchUser = useCallback(async () => {
-    setLoading(true);
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      setUserState(null);
+      setLoading(false);
+      return null;
+    }
+
     try {
       const res = await fetch(`${API_BASE}/api/auth/me`, {
-        credentials: "include",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
 
       if (!res.ok) {
         setUserState(null);
+        localStorage.removeItem("token");
         return null;
       }
 
       const data = await res.json();
-      setUserState(data);
-      return data;
+      setUserState(data.user);
+      return data.user;
     } catch {
       setUserState(null);
       return null;
@@ -34,38 +44,53 @@ export const AuthProvider = ({ children }) => {
     fetchUser();
   }, [fetchUser]);
 
-  const login = async () => {
-    return await fetchUser();
+  const login = async (email, password) => {
+    setLoading(true);
+
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setLoading(false);
+        return data;
+      }
+
+      localStorage.setItem("token", data.token);
+      setUserState(data.user);
+      setLoading(false);
+      return data;
+    } catch {
+      setLoading(false);
+      return { success: false };
+    }
   };
 
-  const logout = async () => {
-    try {
-      await fetch(`${API_BASE}/api/auth/logout`, {
-        method: "POST",
-        credentials: "include",
-      });
-    } catch {}
+  const logout = () => {
+    localStorage.removeItem("token");
     setUserState(null);
     setLoading(false);
   };
 
-  const setUser = (data) => {
-    setUserState(data);
-    setLoading(false);
-  };
-
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        loading,
-        login,
-        logout,
-        refreshUser: fetchUser,
-        setUser,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
-  );
+  <AuthContext.Provider
+    value={{
+      user,
+      loading,
+      login,
+      logout,
+      refreshUser: fetchUser,
+      setUser: setUserState
+    }}
+  >
+    {children}
+  </AuthContext.Provider>
+);
 };
