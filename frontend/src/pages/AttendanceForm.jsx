@@ -1,15 +1,13 @@
 import { useState, useEffect, useContext } from "react"
-import { useNavigate, useLocation } from "react-router-dom"
+import { useNavigate, useParams } from "react-router-dom"
 import { motion, AnimatePresence } from "framer-motion"
 import { AuthContext } from "../context/AuthContext"
 import API_BASE from "../config/api"
 
 const AttendanceForm = () => {
   const navigate = useNavigate()
-  const location = useLocation()
+  const { token } = useParams()
   const { user, loading: authLoading } = useContext(AuthContext)
-
-  const tokenFromQR = location.state?.token
 
   const [latitude, setLatitude] = useState(null)
   const [longitude, setLongitude] = useState(null)
@@ -22,10 +20,10 @@ const AttendanceForm = () => {
       navigate("/login")
     }
 
-    if (!tokenFromQR) {
+    if (!token) {
       navigate("/student")
     }
-  }, [authLoading, user, navigate, tokenFromQR])
+  }, [authLoading, user, navigate, token])
 
   if (authLoading) {
     return (
@@ -74,7 +72,7 @@ const AttendanceForm = () => {
           Authorization: `Bearer ${authToken}`
         },
         body: JSON.stringify({
-          token: tokenFromQR,
+          token,
           latitude,
           longitude
         })

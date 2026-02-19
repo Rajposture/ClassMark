@@ -38,12 +38,13 @@ const QRScanner = () => {
 
             scanner.stop().catch(() => {})
 
-            navigate("/attendance", {
-              state: { token: decodedText }
-            })
+            navigate(`/attendance/${decodedText}`)
           },
-          () => {}
+          (errorMessage) => {
+            // optional: ignore scan errors silently
+          }
         )
+
       } catch (err) {
         console.error("Camera error:", err)
         setError("Camera permission denied or unavailable")
