@@ -15,11 +15,13 @@ const AttendanceForm = () => {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
-  useEffect(() => {
-    if (!authLoading && !user) {
-      navigate("/login");
-    }
-  }, [authLoading, user, navigate]);
+useEffect(() => {
+  if (!authLoading && !user) {
+    navigate("/login", {
+      state: { from: `/attendance/${lectureId}` }
+    });
+  }
+}, [authLoading, user, navigate, lectureId]);
 
   if (authLoading) {
     return (

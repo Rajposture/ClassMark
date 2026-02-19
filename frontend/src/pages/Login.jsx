@@ -3,12 +3,12 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { AuthContext } from "../context/AuthContext";
 import API_BASE from "../config/api";
-
+import { useLocation } from "react-router-dom";
 const Login = () => {
   const navigate = useNavigate();
   const { setUser } = useContext(AuthContext);
   const [searchParams] = useSearchParams();
-
+const location = useLocation();
   const redirect = searchParams.get("redirect");
 
   const [email, setEmail] = useState("");
@@ -41,11 +41,14 @@ const Login = () => {
       localStorage.setItem("token", data.token);
       setUser(data.user);
 
-      if (redirect) {
-        navigate(redirect, { replace: true });
-      } else {
-        navigate(data.user.role === "teacher" ? "/teacher" : "/student");
-      }
+const redirectPath = location.state?.from;
+
+if (redirectPath) {
+  navigate(redirectPath);
+} else {
+  navigate(data.user.role === "teacher" ? "/teacher" : "/student");
+}
+
 
     } catch {
       setError("Something went wrong. Try again.");
