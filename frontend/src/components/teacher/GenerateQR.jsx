@@ -4,12 +4,8 @@ import QRCode from "react-qr-code";
 const GenerateQR = ({ lecture, onClose }) => {
   if (!lecture?._id) return null;
 
-  const FRONTEND_URL =
-    import.meta.env.MODE === "production"
-      ? "https://class-mark.vercel.app"
-      : "http://localhost:5173";
-
-  const attendanceUrl = `${FRONTEND_URL}/attendance/${lecture._id}`;
+  // 🔥 Only store lecture ID in QR
+  const qrValue = lecture._id;
 
   return (
     <AnimatePresence>
@@ -26,6 +22,7 @@ const GenerateQR = ({ lecture, onClose }) => {
           transition={{ duration: 0.25 }}
           className="relative w-[92%] max-w-md bg-white rounded-3xl shadow-2xl p-8 text-center"
         >
+          {/* Close Button */}
           <button
             onClick={onClose}
             className="absolute top-4 right-4 text-gray-400 hover:text-black text-xl transition"
@@ -41,10 +38,11 @@ const GenerateQR = ({ lecture, onClose }) => {
             {lecture.subject}
           </p>
 
+          {/* QR Code */}
           <div className="flex justify-center">
             <div className="bg-white p-4 rounded-2xl shadow-inner border">
               <QRCode
-                value={attendanceUrl}
+                value={qrValue}
                 size={260}
                 level="H"
                 bgColor="#ffffff"
@@ -53,8 +51,9 @@ const GenerateQR = ({ lecture, onClose }) => {
             </div>
           </div>
 
-          <p className="mt-5 text-xs text-gray-500 break-all">
-            {attendanceUrl}
+          {/* Optional readable ID */}
+          <p className="mt-5 text-xs text-gray-400 break-all">
+            Lecture ID: {lecture._id}
           </p>
         </motion.div>
       </motion.div>

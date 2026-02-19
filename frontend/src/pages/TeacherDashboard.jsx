@@ -160,15 +160,15 @@ const TeacherDashboard = () => {
   ============================== */
 return (
   <DashboardLayout>
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-24 pb-12">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-24 pb-16">
 
       {/* Header */}
-      <div className="mb-10">
-        <h1 className="text-3xl sm:text-4xl font-bold text-slate-800">
+      <div className="mb-12">
+        <h1 className="text-3xl sm:text-4xl font-semibold text-gray-900">
           Teacher Dashboard
         </h1>
-        <p className="text-slate-500 mt-2">
-          Manage your lectures and attendance
+        <p className="text-gray-500 mt-2 text-sm sm:text-base">
+          Manage your lectures and attendance seamlessly
         </p>
       </div>
 
@@ -176,71 +176,71 @@ return (
         <p className="text-red-500 mb-6">{fetchError}</p>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-10">
 
         {/* Create Lecture Card */}
-        <div className="bg-gradient-to-br from-indigo-50 to-white rounded-3xl shadow-lg p-6 transition hover:shadow-2xl">
+        <div className="bg-white/80 backdrop-blur-xl border border-gray-200 rounded-3xl shadow-md p-6 sm:p-8 transition hover:shadow-xl">
           <CreateLecture onCreate={handleLectureCreated} />
         </div>
 
         {/* Lectures Section */}
-        <div className="lg:col-span-2 bg-white rounded-3xl shadow-xl p-6 sm:p-8 transition hover:shadow-2xl">
+        <div className="xl:col-span-2 bg-white/80 backdrop-blur-xl border border-gray-200 rounded-3xl shadow-md p-6 sm:p-8 transition hover:shadow-xl">
 
-          <h2 className="text-2xl font-semibold text-slate-800 mb-6">
-            Today’s Lectures
+          <h2 className="text-2xl font-semibold text-gray-900 mb-8">
+            Your Lectures
           </h2>
 
           {lectures.length === 0 ? (
-            <div className="h-40 flex items-center justify-center text-slate-400">
+            <div className="h-40 flex items-center justify-center text-gray-400">
               No lectures scheduled yet
             </div>
           ) : (
-            lectures.map((lecture) => (
-              <div
-                key={lecture._id}
-                className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 border border-slate-200 rounded-2xl p-5 mb-5 bg-slate-50 hover:bg-indigo-50 transition duration-200"
-              >
-                <div>
-                  <h3 className="font-semibold text-slate-800 text-lg">
-                    {lecture.subject}
-                  </h3>
-                  <p className="text-sm text-slate-500 mt-1">
-                    {lecture.date} • {lecture.startTime} – {lecture.endTime}
-                  </p>
+            <div className="space-y-5">
+              {lectures.map((lecture) => (
+                <div
+                  key={lecture._id}
+                  className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5 border border-gray-200 rounded-2xl p-5 bg-gray-50 hover:bg-gray-100 transition duration-200"
+                >
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-gray-900 text-lg">
+                      {lecture.subject}
+                    </h3>
+                    <p className="text-sm text-gray-500 mt-1">
+                      {lecture.date} • {lecture.startTime} – {lecture.endTime}
+                    </p>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+
+                    {/* Generate QR */}
+                    <button
+                      onClick={() => setActiveLecture(lecture)}
+                      className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-black text-white font-medium hover:bg-gray-900 active:scale-95 transition"
+                    >
+                      Generate QR
+                    </button>
+
+                    {/* Excel */}
+                    <button
+                      onClick={() =>
+                        handleExcelDownload(
+                          lecture._id,
+                          lecture.subject
+                        )
+                      }
+                      className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-gray-200 text-gray-900 font-medium hover:bg-gray-300 active:scale-95 transition"
+                    >
+                      Download Excel
+                    </button>
+
+                  </div>
                 </div>
-
-                <div className="flex gap-3">
-
-                  {/* Generate QR */}
-                  <button
-                    onClick={() => setActiveLecture(lecture)}
-                    className="px-4 py-2 rounded-xl bg-indigo-600 text-white font-medium hover:bg-indigo-700 active:scale-95 transition"
-                  >
-                    Generate QR
-                  </button>
-
-                  {/* Excel */}
-                  <button
-                    onClick={() =>
-                      handleExcelDownload(
-                        lecture._id,
-                        lecture.subject
-                      )
-                    }
-                    className="px-4 py-2 rounded-xl bg-slate-800 text-white font-medium hover:bg-slate-900 active:scale-95 transition"
-                  >
-                    Excel
-                  </button>
-
-                </div>
-              </div>
-            ))
+              ))}
+            </div>
           )}
-
         </div>
       </div>
 
-      {/* QR Modal */}
       {activeLecture && (
         <GenerateQR
           lecture={activeLecture}
@@ -250,6 +250,7 @@ return (
     </div>
   </DashboardLayout>
 );
+
 
 };
 
