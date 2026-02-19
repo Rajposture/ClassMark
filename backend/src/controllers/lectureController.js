@@ -64,7 +64,6 @@ export const getMyLectures = async (req, res) => {
     return res.status(500).json({ success: false, message: "Server error" });
   }
 };
-
 export const generateQRToken = async (req, res) => {
   try {
     const lecture = await Lecture.findById(req.params.id);
@@ -75,23 +74,33 @@ export const generateQRToken = async (req, res) => {
     if (lecture.teacherId.toString() !== req.user._id.toString())
       return res.status(403).json({ success: false, message: "Unauthorized access" });
 
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+    const expirySeconds = 60;
+    const expiresAt = new Date(Date.now() + expirySeconds * 1000);
+
     lecture.qrExpiresAt = expiresAt;
     await lecture.save();
 
     const token = jwt.sign(
-      { lectureId: lecture._id },
-      lecture.qrSecret,
-      { expiresIn: "10m" }
+      {
+        lectureId: lecture._id,
+        exp: Math.floor(Date.now() / 1000) + expirySeconds
+      },
+      lecture.qrSecret
     );
 
-    return res.status(200).json({ success: true, token, subject: lecture.subject, expiresAt });
+    return res.status(200).json({
+      success: true,
+      token,
+      subject: lecture.subject,
+      expiresAt
+    });
 
   } catch (err) {
     console.log(err);
     return res.status(500).json({ success: false, message: "Server error" });
   }
 };
+
 
 export const generateExcelSheet = async (req, res) => {
   try {
@@ -106,6 +115,35 @@ export const generateExcelSheet = async (req, res) => {
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Attendance");
 
+    const totalCount = lecture.attendance.length;
+
+    worksheet.mergeCells("A1:G1");
+    worksheet.getCell("A1").value = `Subject: ${lecture.subject}`;
+    worksheet.getCell("A1").font = { bold: true, size: 14 };
+    worksheet.getCell("A1").alignment = { horizontal: "center" };
+    worksheet.getCell("A1").fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FFEFEFEF" }
+    };
+
+    worksheet.mergeCells("A2:G2");
+    worksheet.getCell("A2").value = `Date: ${lecture.date}`;
+    worksheet.getCell("A2").font = { bold: true };
+    worksheet.getCell("A2").alignment = { horizontal: "center" };
+
+    worksheet.mergeCells("A3:G3");
+    worksheet.getCell("A3").value = `Total Present: ${totalCount}`;
+    worksheet.getCell("A3").font = { bold: true };
+    worksheet.getCell("A3").alignment = { horizontal: "center" };
+
+    worksheet.mergeCells("A4:G4");
+    worksheet.getCell("A4").value = `Generated On: ${new Date().toLocaleString()}`;
+    worksheet.getCell("A4").font = { italic: true };
+    worksheet.getCell("A4").alignment = { horizontal: "center" };
+
+    worksheet.addRow([]);
+
     worksheet.columns = [
       { header: "Name", key: "name", width: 25 },
       { header: "Enrollment Number", key: "enrollmentNumber", width: 25 },
@@ -116,13 +154,20 @@ export const generateExcelSheet = async (req, res) => {
       { header: "IP Address", key: "ip", width: 20 }
     ];
 
-    worksheet.getRow(1).font = { bold: true };
+    worksheet.getRow(6).font = { bold: true };
+    worksheet.getRow(6).alignment = { horizontal: "center" };
+    
+    worksheet.views = [
+  { state: "frozen", ySplit: 6 }
+];
 
     lecture.attendance.forEach((entry) => {
       worksheet.addRow({
         name: entry.name || "",
         enrollmentNumber: entry.enrollmentNumber || "",
-        submitTime: entry.time ? new Date(entry.time).toLocaleString() : "",
+        submitTime: entry.markedAt
+          ? new Date(entry.markedAt).toLocaleString()
+          : "",
         device: entry.deviceInfo || "",
         latitude: entry.latitude || "",
         longitude: entry.longitude || "",
@@ -152,6 +197,8 @@ export const generateExcelSheet = async (req, res) => {
     return res.status(500).json({ success: false, message: "Failed to generate Excel" });
   }
 };
+
+
 
 export const deleteLecture = async (req, res) => {
   try {

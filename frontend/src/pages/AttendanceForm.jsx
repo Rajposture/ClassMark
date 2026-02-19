@@ -1,100 +1,104 @@
-import { useState, useEffect, useContext } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
-import { AuthContext } from "../context/AuthContext";
-import API_BASE from "../config/api";
+import { useState, useEffect, useContext } from "react"
+import { useNavigate, useLocation } from "react-router-dom"
+import { motion, AnimatePresence } from "framer-motion"
+import { AuthContext } from "../context/AuthContext"
+import API_BASE from "../config/api"
 
 const AttendanceForm = () => {
-  const { lectureId } = useParams();
-  const navigate = useNavigate();
-  const { user, loading: authLoading } = useContext(AuthContext);
+  const navigate = useNavigate()
+  const location = useLocation()
+  const { user, loading: authLoading } = useContext(AuthContext)
 
-  const [latitude, setLatitude] = useState(null);
-  const [longitude, setLongitude] = useState(null);
-  const [message, setMessage] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
+  const tokenFromQR = location.state?.token
 
-useEffect(() => {
-  if (!authLoading && !user) {
-    navigate("/login", {
-      state: { from: `/attendance/${lectureId}` }
-    });
-  }
-}, [authLoading, user, navigate, lectureId]);
+  const [latitude, setLatitude] = useState(null)
+  const [longitude, setLongitude] = useState(null)
+  const [message, setMessage] = useState("")
+  const [loading, setLoading] = useState(false)
+  const [success, setSuccess] = useState(false)
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate("/login")
+    }
+
+    if (!tokenFromQR) {
+      navigate("/student")
+    }
+  }, [authLoading, user, navigate, tokenFromQR])
 
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         Loading...
       </div>
-    );
+    )
   }
 
-  if (!user) return null;
+  if (!user) return null
 
   const handleSetLocation = () => {
     if (!navigator.geolocation) {
-      setMessage("Geolocation not supported");
-      return;
+      setMessage("Geolocation not supported")
+      return
     }
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        setLatitude(position.coords.latitude);
-        setLongitude(position.coords.longitude);
-        setMessage("Location captured successfully");
+        setLatitude(position.coords.latitude)
+        setLongitude(position.coords.longitude)
+        setMessage("Location captured successfully")
       },
       () => {
-        setMessage("Location permission denied");
+        setMessage("Location permission denied")
       },
       { enableHighAccuracy: true }
-    );
-  };
+    )
+  }
 
   const submitAttendance = async () => {
     if (!latitude || !longitude) {
-      setMessage("Please set your location first");
-      return;
+      setMessage("Please set your location first")
+      return
     }
 
-    setLoading(true);
+    setLoading(true)
 
     try {
-      const token = localStorage.getItem("token");
+      const authToken = localStorage.getItem("token")
 
       const res = await fetch(`${API_BASE}/api/attendance/mark`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
+          Authorization: `Bearer ${authToken}`
         },
         body: JSON.stringify({
-          lectureId,
+          token: tokenFromQR,
           latitude,
           longitude
         })
-      });
+      })
 
-      const data = await res.json();
+      const data = await res.json()
 
       if (!res.ok) {
-        setMessage(data.message);
+        setMessage(data.message)
       } else {
-        setSuccess(true);
-        setMessage("Attendance marked successfully 🎉");
+        setSuccess(true)
+        setMessage("Attendance marked successfully")
 
         setTimeout(() => {
-          navigate("/student");
-        }, 1800);
+          navigate("/student")
+        }, 1800)
       }
 
     } catch {
-      setMessage("Server error");
+      setMessage("Server error")
     }
 
-    setLoading(false);
-  };
+    setLoading(false)
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 px-4">
@@ -112,7 +116,6 @@ useEffect(() => {
           Mark Attendance
         </h2>
 
-        {/* Student Info Card */}
         <div className="mb-6 bg-gray-50 p-4 rounded-xl border border-gray-200">
           <p className="text-sm text-gray-500">Student Name</p>
           <p className="font-semibold text-gray-800">
@@ -127,7 +130,6 @@ useEffect(() => {
           </div>
         </div>
 
-        {/* Location Button */}
         <motion.button
           whileTap={{ scale: 0.97 }}
           onClick={handleSetLocation}
@@ -136,7 +138,6 @@ useEffect(() => {
           {latitude ? "Location Set ✓" : "Set Current Location"}
         </motion.button>
 
-        {/* Submit Button */}
         <motion.button
           whileTap={{ scale: 0.97 }}
           onClick={submitAttendance}
@@ -150,7 +151,6 @@ useEffect(() => {
             : "Submit Attendance"}
         </motion.button>
 
-        {/* Message */}
         <AnimatePresence>
           {message && (
             <motion.p
@@ -168,7 +168,7 @@ useEffect(() => {
 
       </motion.div>
     </div>
-  );
-};
+  )
+}
 
-export default AttendanceForm;
+export default AttendanceForm
