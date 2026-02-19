@@ -17,6 +17,9 @@ import ProtectedRoute from "./ProtectedRoute";
 import PublicRoute from "./PublicRoute";
 import { AuthContext } from "../context/AuthContext";
 
+import Assignments from "../pages/Assignments";
+import AssignmentDetail from "../pages/AssignmentDetail";
+
 const DashboardRedirect = () => {
   const { user, loading } = useContext(AuthContext);
 
@@ -36,7 +39,6 @@ const AppRoutes = () => {
   return (
     <Routes>
 
-      {/* PUBLIC ROUTES */}
       <Route
         path="/"
         element={
@@ -82,7 +84,6 @@ const AppRoutes = () => {
         }
       />
 
-      {/* PROTECTED ROUTES */}
       <Route
         path="/dashboard"
         element={
@@ -116,6 +117,24 @@ const AppRoutes = () => {
       />
 
       <Route
+        path="/assignments"
+        element={
+          <ProtectedRoute>
+            <Assignments />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/assignments/:id"
+        element={
+          <ProtectedRoute>
+            <AssignmentDetail />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
         path="/teacher"
         element={
           <ProtectedRoute role="teacher">
@@ -124,7 +143,6 @@ const AppRoutes = () => {
         }
       />
 
-      {/* FALLBACK */}
       <Route path="*" element={<Navigate to="/" replace />} />
 
     </Routes>

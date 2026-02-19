@@ -11,6 +11,7 @@ import connectDB from "./config/db.js";
 import authRoutes from "./routes/authRoutes.js";
 import lectureRoutes from "./routes/lectureRoutes.js";
 import attendanceRoutes from "./routes/attendanceRoutes.js";
+import assignmentRoutes from "./routes/assignmentRoutes.js";
 
 const app = express();
 const server = http.createServer(app);
@@ -55,6 +56,7 @@ io.on("connection", (socket) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/lectures", lectureRoutes);
 app.use("/api/attendance", attendanceRoutes);
+app.use("/api/assignments", assignmentRoutes);
 
 app.get("/", (req, res) => {
   res.status(200).json({ message: "ClassMark API running" });

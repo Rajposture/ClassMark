@@ -10,10 +10,12 @@ const attendanceSchema = new mongoose.Schema(
     name: {
       type: String,
       required: true,
+      trim: true,
     },
     enrollmentNumber: {
       type: String,
       required: true,
+      trim: true,
     },
     ipAddress: {
       type: String,
@@ -44,6 +46,7 @@ const lectureSchema = new mongoose.Schema(
     subject: {
       type: String,
       required: true,
+      trim: true,
     },
     date: {
       type: String,
@@ -61,6 +64,7 @@ const lectureSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
+      index: true,
     },
     qrSecret: {
       type: String,
@@ -95,9 +99,6 @@ const lectureSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-lectureSchema.index(
-  { _id: 1, "attendance.studentId": 1 },
-  { unique: true, sparse: true }
-);
+lectureSchema.index({ teacherId: 1 });
 
 export default mongoose.model("Lecture", lectureSchema);

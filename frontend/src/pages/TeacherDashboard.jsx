@@ -49,8 +49,7 @@ const TeacherDashboard = () => {
           return;
         }
 
-        // ✅ Backend returns array directly
-        setLectures(Array.isArray(data) ? data : []);
+        setLectures(Array.isArray(data.lectures) ? data.lectures : []);
       } catch (err) {
         console.log("Lecture fetch error:", err);
         setFetchError("Server error while fetching lectures");
@@ -82,7 +81,6 @@ const TeacherDashboard = () => {
         return false;
       }
 
-      // ✅ Backend returns { lecture }
       if (data.lecture) {
         setLectures((prev) => [data.lecture, ...prev]);
       }
@@ -94,7 +92,6 @@ const TeacherDashboard = () => {
       return false;
     }
   };
-
 
   const handleExcelDownload = async (lectureId, subject) => {
     try {
@@ -134,7 +131,6 @@ const TeacherDashboard = () => {
     }
   };
 
-
   if (loading || fetching) {
     return (
       <DashboardLayout>
@@ -145,101 +141,88 @@ const TeacherDashboard = () => {
     );
   }
 
-
-return (
-  <DashboardLayout>
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-24 pb-16">
-
-      {/* Header */}
-      <div className="mb-12">
-        <h1 className="text-3xl sm:text-4xl font-semibold text-gray-900">
-          Teacher Dashboard
-        </h1>
-        <p className="text-gray-500 mt-2 text-sm sm:text-base">
-          Manage your lectures and attendance seamlessly
-        </p>
-      </div>
-
-      {fetchError && (
-        <p className="text-red-500 mb-6">{fetchError}</p>
-      )}
-
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-10">
-
-        {/* Create Lecture Card */}
-        <div className="bg-white/80 backdrop-blur-xl border border-gray-200 rounded-3xl shadow-md p-6 sm:p-8 transition hover:shadow-xl">
-          <CreateLecture onCreate={handleLectureCreated} />
+  return (
+    <DashboardLayout>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-24 pb-16">
+        <div className="mb-12">
+          <h1 className="text-3xl sm:text-4xl font-semibold text-gray-900">
+            Teacher Dashboard
+          </h1>
+          <p className="text-gray-500 mt-2 text-sm sm:text-base">
+            Manage your lectures and attendance seamlessly
+          </p>
         </div>
 
-        {/* Lectures Section */}
-        <div className="xl:col-span-2 bg-white/80 backdrop-blur-xl border border-gray-200 rounded-3xl shadow-md p-6 sm:p-8 transition hover:shadow-xl">
+        {fetchError && (
+          <p className="text-red-500 mb-6">{fetchError}</p>
+        )}
 
-          <h2 className="text-2xl font-semibold text-gray-900 mb-8">
-            Your Lectures
-          </h2>
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-10">
+          <div className="bg-white/80 backdrop-blur-xl border border-gray-200 rounded-3xl shadow-md p-6 sm:p-8 transition hover:shadow-xl">
+            <CreateLecture onCreate={handleLectureCreated} />
+          </div>
 
-          {lectures.length === 0 ? (
-            <div className="h-40 flex items-center justify-center text-gray-400">
-              No lectures scheduled yet
-            </div>
-          ) : (
-            <div className="space-y-5">
-              {lectures.map((lecture) => (
-                <div
-                  key={lecture._id}
-                  className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5 border border-gray-200 rounded-2xl p-5 bg-gray-50 hover:bg-gray-100 transition duration-200"
-                >
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-gray-900 text-lg">
-                      {lecture.subject}
-                    </h3>
-                    <p className="text-sm text-gray-500 mt-1">
-                      {lecture.date} • {lecture.startTime} – {lecture.endTime}
-                    </p>
+          <div className="xl:col-span-2 bg-white/80 backdrop-blur-xl border border-gray-200 rounded-3xl shadow-md p-6 sm:p-8 transition hover:shadow-xl">
+            <h2 className="text-2xl font-semibold text-gray-900 mb-8">
+              Your Lectures
+            </h2>
+
+            {lectures.length === 0 ? (
+              <div className="h-40 flex items-center justify-center text-gray-400">
+                No lectures scheduled yet
+              </div>
+            ) : (
+              <div className="space-y-5">
+                {lectures.map((lecture) => (
+                  <div
+                    key={lecture._id}
+                    className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5 border border-gray-200 rounded-2xl p-5 bg-gray-50 hover:bg-gray-100 transition duration-200"
+                  >
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-gray-900 text-lg">
+                        {lecture.subject}
+                      </h3>
+                      <p className="text-sm text-gray-500 mt-1">
+                        {lecture.date} • {lecture.startTime} – {lecture.endTime}
+                      </p>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                      <button
+                        onClick={() => setActiveLecture(lecture)}
+                        className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-black text-white font-medium hover:bg-gray-900 active:scale-95 transition"
+                      >
+                        Generate QR
+                      </button>
+
+                      <button
+                        onClick={() =>
+                          handleExcelDownload(
+                            lecture._id,
+                            lecture.subject
+                          )
+                        }
+                        className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-gray-200 text-gray-900 font-medium hover:bg-gray-300 active:scale-95 transition"
+                      >
+                        Download Excel
+                      </button>
+                    </div>
                   </div>
-
-                  <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-
-                    {/* Generate QR */}
-                    <button
-                      onClick={() => setActiveLecture(lecture)}
-                      className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-black text-white font-medium hover:bg-gray-900 active:scale-95 transition"
-                    >
-                      Generate QR
-                    </button>
-
-                    {/* Excel */}
-                    <button
-                      onClick={() =>
-                        handleExcelDownload(
-                          lecture._id,
-                          lecture.subject
-                        )
-                      }
-                      className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-gray-200 text-gray-900 font-medium hover:bg-gray-300 active:scale-95 transition"
-                    >
-                      Download Excel
-                    </button>
-
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+                ))}
+              </div>
+            )}
+          </div>
         </div>
+
+        {activeLecture && (
+          <GenerateQR
+            lecture={activeLecture}
+            onClose={() => setActiveLecture(null)}
+          />
+        )}
       </div>
-
-      {activeLecture && (
-        <GenerateQR
-          lecture={activeLecture}
-          onClose={() => setActiveLecture(null)}
-        />
-      )}
-    </div>
-  </DashboardLayout>
-);
-
-
+    </DashboardLayout>
+  );
 };
 
 export default TeacherDashboard;
