@@ -64,12 +64,19 @@ const AttendanceForm = () => {
     setLoading(true)
 
     try {
+      const authToken = localStorage.getItem("token")
+
+      if (!authToken) {
+        navigate("/login")
+        return
+      }
+
       const res = await fetch(`${API_BASE}/api/attendance/mark`, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`
         },
-        credentials: "include",
         body: JSON.stringify({
           token,
           latitude,
@@ -89,6 +96,7 @@ const AttendanceForm = () => {
           navigate("/student")
         }, 1800)
       }
+
     } catch {
       setMessage("Server error")
     }
