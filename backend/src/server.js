@@ -4,6 +4,8 @@ dotenv.config();
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import http from "http";
+import { Server } from "socket.io";
 
 import connectDB from "./config/db.js";
 import authRoutes from "./routes/authRoutes.js";
@@ -11,32 +13,51 @@ import lectureRoutes from "./routes/lectureRoutes.js";
 import attendanceRoutes from "./routes/attendanceRoutes.js";
 
 const app = express();
+const server = http.createServer(app);
 
 connectDB();
 
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://class-mark.vercel.app"
+];
+
 app.use(
   cors({
-    origin: [
-      "http://localhost:5173",
-      "https://class-mark.vercel.app"
-    ],
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-    credentials: true,
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+    credentials: true
   })
 );
 
-app.use(express.json());
+app.use(express.json({ limit: "10mb" }));
 app.use(cookieParser());
 
-app.use("/uploads", express.static("uploads"));
+const io = new Server(server, {
+  cors: {
+    origin: allowedOrigins,
+    methods: ["GET", "POST"],
+    credentials: true
+  }
+});
+
+app.set("io", io);
+
+io.on("connection", (socket) => {
+  socket.on("disconnect", () => {});
+});
 
 app.use("/api/auth", authRoutes);
 app.use("/api/lectures", lectureRoutes);
 app.use("/api/attendance", attendanceRoutes);
 
 app.get("/", (req, res) => {
-  res.json({ message: "ClassMark API running" });
+  res.status(200).json({ message: "ClassMark API running" });
 });
 
 app.use((req, res) => {
@@ -44,11 +65,12 @@ app.use((req, res) => {
 });
 
 app.use((err, req, res, next) => {
+  console.error(err);
   res.status(500).json({ message: "Server error" });
 });
 
 const PORT = process.env.PORT || 5001;
 
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });

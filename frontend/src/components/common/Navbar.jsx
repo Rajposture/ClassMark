@@ -1,6 +1,8 @@
 import { useContext, useState, useRef, useEffect } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { AuthContext } from "../../context/AuthContext"
+import { FiMenu, FiX, FiLogOut, FiUser } from "react-icons/fi"
+import { IoNotificationsOutline } from "react-icons/io5"
 
 const Navbar = () => {
   const { user, logout } = useContext(AuthContext)
@@ -21,7 +23,6 @@ const Navbar = () => {
         setOpenProfile(false)
       }
     }
-
     document.addEventListener("mousedown", handleClick)
     return () => document.removeEventListener("mousedown", handleClick)
   }, [])
@@ -34,7 +35,6 @@ const Navbar = () => {
   const handleImageChange = (e) => {
     const file = e.target.files[0]
     if (!file) return
-
     const reader = new FileReader()
     reader.onloadend = () => {
       setProfileImage(reader.result)
@@ -54,211 +54,204 @@ const Navbar = () => {
   return (
     <>
       {/* NAVBAR */}
-      <div className="fixed top-4 left-0 right-0 z-50 flex justify-center px-4 sm:px-6">
-        <nav className="w-full max-w-7xl bg-white/90 backdrop-blur-xl shadow-xl rounded-2xl px-5 sm:px-8 py-3 sm:py-4 flex justify-between items-center border">
+      <div className="fixed top-4 left-0 right-0 z-50 flex justify-center px-4">
+        <nav className="w-full max-w-7xl backdrop-blur-2xl bg-white/60 border border-white/30 shadow-xl rounded-2xl px-6 py-3 flex justify-between items-center">
 
           {/* LEFT */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
             <button
-              className="md:hidden text-xl"
+              className="md:hidden text-xl text-slate-700"
               onClick={() => setOpenSidebar(true)}
             >
-              ☰
+              <FiMenu />
             </button>
 
-            <img src="/favicon.png" alt="logo" className="w-8 h-8 sm:w-9 sm:h-9" />
-
-            <span className="text-lg sm:text-xl font-bold text-indigo-600">
+            <span className="text-xl font-semibold tracking-tight text-slate-900">
               ClassMark
             </span>
           </div>
 
           {/* DESKTOP NAV */}
           {user && (
-            <div className="hidden md:flex gap-10 text-slate-700 font-medium">
+            <div className="hidden md:flex gap-8 text-slate-700 font-medium text-sm">
               <Link
                 to={user.role === "teacher" ? "/teacher" : "/student"}
-                className="hover:text-indigo-600 transition"
+                className="hover:text-black transition"
               >
                 Dashboard
               </Link>
-
-              <Link
-                to="/lectures"
-                className="hover:text-indigo-600 transition"
-              >
+              <Link to="/lectures" className="hover:text-black transition">
                 Lectures
               </Link>
-
-              <Link
-                to="/assignments"
-                className="hover:text-indigo-600 transition"
-              >
+              <Link to="/assignments" className="hover:text-black transition">
                 Assignments
               </Link>
-
-              <Link
-                to="/mis"
-                className="hover:text-indigo-600 transition"
-              >
+              <Link to="/mis" className="hover:text-black transition">
                 MIS
               </Link>
             </div>
           )}
 
           {/* RIGHT */}
-          <div className="flex items-center gap-4 sm:gap-6">
+          <div className="flex items-center gap-6">
+
             {!user && (
               <Link
                 to="/login"
-                className="px-5 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition text-sm"
+                className="px-5 py-2 bg-black text-white rounded-full text-sm hover:opacity-90 transition"
               >
                 Login
               </Link>
             )}
 
             {user && (
-              <div ref={dropdownRef} className="relative">
-                <div
-                  onClick={() => setOpenProfile(!openProfile)}
-                  className="w-9 h-9 sm:w-11 sm:h-11 rounded-full border-2 border-indigo-500 bg-white flex items-center justify-center font-semibold text-indigo-600 cursor-pointer overflow-hidden"
-                >
-                  {profileImage ? (
-                    <img
-                      src={profileImage}
-                      alt="profile"
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    initials
+              <>
+                {/* Notification Icon (Professional, no emoji) */}
+                <button className="text-xl text-slate-700 hover:text-black transition">
+                  <IoNotificationsOutline />
+                </button>
+
+                {/* PROFILE */}
+                <div ref={dropdownRef} className="relative">
+                  <div
+                    onClick={() => setOpenProfile(!openProfile)}
+                    className="w-10 h-10 rounded-full bg-white/80 border border-slate-300 flex items-center justify-center text-sm font-semibold text-slate-700 cursor-pointer overflow-hidden backdrop-blur-md shadow-sm"
+                  >
+                    {profileImage ? (
+                      <img
+                        src={profileImage}
+                        alt="profile"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      initials
+                    )}
+                  </div>
+
+                  {openProfile && (
+                    <div className="absolute right-0 mt-4 w-72 backdrop-blur-xl bg-white/80 border border-white/40 shadow-2xl rounded-2xl p-6">
+
+                      <div className="flex items-center gap-4">
+                        <div className="w-14 h-14 rounded-full border overflow-hidden">
+                          {profileImage ? (
+                            <img
+                              src={profileImage}
+                              alt="profile"
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-lg font-semibold text-slate-700">
+                              {initials}
+                            </div>
+                          )}
+                        </div>
+
+                        <div>
+                          <p className="font-semibold text-slate-800">
+                            {user.name}
+                          </p>
+                          <p className="text-sm text-slate-500 capitalize">
+                            {user.role}
+                          </p>
+                          {user.role === "student" && (
+                            <p className="text-xs text-slate-500">
+                              {user.enrollmentNumber}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      <input
+                        type="file"
+                        ref={fileInputRef}
+                        accept="image/*"
+                        onChange={handleImageChange}
+                        className="hidden"
+                      />
+
+                      <button
+                        onClick={() => fileInputRef.current.click()}
+                        className="mt-5 w-full py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-sm transition"
+                      >
+                        Change Photo
+                      </button>
+
+                      <button
+                        onClick={handleLogout}
+                        className="mt-3 w-full py-2 rounded-lg bg-black text-white text-sm flex items-center justify-center gap-2 hover:opacity-90 transition"
+                      >
+                        <FiLogOut />
+                        Logout
+                      </button>
+                    </div>
                   )}
                 </div>
-
-                {openProfile && (
-                  <div className="absolute right-0 mt-4 w-72 bg-white shadow-2xl rounded-xl p-6 border">
-
-                    <div className="flex items-center gap-4">
-                      <div className="w-14 h-14 rounded-full border overflow-hidden">
-                        {profileImage ? (
-                          <img
-                            src={profileImage}
-                            alt="profile"
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-lg font-bold text-indigo-600">
-                            {initials}
-                          </div>
-                        )}
-                      </div>
-
-                      <div>
-                        <p className="font-semibold text-slate-800">
-                          {user.name}
-                        </p>
-                        <p className="text-sm text-slate-500 capitalize">
-                          {user.role}
-                        </p>
-
-                        {user.role === "student" && (
-                          <p className="text-sm text-slate-500">
-                            Enrollment: {user.enrollmentNumber}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-
-                    <input
-                      type="file"
-                      ref={fileInputRef}
-                      accept="image/*"
-                      onChange={handleImageChange}
-                      className="hidden"
-                    />
-
-                    <button
-                      onClick={() => fileInputRef.current.click()}
-                      className="mt-4 w-full py-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm"
-                    >
-                      Change Profile Photo
-                    </button>
-
-                    <button
-                      onClick={handleLogout}
-                      className="mt-3 w-full py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm"
-                    >
-                      Logout
-                    </button>
-                  </div>
-                )}
-              </div>
+              </>
             )}
           </div>
         </nav>
       </div>
 
       {/* MOBILE SIDEBAR */}
-      {/* MOBILE SIDEBAR */}
-<div
-  className={`fixed inset-0 z-40 md:hidden transition-opacity duration-300 ${
-    openSidebar ? "opacity-100 visible" : "opacity-0 invisible"
-  }`}
->
-  {/* Overlay */}
-  <div
-    className="absolute inset-0 bg-black/50"
-    onClick={() => setOpenSidebar(false)}
-  />
-
-  {/* Drawer */}
-  <div
-    className={`absolute top-0 left-0 h-full w-72 bg-white shadow-2xl p-6 transform transition-transform duration-300 ${
-      openSidebar ? "translate-x-0" : "-translate-x-full"
-    }`}
-  >
-    <div className="flex justify-between items-center mb-8">
-      <span className="text-lg font-bold text-indigo-600">
-        Menu
-      </span>
-      <button onClick={() => setOpenSidebar(false)}>✕</button>
-    </div>
-
-    <div className="space-y-6 font-medium text-slate-700">
-      <Link
-        to={user?.role === "teacher" ? "/teacher" : "/student"}
-        onClick={() => setOpenSidebar(false)}
-        className="block hover:text-indigo-600"
+      <div
+        className={`fixed inset-0 z-40 md:hidden transition ${
+          openSidebar ? "visible opacity-100" : "invisible opacity-0"
+        }`}
       >
-        Dashboard
-      </Link>
+        <div
+          className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+          onClick={() => setOpenSidebar(false)}
+        />
 
-      <Link
-        to="/lectures"
-        onClick={() => setOpenSidebar(false)}
-        className="block hover:text-indigo-600"
-      >
-        Lectures
-      </Link>
+        <div
+          className={`absolute top-0 left-0 h-full w-72 backdrop-blur-2xl bg-white/70 border-r border-white/40 shadow-2xl p-6 transform transition-transform duration-300 ${
+            openSidebar ? "translate-x-0" : "-translate-x-full"
+          }`}
+        >
+          <div className="flex justify-between items-center mb-10">
+            <span className="text-lg font-semibold text-slate-800">
+              Menu
+            </span>
+            <button onClick={() => setOpenSidebar(false)}>
+              <FiX />
+            </button>
+          </div>
 
-      <Link
-        to="/assignments"
-        onClick={() => setOpenSidebar(false)}
-        className="block hover:text-indigo-600"
-      >
-        Assignments
-      </Link>
+          <div className="space-y-6 text-slate-700 font-medium text-sm">
+            <Link
+              to={user?.role === "teacher" ? "/teacher" : "/student"}
+              onClick={() => setOpenSidebar(false)}
+              className="block hover:text-black transition"
+            >
+              Dashboard
+            </Link>
 
-      <Link
-        to="https://lssimss.com/GPMMIS/jsp/userlogin.action"
-        onClick={() => setOpenSidebar(false)}
-        className="block hover:text-indigo-600"
-      >
-        MIS
-      </Link>
-    </div>
-  </div>
-</div>
+            <Link
+              to="/lectures"
+              onClick={() => setOpenSidebar(false)}
+              className="block hover:text-black transition"
+            >
+              Lectures
+            </Link>
 
+            <Link
+              to="/assignments"
+              onClick={() => setOpenSidebar(false)}
+              className="block hover:text-black transition"
+            >
+              Assignments
+            </Link>
+
+            <Link
+              to="/mis"
+              onClick={() => setOpenSidebar(false)}
+              className="block hover:text-black transition"
+            >
+              MIS
+            </Link>
+          </div>
+        </div>
+      </div>
     </>
   )
 }
