@@ -1,12 +1,12 @@
-import jwt from "jsonwebtoken";
 import Lecture from "../models/Lecture.js";
-import fs from "fs";
-import path from "path";
-import ExcelJS from "exceljs";
 
+/* ===============================
+   DISTANCE CALCULATION (Haversine)
+=============================== */
 const calculateDistance = (lat1, lon1, lat2, lon2) => {
   const toRad = (value) => (value * Math.PI) / 180;
-  const R = 6371000;
+  const R = 6371000; // Earth radius in meters
+
   const dLat = toRad(lat2 - lat1);
   const dLon = toRad(lon2 - lon1);
 
@@ -18,9 +18,13 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
       Math.sin(dLon / 2);
 
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
   return R * c;
 };
 
+/* ===============================
+   MARK ATTENDANCE
+=============================== */
 export const markAttendance = async (req, res) => {
   try {
     const { lectureId, latitude, longitude } = req.body;
@@ -31,10 +35,10 @@ export const markAttendance = async (req, res) => {
     if (latitude == null || longitude == null)
       return res.status(400).json({ message: "Location not detected" });
 
-    if (!req.user || !req.user.id)
+    if (!req.user || !req.user._id)
       return res.status(401).json({ message: "Unauthorized" });
 
-    const studentId = req.user.id;
+    const studentId = req.user._id;
 
     const lecture = await Lecture.findById(lectureId);
     if (!lecture)
@@ -73,63 +77,15 @@ export const markAttendance = async (req, res) => {
 
     await lecture.save();
 
-    const folderPath = path.join("uploads", "attendance");
-    if (!fs.existsSync(folderPath))
-      fs.mkdirSync(folderPath, { recursive: true });
-
-    const safeSubject = (lecture.subject || "lecture")
-      .replace(/[^a-z0-9]/gi, "_")
-      .toLowerCase();
-
-    const filePath = path.join(folderPath, `${safeSubject}.xlsx`);
-
-    const workbook = new ExcelJS.Workbook();
-    let worksheet;
-
-    if (fs.existsSync(filePath)) {
-      await workbook.xlsx.readFile(filePath);
-      worksheet = workbook.getWorksheet("Attendance");
-    } else {
-      worksheet = workbook.addWorksheet("Attendance");
-
-      worksheet.columns = [
-        { header: "Student ID", key: "studentId" },
-        { header: "Date", key: "date" },
-        { header: "Submit Time", key: "submitTime" },
-        { header: "Device", key: "device" },
-        { header: "Latitude", key: "latitude" },
-        { header: "Longitude", key: "longitude" },
-        { header: "IP Address", key: "ip" }
-      ];
-
-      worksheet.views = [{ state: "frozen", ySplit: 1 }];
-      worksheet.getRow(1).font = { bold: true };
-      worksheet.columns.forEach((column) => {
-        column.width = 22;
-      });
-    }
-
-    worksheet.addRow({
-      studentId,
-      date: lecture.date,
-      submitTime: new Date().toLocaleString(),
-      device: req.headers["user-agent"] || "",
-      latitude: studentLat,
-      longitude: studentLon,
-      ip: req.ip || ""
-    });
-
-    await workbook.xlsx.writeFile(filePath);
-
     return res.status(201).json({
       success: true,
       message: "Attendance marked successfully"
     });
 
   } catch (error) {
-    console.log(error);
-    return res.status(500).json({ message: "Server error" });
+    console.log("Attendance Error:", error);
+    return res.status(500).json({
+      message: "Server error"
+    });
   }
 };
-
-

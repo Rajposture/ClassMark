@@ -1,5 +1,6 @@
 import { useState, useEffect, useContext } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import { AuthContext } from "../context/AuthContext";
 import API_BASE from "../config/api";
 
@@ -12,8 +13,8 @@ const AttendanceForm = () => {
   const [longitude, setLongitude] = useState(null);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
 
-  /* WAIT for auth to finish */
   useEffect(() => {
     if (!authLoading && !user) {
       navigate("/login");
@@ -40,7 +41,7 @@ const AttendanceForm = () => {
       (position) => {
         setLatitude(position.coords.latitude);
         setLongitude(position.coords.longitude);
-        setMessage("");
+        setMessage("Location captured successfully");
       },
       () => {
         setMessage("Location permission denied");
@@ -78,10 +79,12 @@ const AttendanceForm = () => {
       if (!res.ok) {
         setMessage(data.message);
       } else {
-        setMessage("Attendance submitted successfully 🎉");
+        setSuccess(true);
+        setMessage("Attendance marked successfully 🎉");
+
         setTimeout(() => {
           navigate("/student");
-        }, 1500);
+        }, 1800);
       }
 
     } catch {
@@ -92,37 +95,76 @@ const AttendanceForm = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-100 px-4">
-      <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md">
-        <h2 className="text-2xl font-bold text-center mb-6">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 px-4">
+
+      <motion.div
+        initial={{ opacity: 0, y: 40 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+        className={`bg-white rounded-3xl shadow-2xl p-8 w-full max-w-md border border-gray-200 transition-all duration-300 ${
+          success ? "scale-105" : ""
+        }`}
+      >
+
+        <h2 className="text-2xl font-semibold text-center text-gray-900 mb-6">
           Mark Attendance
         </h2>
 
-        <p className="mb-4 text-sm text-slate-600">
-          Name: {user.name}
-        </p>
-
-        <button
-          onClick={handleSetLocation}
-          className="w-full mb-4 py-3 bg-slate-800 text-white rounded-lg"
-        >
-          Set Current Location
-        </button>
-
-        <button
-          onClick={submitAttendance}
-          disabled={loading}
-          className="w-full py-3 bg-indigo-600 text-white rounded-lg"
-        >
-          {loading ? "Submitting..." : "Submit Attendance"}
-        </button>
-
-        {message && (
-          <p className="mt-4 text-center text-sm text-red-600">
-            {message}
+        {/* Student Info Card */}
+        <div className="mb-6 bg-gray-50 p-4 rounded-xl border border-gray-200">
+          <p className="text-sm text-gray-500">Student Name</p>
+          <p className="font-semibold text-gray-800">
+            {user.name}
           </p>
-        )}
-      </div>
+
+          <div className="mt-3">
+            <p className="text-sm text-gray-500">Enrollment Number</p>
+            <p className="font-semibold text-gray-800">
+              {user.enrollmentNumber}
+            </p>
+          </div>
+        </div>
+
+        {/* Location Button */}
+        <motion.button
+          whileTap={{ scale: 0.97 }}
+          onClick={handleSetLocation}
+          className="w-full mb-4 py-3 rounded-xl bg-black text-white font-medium hover:bg-gray-900 transition"
+        >
+          {latitude ? "Location Set ✓" : "Set Current Location"}
+        </motion.button>
+
+        {/* Submit Button */}
+        <motion.button
+          whileTap={{ scale: 0.97 }}
+          onClick={submitAttendance}
+          disabled={loading || success}
+          className="w-full py-3 rounded-xl bg-indigo-600 text-white font-medium hover:bg-indigo-700 transition disabled:opacity-60"
+        >
+          {loading
+            ? "Submitting..."
+            : success
+            ? "Redirecting..."
+            : "Submit Attendance"}
+        </motion.button>
+
+        {/* Message */}
+        <AnimatePresence>
+          {message && (
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className={`mt-5 text-center text-sm font-medium ${
+                success ? "text-green-600" : "text-red-600"
+              }`}
+            >
+              {message}
+            </motion.p>
+          )}
+        </AnimatePresence>
+
+      </motion.div>
     </div>
   );
 };

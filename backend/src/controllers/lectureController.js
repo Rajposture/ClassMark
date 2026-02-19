@@ -5,7 +5,6 @@ import XLSX from "xlsx";
 import jwt from "jsonwebtoken";
 import Lecture from "../models/Lecture.js";
 
-
 export const createLecture = async (req, res) => {
   try {
     const {
@@ -45,6 +44,7 @@ export const createLecture = async (req, res) => {
       longitude: Number(longitude),
       radius: radius ? Number(radius) : 300,
       isActive: true,
+      qrExpiresAt: null,
       attendance: []
     });
 
@@ -63,7 +63,6 @@ export const createLecture = async (req, res) => {
     });
   }
 };
-
 
 export const getMyLectures = async (req, res) => {
   try {
@@ -92,7 +91,6 @@ export const getMyLectures = async (req, res) => {
   }
 };
 
-
 export const generateQRToken = async (req, res) => {
   try {
     const lecture = await Lecture.findById(req.params.id);
@@ -111,16 +109,23 @@ export const generateQRToken = async (req, res) => {
       });
     }
 
+    const expiresInMinutes = 10;
+    const expiresAt = new Date(Date.now() + expiresInMinutes * 60 * 1000);
+
+    lecture.qrExpiresAt = expiresAt;
+    await lecture.save();
+
     const token = jwt.sign(
       { lectureId: lecture._id },
       lecture.qrSecret,
-      { expiresIn: "3h" }
+      { expiresIn: "10m" }
     );
 
     return res.status(200).json({
       success: true,
       token,
-      subject: lecture.subject
+      subject: lecture.subject,
+      expiresAt
     });
 
   } catch (err) {
@@ -131,7 +136,6 @@ export const generateQRToken = async (req, res) => {
     });
   }
 };
-
 
 export const generateExcelSheet = async (req, res) => {
   try {

@@ -14,9 +14,6 @@ const TeacherDashboard = () => {
   const [fetching, setFetching] = useState(true);
   const navigate = useNavigate();
 
-  /* ===============================
-     LOAD LECTURES
-  ============================== */
   useEffect(() => {
     if (loading) return;
 
@@ -65,9 +62,6 @@ const TeacherDashboard = () => {
     loadLectures();
   }, [user, loading, navigate]);
 
-  /* ===============================
-     CREATE LECTURE
-  ============================== */
   const handleLectureCreated = async (lectureData) => {
     try {
       const token = localStorage.getItem("token");
@@ -101,9 +95,7 @@ const TeacherDashboard = () => {
     }
   };
 
-  /* ===============================
-     EXCEL DOWNLOAD
-  ============================== */
+
   const handleExcelDownload = async (lectureId, subject) => {
     try {
       const token = localStorage.getItem("token");
@@ -142,9 +134,7 @@ const TeacherDashboard = () => {
     }
   };
 
-  /* ===============================
-     LOADING STATE
-  ============================== */
+
   if (loading || fetching) {
     return (
       <DashboardLayout>
@@ -155,9 +145,7 @@ const TeacherDashboard = () => {
     );
   }
 
-  /* ===============================
-     UI
-  ============================== */
+
 return (
   <DashboardLayout>
     <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-24 pb-16">

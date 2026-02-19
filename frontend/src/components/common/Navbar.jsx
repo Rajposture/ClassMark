@@ -249,7 +249,7 @@ const Navbar = () => {
       </Link>
 
       <Link
-        to="/mis"
+        to="https://lssimss.com/GPMMIS/jsp/userlogin.action"
         onClick={() => setOpenSidebar(false)}
         className="block hover:text-indigo-600"
       >
