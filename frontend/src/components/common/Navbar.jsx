@@ -163,22 +163,20 @@ const Navbar = () => {
                     )}
                   </button>
 
-                  {openNotifications && (
-                    <div
-                      className="
-                        absolute md:right-0 md:w-80
-                        left-0 right-0 md:left-auto
-                        mt-4
-                        w-full md:max-h-96
-                        max-h-[70vh]
-                        overflow-y-auto
-                        backdrop-blur-xl bg-white/90
-                        border border-white/40
-                        shadow-2xl
-                        rounded-2xl
-                        p-4
-                      "
-                    >
+{openNotifications && (
+  <div
+    className="
+      absolute right-0 mt-4
+      w-80 max-w-[90vw]
+      max-h-96 overflow-y-auto
+      backdrop-blur-xl bg-white/90
+      border border-white/40
+      shadow-2xl
+      rounded-2xl
+      p-4
+    "
+  >
+
                       <div className="flex justify-between items-center mb-4">
                         <h3 className="font-semibold text-slate-800">
                           Notifications
