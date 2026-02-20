@@ -1,49 +1,10 @@
-import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import QRCode from "react-qr-code";
-import API_BASE from "../../config/api";
 
 const GenerateQR = ({ lecture, onClose }) => {
-  const [qrUrl, setQrUrl] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchQR = async () => {
-      try {
-        setLoading(true);
-const res = await fetch(
-  `${API_BASE}/api/lectures/${lecture._id}/qr`,
-  {
-    headers: {
-      Authorization: `Bearer ${localStorage.getItem("token")}`
-    }
-  }
-);
-
-        const data = await res.json();
-
-        if (!res.ok || !data.success) {
-          setError(data.message || "Failed to generate QR");
-          return;
-        }
-
-        const url = `${window.location.origin}/attendance/${data.token}`;
-        setQrUrl(url);
-
-      } catch (err) {
-        setError("Server error");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (lecture?._id) {
-      fetchQR();
-    }
-  }, [lecture]);
-
   if (!lecture?._id) return null;
+
+  const attendanceUrl = `${window.location.origin}/attendance/${lecture._id}`;
 
   return (
     <AnimatePresence>
@@ -67,25 +28,21 @@ const res = await fetch(
             ✕
           </button>
 
-          <h2 className="text-2xl font-semibold mb-4">Mark Attendance</h2>
+          <h2 className="text-2xl font-semibold mb-6">
+            Mark Attendance
+          </h2>
 
-          {loading && <p>Generating QR...</p>}
+          <div className="flex justify-center">
+            <QRCode
+              value={attendanceUrl}
+              size={220}
+              level="H"
+            />
+          </div>
 
-          {error && (
-            <p className="text-red-500 text-sm">{error}</p>
-          )}
-
-          {!loading && qrUrl && (
-            <>
-              <div className="flex justify-center mt-4">
-                <QRCode value={qrUrl} size={220} />
-              </div>
-
-              <div className="mt-4 text-xs break-all">
-                {qrUrl}
-              </div>
-            </>
-          )}
+          <div className="mt-4 text-xs text-gray-500 break-all">
+            {attendanceUrl}
+          </div>
         </motion.div>
       </motion.div>
     </AnimatePresence>

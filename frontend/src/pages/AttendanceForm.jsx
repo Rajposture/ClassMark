@@ -1,111 +1,115 @@
-import { useState, useEffect, useContext } from "react"
-import { useNavigate, useParams } from "react-router-dom"
-import { motion, AnimatePresence } from "framer-motion"
-import { AuthContext } from "../context/AuthContext"
-import API_BASE from "../config/api"
+import { useState, useEffect, useContext } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
+import { AuthContext } from "../context/AuthContext";
+import API_BASE from "../config/api";
 
 const AttendanceForm = () => {
-  const navigate = useNavigate()
-  const { token } = useParams()
-  const { user, loading: authLoading } = useContext(AuthContext)
+  const navigate = useNavigate();
+  const { token: lectureId } = useParams();
+  const { user, loading: authLoading } = useContext(AuthContext);
 
-  const [latitude, setLatitude] = useState(null)
-  const [longitude, setLongitude] = useState(null)
-  const [message, setMessage] = useState("")
-  const [loading, setLoading] = useState(false)
-  const [success, setSuccess] = useState(false)
+  const [latitude, setLatitude] = useState(null);
+  const [longitude, setLongitude] = useState(null);
+  const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
 
+  // 🔐 Login protection flow
   useEffect(() => {
-    if (authLoading) return
+    if (authLoading) return;
 
-if (!user) {
-  navigate("/login", {
-    state: { from: `/attendance/${token}` }
-  })
-  return
-}
-
-
-    if (!token) {
-      navigate("/student")
+    if (!user) {
+      navigate("/login", {
+        state: { from: `/attendance/${lectureId}` },
+      });
+      return;
     }
-  }, [authLoading, user, navigate, token])
+
+    if (!lectureId) {
+      navigate("/student");
+    }
+  }, [authLoading, user, navigate, lectureId]);
 
   if (authLoading || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         Loading...
       </div>
-    )
+    );
   }
 
+  // 📍 Set Location
   const handleSetLocation = () => {
     if (!navigator.geolocation) {
-      setMessage("Geolocation not supported")
-      return
+      setMessage("Geolocation not supported");
+      return;
     }
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        setLatitude(position.coords.latitude)
-        setLongitude(position.coords.longitude)
-        setMessage("Location captured successfully")
+        setLatitude(position.coords.latitude);
+        setLongitude(position.coords.longitude);
+        setMessage("Location captured successfully");
       },
       () => {
-        setMessage("Location permission denied")
+        setMessage("Location permission denied");
       },
       { enableHighAccuracy: true }
-    )
-  }
+    );
+  };
 
+  // ✅ Submit Attendance
   const submitAttendance = async () => {
     if (!latitude || !longitude) {
-      setMessage("Please set your location first")
-      return
+      setMessage("Please set your location first");
+      return;
     }
 
-    setLoading(true)
+    setLoading(true);
+    setMessage("");
 
     try {
-      const authToken = localStorage.getItem("token")
+      const authToken = localStorage.getItem("token");
 
       if (!authToken) {
-        navigate("/login")
-        return
+        navigate("/login", {
+          state: { from: `/attendance/${lectureId}` },
+        });
+        return;
       }
 
       const res = await fetch(`${API_BASE}/api/attendance/mark`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${authToken}`
+          Authorization: `Bearer ${authToken}`,
         },
         body: JSON.stringify({
-          token,
+          token: lectureId, // lectureId instead of JWT
           latitude,
-          longitude
-        })
-      })
+          longitude,
+        }),
+      });
 
-      const data = await res.json()
+      const data = await res.json();
 
       if (!res.ok) {
-        setMessage(data.message)
+        setMessage(data.message || "Failed to mark attendance");
       } else {
-        setSuccess(true)
-        setMessage("Attendance marked successfully")
+        setSuccess(true);
+        setMessage("Attendance marked successfully");
 
         setTimeout(() => {
-          navigate("/student")
-        }, 1800)
+          navigate("/student");
+        }, 1500);
       }
-
-    } catch {
-      setMessage("Server error")
+    } catch (error) {
+      setMessage("Server error");
     }
 
-    setLoading(false)
-  }
+    setLoading(false);
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 px-4">
@@ -121,20 +125,22 @@ if (!user) {
           Mark Attendance
         </h2>
 
+        {/* 👤 Student Info */}
         <div className="mb-6 bg-gray-50 p-4 rounded-xl border border-gray-200">
           <p className="text-sm text-gray-500">Student Name</p>
           <p className="font-semibold text-gray-800">
-            {user.name}
+            {user?.name}
           </p>
 
           <div className="mt-3">
             <p className="text-sm text-gray-500">Enrollment Number</p>
             <p className="font-semibold text-gray-800">
-              {user.enrollmentNumber}
+              {user?.enrollmentNumber}
             </p>
           </div>
         </div>
 
+        {/* 📍 Location Button */}
         <motion.button
           whileTap={{ scale: 0.97 }}
           onClick={handleSetLocation}
@@ -143,6 +149,7 @@ if (!user) {
           {latitude ? "Location Set ✓" : "Set Current Location"}
         </motion.button>
 
+        {/* ✅ Submit Button */}
         <motion.button
           whileTap={{ scale: 0.97 }}
           onClick={submitAttendance}
@@ -156,6 +163,7 @@ if (!user) {
             : "Submit Attendance"}
         </motion.button>
 
+        {/* 🔔 Message */}
         <AnimatePresence>
           {message && (
             <motion.p
@@ -172,7 +180,7 @@ if (!user) {
         </AnimatePresence>
       </motion.div>
     </div>
-  )
-}
+  );
+};
 
-export default AttendanceForm
+export default AttendanceForm;
