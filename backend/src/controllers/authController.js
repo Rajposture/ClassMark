@@ -41,9 +41,10 @@ const sendMail = async ({ to, subject, html }) => {
       html,
     });
     return true;
-  } catch {
-    return false;
-  }
+  } catch (err) {
+  console.error("MAIL ERROR:", err);
+  return false;
+}
 };
 
 const generateToken = (user) =>
