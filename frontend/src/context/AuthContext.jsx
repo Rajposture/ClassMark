@@ -24,19 +24,21 @@ export const AuthProvider = ({ children }) => {
       });
 
       if (!res.ok) {
-        setUserState(null);
         localStorage.removeItem("token");
+        setUserState(null);
+        setLoading(false);
         return null;
       }
 
       const data = await res.json();
       setUserState(data.user);
+      setLoading(false);
       return data.user;
     } catch {
+      localStorage.removeItem("token");
       setUserState(null);
-      return null;
-    } finally {
       setLoading(false);
+      return null;
     }
   }, []);
 
@@ -53,12 +55,12 @@ export const AuthProvider = ({ children }) => {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email: email.toLowerCase(), password }),
       });
 
       const data = await res.json();
 
-      if (!res.ok) {
+      if (!res.ok || !data.success) {
         setLoading(false);
         return data;
       }
@@ -80,17 +82,17 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-  <AuthContext.Provider
-    value={{
-      user,
-      loading,
-      login,
-      logout,
-      refreshUser: fetchUser,
-      setUser: setUserState
-    }}
-  >
-    {children}
-  </AuthContext.Provider>
-);
+    <AuthContext.Provider
+      value={{
+        user,
+        loading,
+        login,
+        logout,
+        refreshUser: fetchUser,
+        setUser: setUserState
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
 };

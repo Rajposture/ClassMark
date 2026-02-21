@@ -9,7 +9,8 @@ const Login = () => {
   const location = useLocation();
   const { setUser } = useContext(AuthContext);
 
-  const from = location.state?.from || null;
+  const redirectParam = new URLSearchParams(location.search).get("redirect");
+  const from = location.state?.from || redirectParam || null;
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

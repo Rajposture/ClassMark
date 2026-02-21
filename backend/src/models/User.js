@@ -35,6 +35,7 @@ const userSchema = new mongoose.Schema(
       required: function () {
         return this.role === "student";
       },
+      default: null
     },
 
     resetPasswordToken: {
@@ -44,9 +45,11 @@ const userSchema = new mongoose.Schema(
     resetPasswordExpire: {
       type: Date,
     },
-    
   },
   { timestamps: true }
 );
+
+userSchema.index({ email: 1 }, { unique: true });
+userSchema.index({ enrollmentNumber: 1 }, { unique: true, sparse: true });
 
 export default mongoose.model("User", userSchema);

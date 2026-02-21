@@ -93,14 +93,14 @@ const AppRoutes = () => {
         }
       />
 
-      <Route
-        path="/attendance/:token"
-        element={
-          <ProtectedRoute role="student">
-            <AttendanceForm />
-          </ProtectedRoute>
-        }
-      />
+<Route
+  path="/attendance/:lectureId"
+  element={
+    <ProtectedRoute role="student">
+      <AttendanceForm />
+    </ProtectedRoute>
+  }
+/>
 
       <Route
         path="/student"

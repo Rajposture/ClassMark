@@ -1,21 +1,28 @@
 import { useContext } from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 
 const ProtectedRoute = ({ children, role }) => {
   const { user, loading } = useContext(AuthContext);
+  const location = useLocation();
 
   // ⏳ Wait until auth check completes
   if (loading) {
-    return null;
+    return null; // or loader component
   }
 
-  // ❌ Not logged in → go to login
+  // ❌ Not logged in → go to login and remember page
   if (!user) {
-    return <Navigate to="/login" replace />;
+    return (
+      <Navigate
+        to="/login"
+        state={{ from: location }}
+        replace
+      />
+    );
   }
 
-  // ❌ Wrong role → send to correct dashboard
+  // ❌ Wrong role → redirect to correct dashboard
   if (role && user.role !== role) {
     return <Navigate to="/dashboard" replace />;
   }

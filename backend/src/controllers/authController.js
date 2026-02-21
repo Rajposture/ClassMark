@@ -5,7 +5,8 @@ import crypto from "crypto";
 import resetPasswordTemplate from "./resetPasswordTemplate.js";
 import nodemailer from "nodemailer";
 import dotenv from "dotenv";
-
+import Otp from "../models/Otp.js";
+import otpEmailTemplate from "./otpEmailTemplate.js";
 dotenv.config();
 
 const transporter = nodemailer.createTransport({
@@ -39,7 +40,7 @@ const generateToken = (user) =>
     { expiresIn: "1d" }
   );
 
-export const signup = async (req, res) => {
+export const requestSignupOtp = async (req, res) => {
   try {
     const { name, email, password, role, enrollmentNumber } = req.body;
 
@@ -50,19 +51,57 @@ export const signup = async (req, res) => {
       return res.status(400).json({ success: false, message: "Enrollment required" });
 
     const existingUser = await User.findOne({ email: email.toLowerCase() });
-
     if (existingUser)
       return res.status(400).json({ success: false, message: "User already exists" });
 
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    const user = await User.create({
-      name,
+    await Otp.deleteMany({ email: email.toLowerCase() });
+
+    await Otp.create({
       email: email.toLowerCase(),
-      password: hashedPassword,
-      role,
-      enrollmentNumber: role === "student" ? enrollmentNumber : null,
+      otp,
+      userData: {
+        name,
+        email: email.toLowerCase(),
+        password: hashedPassword,
+        role,
+        enrollmentNumber: role === "student" ? enrollmentNumber : null,
+      },
+      expiresAt: new Date(Date.now() + 5 * 60 * 1000),
     });
+
+const mailSent = await sendMail({
+  to: email,
+  subject: "Your ClassMark OTP Verification",
+  html: otpEmailTemplate(name, otp),
+});
+
+    if (!mailSent)
+      return res.status(500).json({ success: false, message: "Failed to send OTP" });
+
+    return res.json({ success: true, message: "OTP sent successfully" });
+  } catch {
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+export const verifySignupOtp = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+
+    const record = await Otp.findOne({ email: email.toLowerCase() });
+
+    if (!record || record.otp !== otp)
+      return res.status(400).json({ success: false, message: "Invalid OTP" });
+
+    if (record.expiresAt < new Date())
+      return res.status(400).json({ success: false, message: "OTP expired" });
+
+    const user = await User.create(record.userData);
+
+    await Otp.deleteMany({ email: email.toLowerCase() });
 
     const token = generateToken(user);
 
@@ -135,10 +174,10 @@ export const forgotPassword = async (req, res) => {
 
     await user.save({ validateBeforeSave: false });
 
-    const resetLink =
-      process.env.NODE_ENV === "production"
-        ? `https://class-mark.vercel.app/reset-password/${resetToken}`
-        : `http://localhost:5173/reset-password/${resetToken}`;
+  const resetLink =
+  process.env.NODE_ENV === "production"
+    ? `${process.env.CLIENT_URL}/reset-password/${resetToken}`
+    : `http://localhost:5173/reset-password/${resetToken}`;
 
     const mailSent = await sendMail({
       to: user.email,
@@ -217,6 +256,6 @@ export const getMe = async (req, res) => {
   }
 };
 
-export const logout = async (req, res) => {
-  return res.json({ success: true });
+export const logout = async () => {
+  return { success: true };
 };

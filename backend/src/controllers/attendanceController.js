@@ -22,24 +22,26 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
 
 export const markAttendance = async (req, res) => {
   try {
-    const { token, latitude, longitude } = req.body;
+    const {
+      lectureId,
+      latitude,
+      longitude
+    } = req.body;
 
-    if (!token)
-      return res.status(400).json({ message: "Lecture ID required" });
+    const studentId = req.user._id;
+    const name = req.user.name;
+    const enrollmentNumber = req.user.enrollmentNumber;
+
+    if (!lectureId)
+      return res.status(400).json({ message: "Lecture ID missing" });
 
     if (latitude == null || longitude == null)
       return res.status(400).json({ message: "Location not detected" });
 
-    if (!req.user)
-      return res.status(401).json({ message: "Unauthorized" });
-
-    const lecture = await Lecture.findById(token);
+    const lecture = await Lecture.findById(lectureId);
 
     if (!lecture)
       return res.status(404).json({ message: "Lecture not found" });
-
-    if (!lecture.isActive)
-      return res.status(403).json({ message: "Lecture is not active" });
 
     const studentLat = Number(latitude);
     const studentLon = Number(longitude);
@@ -52,26 +54,24 @@ export const markAttendance = async (req, res) => {
     );
 
     if (distance > Number(lecture.radius))
-      return res.status(403).json({
-        message: "You are outside classroom radius"
-      });
+      return res.status(403).json({ message: "Outside classroom radius" });
 
     const alreadyMarked = lecture.attendance.some(
-      (entry) => entry.studentId.toString() === req.user._id.toString()
+      (entry) => entry.studentId.toString() === studentId.toString()
     );
 
     if (alreadyMarked)
-      return res.status(400).json({
-        message: "Attendance already marked"
-      });
+      return res.status(400).json({ message: "Attendance already marked" });
 
     lecture.attendance.push({
-      studentId: req.user._id,
-      name: req.user.name,
-      enrollmentNumber: req.user.enrollmentNumber,
+      studentId,
+      name,
+      enrollmentNumber,
       latitude: studentLat,
       longitude: studentLon,
-      markedAt: new Date()
+      ipAddress: req.ip || "",
+      deviceInfo: req.headers["user-agent"] || "",
+      time: new Date()
     });
 
     await lecture.save();
@@ -82,7 +82,6 @@ export const markAttendance = async (req, res) => {
     });
 
   } catch (error) {
-    console.log(error);
     return res.status(500).json({ message: "Server error" });
   }
 };

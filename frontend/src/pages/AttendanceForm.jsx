@@ -15,31 +15,39 @@ const AttendanceForm = () => {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
-  // 🔐 Login protection flow
-  useEffect(() => {
-    if (authLoading) return;
+useEffect(() => {
+  if (authLoading) return;
 
-    if (!user) {
-      navigate("/login", {
-        state: { from: `/attendance/${lectureId}` },
-      });
-      return;
-    }
+  const token = localStorage.getItem("token");
 
-    if (!lectureId) {
-      navigate("/student");
-    }
-  }, [authLoading, user, navigate, lectureId]);
+  if (!token) {
+    navigate(`/login?redirect=/attendance/${lectureId}`, { replace: true });
+    return;
+  }
+
+  if (!user) {
+    navigate(`/login?redirect=/attendance/${lectureId}`, { replace: true });
+    return;
+  }
+
+  if (user.role !== "student") {
+    navigate("/teacher", { replace: true });
+    return;
+  }
+
+  if (!lectureId) {
+    navigate("/student", { replace: true });
+  }
+}, [authLoading, user, navigate, lectureId]);
 
   if (authLoading || !user) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-white">
         Loading...
       </div>
     );
   }
 
-  // 📍 Set Location
   const handleSetLocation = () => {
     if (!navigator.geolocation) {
       setMessage("Geolocation not supported");
@@ -59,7 +67,6 @@ const AttendanceForm = () => {
     );
   };
 
-  // ✅ Submit Attendance
   const submitAttendance = async () => {
     if (!latitude || !longitude) {
       setMessage("Please set your location first");
@@ -73,9 +80,7 @@ const AttendanceForm = () => {
       const authToken = localStorage.getItem("token");
 
       if (!authToken) {
-        navigate("/login", {
-          state: { from: `/attendance/${lectureId}` },
-        });
+        navigate(`/login?redirect=/attendance/${lectureId}`);
         return;
       }
 
@@ -86,7 +91,7 @@ const AttendanceForm = () => {
           Authorization: `Bearer ${authToken}`,
         },
         body: JSON.stringify({
-          token: lectureId, // lectureId instead of JWT
+          token: lectureId,
           latitude,
           longitude,
         }),
@@ -101,10 +106,10 @@ const AttendanceForm = () => {
         setMessage("Attendance marked successfully");
 
         setTimeout(() => {
-          navigate("/student");
+          navigate("/student", { replace: true });
         }, 1500);
       }
-    } catch (error) {
+    } catch {
       setMessage("Server error");
     }
 
@@ -112,49 +117,54 @@ const AttendanceForm = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 via-white to-gray-100 px-4">
       <motion.div
-        initial={{ opacity: 0, y: 40 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-        className={`bg-white rounded-3xl shadow-2xl p-8 w-full max-w-md border border-gray-200 transition-all duration-300 ${
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.35 }}
+        className={`bg-white/80 backdrop-blur-xl rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.08)] p-8 w-full max-w-md border border-gray-200 transition-all duration-300 ${
           success ? "scale-105" : ""
         }`}
       >
-        <h2 className="text-2xl font-semibold text-center text-gray-900 mb-6">
+        <h2 className="text-2xl font-semibold text-center text-gray-900 mb-6 tracking-tight">
           Mark Attendance
         </h2>
 
-        {/* 👤 Student Info */}
-        <div className="mb-6 bg-gray-50 p-4 rounded-xl border border-gray-200">
-          <p className="text-sm text-gray-500">Student Name</p>
-          <p className="font-semibold text-gray-800">
+        <div className="mb-6 bg-gray-50/80 backdrop-blur rounded-2xl border border-gray-200 p-5">
+          <p className="text-xs text-gray-500 uppercase tracking-wide">
+            Student Name
+          </p>
+          <p className="font-semibold text-gray-900 mt-1">
             {user?.name}
           </p>
 
-          <div className="mt-3">
-            <p className="text-sm text-gray-500">Enrollment Number</p>
-            <p className="font-semibold text-gray-800">
+          <div className="mt-4">
+            <p className="text-xs text-gray-500 uppercase tracking-wide">
+              Enrollment Number
+            </p>
+            <p className="font-semibold text-gray-900 mt-1">
               {user?.enrollmentNumber}
             </p>
           </div>
         </div>
 
-        {/* 📍 Location Button */}
         <motion.button
           whileTap={{ scale: 0.97 }}
+          whileHover={{ scale: 1.02 }}
+          transition={{ type: "spring", stiffness: 300 }}
           onClick={handleSetLocation}
-          className="w-full mb-4 py-3 rounded-xl bg-black text-white font-medium hover:bg-gray-900 transition"
+          className="w-full mb-4 py-3 rounded-2xl bg-black text-white font-medium transition"
         >
           {latitude ? "Location Set ✓" : "Set Current Location"}
         </motion.button>
 
-        {/* ✅ Submit Button */}
         <motion.button
           whileTap={{ scale: 0.97 }}
+          whileHover={{ scale: 1.02 }}
+          transition={{ type: "spring", stiffness: 300 }}
           onClick={submitAttendance}
           disabled={loading || success}
-          className="w-full py-3 rounded-xl bg-indigo-600 text-white font-medium hover:bg-indigo-700 transition disabled:opacity-60"
+          className="w-full py-3 rounded-2xl bg-indigo-600 text-white font-medium transition disabled:opacity-60"
         >
           {loading
             ? "Submitting..."
@@ -163,12 +173,11 @@ const AttendanceForm = () => {
             : "Submit Attendance"}
         </motion.button>
 
-        {/* 🔔 Message */}
         <AnimatePresence>
           {message && (
             <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
+              initial={{ opacity: 0, y: 5 }}
+              animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
               className={`mt-5 text-center text-sm font-medium ${
                 success ? "text-green-600" : "text-red-600"

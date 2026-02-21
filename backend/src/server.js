@@ -18,20 +18,22 @@ const server = http.createServer(app);
 
 connectDB();
 
+app.set("trust proxy", 1);
+
 const allowedOrigins = [
   "http://localhost:5173",
-  "https://class-mark.vercel.app",
-  "https://www.class-mark.vercel.app"
+  "http://127.0.0.1:5173",
+  process.env.CLIENT_URL
 ];
 
 app.use(
   cors({
-    origin: (origin, callback) => {
+    origin: function (origin, callback) {
       if (!origin) return callback(null, true);
       if (allowedOrigins.includes(origin)) {
         return callback(null, true);
       }
-      return callback(null, true);
+      return callback(new Error("Not allowed by CORS"));
     },
     credentials: true
   })
@@ -50,9 +52,7 @@ const io = new Server(server, {
 
 app.set("io", io);
 
-io.on("connection", (socket) => {
-  socket.on("disconnect", () => {});
-});
+io.on("connection", () => {});
 
 app.use("/api/auth", authRoutes);
 app.use("/api/lectures", lectureRoutes);
@@ -68,7 +68,6 @@ app.use((req, res) => {
 });
 
 app.use((err, req, res, next) => {
-  console.error(err);
   res.status(500).json({ message: "Server error" });
 });
 

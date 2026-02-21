@@ -9,6 +9,7 @@ const Signup = () => {
   const { setUser } = useContext(AuthContext);
 
   const [role, setRole] = useState("student");
+  const [step, setStep] = useState(1);
   const [form, setForm] = useState({
     enrollmentNumber: "",
     name: "",
@@ -16,6 +17,7 @@ const Signup = () => {
     password: "",
   });
 
+  const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -23,7 +25,7 @@ const Signup = () => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSignup = async (e) => {
+  const handleRequestOtp = async (e) => {
     e.preventDefault();
     setError("");
     setLoading(true);
@@ -38,7 +40,7 @@ const Signup = () => {
           role === "student" ? form.enrollmentNumber : undefined,
       };
 
-      const res = await fetch(`${API_BASE}/api/auth/signup`, {
+      const res = await fetch(`${API_BASE}/api/auth/signup/request-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -47,7 +49,33 @@ const Signup = () => {
       const data = await res.json();
 
       if (!res.ok || !data.success) {
-        throw new Error(data?.message || "Signup failed");
+        throw new Error(data?.message || "Failed to send OTP");
+      }
+
+      setStep(2);
+    } catch (err) {
+      setError(err.message || "Server error during signup");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async (e) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/signup/verify-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: form.email.toLowerCase(), otp }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        throw new Error(data?.message || "Invalid OTP");
       }
 
       localStorage.setItem("token", data.token);
@@ -55,7 +83,7 @@ const Signup = () => {
 
       navigate(data.user.role === "teacher" ? "/teacher" : "/student");
     } catch (err) {
-      setError(err.message || "Server error during signup");
+      setError(err.message || "OTP verification failed");
     } finally {
       setLoading(false);
     }
@@ -88,68 +116,92 @@ const Signup = () => {
           </motion.div>
         )}
 
-        <form onSubmit={handleSignup} className="space-y-4 text-white">
-          <div>
-            <label className="text-sm text-slate-400">Register As</label>
-            <select
-              value={role}
-              onChange={(e) => setRole(e.target.value)}
-              className="mt-1 w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-600 focus:outline-none"
-            >
-              <option value="student">Student</option>
-              <option value="teacher">Teacher</option>
-            </select>
-          </div>
+        {step === 1 && (
+          <form onSubmit={handleRequestOtp} className="space-y-4 text-white">
+            <div>
+              <label className="text-sm text-slate-400">Register As</label>
+              <select
+                value={role}
+                onChange={(e) => setRole(e.target.value)}
+                className="mt-1 w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-600 focus:outline-none"
+              >
+                <option value="student">Student</option>
+                <option value="teacher">Teacher</option>
+              </select>
+            </div>
 
-          <input
-            name="name"
-            placeholder="Full Name"
-            value={form.name}
-            onChange={handleChange}
-            className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-600 focus:outline-none"
-            required
-          />
-
-          {role === "student" && (
             <input
-              name="enrollmentNumber"
-              placeholder="Enrollment Number"
-              value={form.enrollmentNumber}
+              name="name"
+              placeholder="Full Name"
+              value={form.name}
               onChange={handleChange}
               className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-600 focus:outline-none"
               required
             />
-          )}
 
-          <input
-            type="email"
-            name="email"
-            placeholder="Email Address"
-            value={form.email}
-            onChange={handleChange}
-            className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-600 focus:outline-none"
-            required
-          />
+            {role === "student" && (
+              <input
+                name="enrollmentNumber"
+                placeholder="Enrollment Number"
+                value={form.enrollmentNumber}
+                onChange={handleChange}
+                className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-600 focus:outline-none"
+                required
+              />
+            )}
 
-          <input
-            type="password"
-            name="password"
-            placeholder="Password"
-            value={form.password}
-            onChange={handleChange}
-            className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-600 focus:outline-none"
-            required
-          />
+            <input
+              type="email"
+              name="email"
+              placeholder="Email Address"
+              value={form.email}
+              onChange={handleChange}
+              className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-600 focus:outline-none"
+              required
+            />
 
-          <motion.button
-            whileTap={{ scale: 0.96 }}
-            type="submit"
-            disabled={loading}
-            className="w-full py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 transition-all font-semibold disabled:opacity-50"
-          >
-            {loading ? "Creating Account..." : "Create Account"}
-          </motion.button>
-        </form>
+            <input
+              type="password"
+              name="password"
+              placeholder="Password"
+              value={form.password}
+              onChange={handleChange}
+              className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-600 focus:outline-none"
+              required
+            />
+
+            <motion.button
+              whileTap={{ scale: 0.96 }}
+              type="submit"
+              disabled={loading}
+              className="w-full py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 transition-all font-semibold disabled:opacity-50"
+            >
+              {loading ? "Sending OTP..." : "Create Account"}
+            </motion.button>
+          </form>
+        )}
+
+        {step === 2 && (
+          <form onSubmit={handleVerifyOtp} className="space-y-4 text-white">
+            <input
+              type="text"
+              placeholder="Enter OTP"
+              value={otp}
+              onChange={(e) => setOtp(e.target.value)}
+              className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-600 focus:outline-none"
+              required
+            />
+
+            <motion.button
+              whileTap={{ scale: 0.96 }}
+              type="submit"
+              disabled={loading}
+              className="w-full py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 transition-all font-semibold disabled:opacity-50"
+            >
+              {loading ? "Verifying..." : "Verify OTP"}
+            </motion.button>
+          </form>
+        )}
 
         <p className="text-sm text-slate-400 mt-6 text-center">
           Already have an account?{" "}
