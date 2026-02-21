@@ -20,21 +20,16 @@ connectDB();
 
 app.set("trust proxy", 1);
 
-const allowedOrigins = [
+const origins = [
   "http://localhost:5173",
   "http://127.0.0.1:5173",
-  process.env.CLIENT_URL
+  "https://class-mark1.vercel.app"
 ];
 
 app.use(
   cors({
-    origin: function (origin, callback) {
-      if (!origin) return callback(null, true);
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-      return callback(new Error("Not allowed by CORS"));
-    },
+    origin: origins,
+    methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true
   })
 );
@@ -44,7 +39,7 @@ app.use(cookieParser());
 
 const io = new Server(server, {
   cors: {
-    origin: allowedOrigins,
+    origin: origins,
     methods: ["GET", "POST"],
     credentials: true
   }
