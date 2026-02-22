@@ -1,52 +1,49 @@
-import { useState, useEffect, useContext } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { AuthContext } from "../context/AuthContext";
-import API_BASE from "../config/api";
+import { useUser } from "@clerk/clerk-react";
+
+const API = import.meta.env.VITE_API_BASE;
 
 const AttendanceForm = () => {
   const navigate = useNavigate();
-  const { token: lectureId } = useParams();
-  const { user, loading: authLoading } = useContext(AuthContext);
+  const { lectureId } = useParams();
+  const { user: clerkUser, isLoaded, isSignedIn } = useUser();
 
+  const [student, setStudent] = useState(null);
   const [latitude, setLatitude] = useState(null);
   const [longitude, setLongitude] = useState(null);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
-useEffect(() => {
-  if (authLoading) return;
+  useEffect(() => {
+    const init = async () => {
+      if (!isLoaded) return;
 
-  const token = localStorage.getItem("token");
+      if (!isSignedIn) {
+        navigate(`/login`, { replace: true });
+        return;
+      }
 
-  if (!token) {
-    navigate(`/login?redirect=/attendance/${lectureId}`, { replace: true });
-    return;
-  }
+      const token = await clerkUser.getToken();
 
-  if (!user) {
-    navigate(`/login?redirect=/attendance/${lectureId}`, { replace: true });
-    return;
-  }
+      const res = await fetch(`${API}/api/auth/me`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
 
-  if (user.role !== "student") {
-    navigate("/teacher", { replace: true });
-    return;
-  }
+      const data = await res.json();
 
-  if (!lectureId) {
-    navigate("/student", { replace: true });
-  }
-}, [authLoading, user, navigate, lectureId]);
+      if (!res.ok || data.user.role !== "student") {
+        navigate("/teacher", { replace: true });
+        return;
+      }
 
-  if (authLoading || !user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
-        Loading...
-      </div>
-    );
-  }
+      setStudent(data.user);
+    };
+
+    init();
+  }, [isLoaded, isSignedIn]);
 
   const handleSetLocation = () => {
     if (!navigator.geolocation) {
@@ -77,24 +74,19 @@ useEffect(() => {
     setMessage("");
 
     try {
-      const authToken = localStorage.getItem("token");
+      const token = await clerkUser.getToken();
 
-      if (!authToken) {
-        navigate(`/login?redirect=/attendance/${lectureId}`);
-        return;
-      }
-
-      const res = await fetch(`${API_BASE}/api/attendance/mark`, {
+      const res = await fetch(`${API}/api/attendance/mark`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${authToken}`,
+          Authorization: `Bearer ${token}`
         },
         body: JSON.stringify({
           token: lectureId,
           latitude,
-          longitude,
-        }),
+          longitude
+        })
       });
 
       const data = await res.json();
@@ -116,13 +108,22 @@ useEffect(() => {
     setLoading(false);
   };
 
+  if (!student) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        Loading...
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 via-white to-gray-100 px-4">
+
       <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.35 }}
-        className={`bg-white/80 backdrop-blur-xl rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.08)] p-8 w-full max-w-md border border-gray-200 transition-all duration-300 ${
+        initial={{ opacity: 0, scale: 0.96, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+        className={`bg-white/70 backdrop-blur-2xl rounded-3xl shadow-[0_25px_80px_rgba(0,0,0,0.08)] p-8 w-full max-w-md border border-gray-200 transition-all ${
           success ? "scale-105" : ""
         }`}
       >
@@ -130,12 +131,17 @@ useEffect(() => {
           Mark Attendance
         </h2>
 
-        <div className="mb-6 bg-gray-50/80 backdrop-blur rounded-2xl border border-gray-200 p-5">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.1 }}
+          className="mb-6 bg-gray-50/80 backdrop-blur rounded-2xl border border-gray-200 p-5"
+        >
           <p className="text-xs text-gray-500 uppercase tracking-wide">
             Student Name
           </p>
           <p className="font-semibold text-gray-900 mt-1">
-            {user?.name}
+            {student.name}
           </p>
 
           <div className="mt-4">
@@ -143,15 +149,15 @@ useEffect(() => {
               Enrollment Number
             </p>
             <p className="font-semibold text-gray-900 mt-1">
-              {user?.enrollmentNumber}
+              {student.enrollmentNumber}
             </p>
           </div>
-        </div>
+        </motion.div>
 
         <motion.button
-          whileTap={{ scale: 0.97 }}
-          whileHover={{ scale: 1.02 }}
-          transition={{ type: "spring", stiffness: 300 }}
+          whileTap={{ scale: 0.95 }}
+          whileHover={{ scale: 1.03 }}
+          transition={{ type: "spring", stiffness: 260 }}
           onClick={handleSetLocation}
           className="w-full mb-4 py-3 rounded-2xl bg-black text-white font-medium transition"
         >
@@ -159,9 +165,9 @@ useEffect(() => {
         </motion.button>
 
         <motion.button
-          whileTap={{ scale: 0.97 }}
-          whileHover={{ scale: 1.02 }}
-          transition={{ type: "spring", stiffness: 300 }}
+          whileTap={{ scale: 0.95 }}
+          whileHover={{ scale: 1.03 }}
+          transition={{ type: "spring", stiffness: 260 }}
           onClick={submitAttendance}
           disabled={loading || success}
           className="w-full py-3 rounded-2xl bg-indigo-600 text-white font-medium transition disabled:opacity-60"
@@ -188,6 +194,7 @@ useEffect(() => {
           )}
         </AnimatePresence>
       </motion.div>
+
     </div>
   );
 };

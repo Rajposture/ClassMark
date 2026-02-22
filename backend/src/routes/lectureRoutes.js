@@ -1,29 +1,27 @@
-import express from "express";
+import express from "express"
 import {
   createLecture,
   getMyLectures,
   generateQRToken,
   generateExcelSheet,
   deleteLecture
-} from "../controllers/lectureController.js";
+} from "../controllers/lectureController.js"
 
-import protect from "../middleware/authMiddleware.js";
+import { requireAuth } from "@clerk/express"
+import roleProtect from "../middleware/roleProtect.js"
 
-const router = express.Router();
+const router = express.Router()
 
-// ✅ Create lecture
-router.post("/", protect, createLecture);
+router.use(requireAuth())
 
-// ✅ Get teacher lectures
-router.get("/mine", protect, getMyLectures);
+router.post("/", roleProtect("teacher"), createLecture)
 
-// ✅ Generate QR token
-router.get("/:id/qr", protect, generateQRToken);
+router.get("/mine", roleProtect("teacher"), getMyLectures)
 
-// ✅ Download Excel
-router.get("/:id/excel", protect, generateExcelSheet);
+router.get("/:id/qr", roleProtect("teacher"), generateQRToken)
 
-// ✅ Delete lecture
-router.delete("/:id", protect, deleteLecture);
+router.get("/:id/excel", roleProtect("teacher"), generateExcelSheet)
 
-export default router;
+router.delete("/:id", roleProtect("teacher"), deleteLecture)
+
+export default router

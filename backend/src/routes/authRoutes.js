@@ -1,25 +1,10 @@
 import express from "express";
-import {
-  requestSignupOtp,
-  verifySignupOtp,
-  login,
-  forgotPassword,
-  resetPassword,
-  getMe,
-  logout
-} from "../controllers/authController.js";
+import { syncUser, getMe } from "../controllers/authController.js";
+import { requireAuth } from "@clerk/express";
 
 const router = express.Router();
 
-router.post("/signup/request-otp", requestSignupOtp);
-router.post("/signup/verify-otp", verifySignupOtp);
-
-router.post("/login", login);
-
-router.post("/forgot-password", forgotPassword);
-router.post("/reset-password/:token", resetPassword);
-
-router.get("/me", getMe);
-router.post("/logout", logout);
+router.post("/sync", requireAuth(), syncUser);
+router.get("/me", requireAuth(), getMe);
 
 export default router;

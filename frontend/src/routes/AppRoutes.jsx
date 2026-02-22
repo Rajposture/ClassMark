@@ -1,156 +1,192 @@
-import { Routes, Route, Navigate } from "react-router-dom"
-import { useContext } from "react"
+import { Routes, Route, Navigate } from "react-router-dom";
+import { useUser, useAuth } from "@clerk/clerk-react";
+import { useEffect, useState } from "react";
+import axios from "axios";
 
-import Landing from "../pages/Landing"
-import Login from "../pages/Login"
-import Signup from "../pages/Signup"
-import ForgotPassword from "../pages/ForgotPassword"
-import ResetPassword from "../pages/ResetPassword"
+import Landing from "../pages/Landing";
+import Login from "../pages/Login";
+import Signup from "../pages/Signup";
+import TeacherDashboard from "../pages/TeacherDashboard";
+import StudentDashboard from "../pages/StudentDashboard";
+import QRScanner from "../components/student/QRScanner";
+import AttendanceForm from "../pages/AttendanceForm";
+import Assignments from "../pages/Assignments";
+import AssignmentDetail from "../pages/AssignmentDetail";
+import CompleteProfile from "../pages/CompleteProfile";
 
-import TeacherDashboard from "../pages/TeacherDashboard"
-import StudentDashboard from "../pages/StudentDashboard"
+const API = import.meta.env.VITE_API_BASE;
 
-import QRScanner from "../components/student/QRScanner"
-import AttendanceForm from "../pages/AttendanceForm"
+/* ================= REQUIRE AUTH ================= */
 
-import ProtectedRoute from "./ProtectedRoute"
-import PublicRoute from "./PublicRoute"
-import { AuthContext } from "../context/AuthContext"
+const RequireAuth = ({ children, role }) => {
+  const { isSignedIn, isLoaded } = useUser();
+  const { getToken } = useAuth();
 
-import Assignments from "../pages/Assignments"
-import AssignmentDetail from "../pages/AssignmentDetail"
+  const [dbUser, setDbUser] = useState(undefined);
+  const [checking, setChecking] = useState(true);
+
+  useEffect(() => {
+    const checkUser = async () => {
+      try {
+        const token = await getToken();
+
+        const res = await axios.get(`${API}/api/auth/me`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        setDbUser(res.data.user);
+      } catch {
+        setDbUser(null);
+      } finally {
+        setChecking(false);
+      }
+    };
+
+    if (isLoaded && isSignedIn) {
+      checkUser();
+    } else if (isLoaded) {
+      setChecking(false);
+    }
+  }, [isLoaded, isSignedIn, getToken]);
+
+  if (!isLoaded || checking) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        Loading...
+      </div>
+    );
+  }
+
+  if (!isSignedIn) return <Navigate to="/login" replace />;
+
+  if (dbUser === null)
+    return <Navigate to="/complete-profile" replace />;
+
+  if (role && dbUser?.role !== role)
+    return <Navigate to="/dashboard" replace />;
+
+  return children;
+};
+
+/* ================= DASHBOARD REDIRECT ================= */
 
 const DashboardRedirect = () => {
-  const { user, loading } = useContext(AuthContext)
+  const { isSignedIn, isLoaded } = useUser();
+  const { getToken } = useAuth();
 
-  if (loading) return null
+  const [role, setRole] = useState(null);
 
-  if (!user) return <Navigate to="/login" replace />
+  useEffect(() => {
+    const fetchRole = async () => {
+      if (!isSignedIn) return;
+
+      const token = await getToken();
+
+      const res = await axios.get(`${API}/api/auth/me`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      setRole(res.data.user.role);
+    };
+
+    if (isLoaded && isSignedIn) {
+      fetchRole();
+    }
+  }, [isLoaded, isSignedIn, getToken]);
+
+  if (!role) return null;
 
   return (
     <Navigate
-      to={user.role === "teacher" ? "/teacher" : "/student"}
+      to={role === "teacher" ? "/teacher" : "/student"}
       replace
     />
-  )
-}
+  );
+};
+
+/* ================= ROUTES ================= */
 
 const AppRoutes = () => {
   return (
     <Routes>
 
-      <Route
-        path="/"
-        element={
-          <PublicRoute>
-            <Landing />
-          </PublicRoute>
-        }
-      />
+      <Route path="/" element={<Landing />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/signup" element={<Signup />} />
 
+      {/* 🔥 DO NOT WRAP THIS */}
       <Route
-        path="/login"
-        element={
-          <PublicRoute>
-            <Login />
-          </PublicRoute>
-        }
-      />
-
-      <Route
-        path="/signup"
-        element={
-          <PublicRoute>
-            <Signup />
-          </PublicRoute>
-        }
-      />
-
-      <Route
-        path="/forgot-password"
-        element={
-          <PublicRoute>
-            <ForgotPassword />
-          </PublicRoute>
-        }
-      />
-
-      <Route
-        path="/reset-password/:token"
-        element={
-          <PublicRoute>
-            <ResetPassword />
-          </PublicRoute>
-        }
+        path="/complete-profile"
+        element={<CompleteProfile />}
       />
 
       <Route
         path="/dashboard"
         element={
-          <ProtectedRoute>
+          <RequireAuth>
             <DashboardRedirect />
-          </ProtectedRoute>
+          </RequireAuth>
         }
       />
 
-<Route
-  path="/attendance/:lectureId"
-  element={
-    <ProtectedRoute role="student">
-      <AttendanceForm />
-    </ProtectedRoute>
-  }
-/>
+      <Route
+        path="/attendance/:lectureId"
+        element={
+          <RequireAuth role="student">
+            <AttendanceForm />
+          </RequireAuth>
+        }
+      />
 
       <Route
         path="/student"
         element={
-          <ProtectedRoute role="student">
+          <RequireAuth role="student">
             <StudentDashboard />
-          </ProtectedRoute>
+          </RequireAuth>
         }
       />
 
       <Route
         path="/scan"
         element={
-          <ProtectedRoute role="student">
+          <RequireAuth role="student">
             <QRScanner />
-          </ProtectedRoute>
+          </RequireAuth>
         }
       />
 
       <Route
         path="/assignments"
         element={
-          <ProtectedRoute>
+          <RequireAuth>
             <Assignments />
-          </ProtectedRoute>
+          </RequireAuth>
         }
       />
 
       <Route
         path="/assignments/:id"
         element={
-          <ProtectedRoute>
+          <RequireAuth>
             <AssignmentDetail />
-          </ProtectedRoute>
+          </RequireAuth>
         }
       />
 
       <Route
         path="/teacher"
         element={
-          <ProtectedRoute role="teacher">
+          <RequireAuth role="teacher">
             <TeacherDashboard />
-          </ProtectedRoute>
+          </RequireAuth>
         }
       />
 
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<Navigate to="/dashboard" replace />} />
 
     </Routes>
-  )
-}
+  );
+};
 
-export default AppRoutes
+export default AppRoutes;

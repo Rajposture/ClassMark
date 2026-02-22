@@ -1,46 +1,62 @@
-import { useContext, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useUser } from "@clerk/clerk-react";
 import { FiTrash2, FiArrowRight } from "react-icons/fi";
 import DashboardLayout from "../components/common/DashboardLayout";
 import CreateAssignment from "../components/teacher/CreateAssignment";
-import { AuthContext } from "../context/AuthContext";
-import API_BASE from "../config/api";
+
+const API = import.meta.env.VITE_API_BASE;
 
 const Assignments = () => {
-  const { user } = useContext(AuthContext);
+  const { user: clerkUser, isLoaded, isSignedIn } = useUser();
+  const [dbUser, setDbUser] = useState(null);
   const [assignments, setAssignments] = useState([]);
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (user) fetchAssignments();
-  }, [user]);
+    const init = async () => {
+      if (!isLoaded || !isSignedIn) return;
 
-  const fetchAssignments = async () => {
-    const token = localStorage.getItem("token");
+      const token = await clerkUser.getToken();
 
-    const res = await fetch(`${API_BASE}/api/assignments`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+      const meRes = await fetch(`${API}/api/auth/me`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
 
-    const data = await res.json();
-    if (res.ok) setAssignments(data.assignments || []);
-  };
+      const meData = await meRes.json();
+      if (meRes.ok) {
+        setDbUser(meData.user);
+      }
+
+      const res = await fetch(`${API}/api/assignments`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      const data = await res.json();
+      if (res.ok) setAssignments(data.assignments || []);
+    };
+
+    init();
+  }, [isLoaded, isSignedIn]);
 
   const handleDelete = async (id) => {
-    const token = localStorage.getItem("token");
+    const token = await clerkUser.getToken();
 
-    const res = await fetch(`${API_BASE}/api/assignments/${id}`, {
+    const res = await fetch(`${API}/api/assignments/${id}`, {
       method: "DELETE",
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { Authorization: `Bearer ${token}` }
     });
 
-    if (res.ok) fetchAssignments();
+    if (res.ok) {
+      setAssignments((prev) => prev.filter((a) => a._id !== id));
+    }
   };
 
-  const isTeacher = user?.role?.toLowerCase() === "teacher";
+  const isTeacher =
+    dbUser?.role?.toLowerCase() === "teacher";
 
   const filteredAssignments = isTeacher
-    ? assignments.filter((a) => a.teacherId?._id === user._id)
+    ? assignments.filter((a) => a.teacherId?._id === dbUser?._id)
     : assignments;
 
   return (
@@ -53,7 +69,7 @@ const Assignments = () => {
 
         {isTeacher && (
           <div className="mb-14">
-            <CreateAssignment onCreated={fetchAssignments} />
+            <CreateAssignment onCreated={() => window.location.reload()} />
           </div>
         )}
 

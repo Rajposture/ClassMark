@@ -1,34 +1,16 @@
-import { useContext } from "react";
-import { Navigate, useLocation } from "react-router-dom";
-import { AuthContext } from "../context/AuthContext";
+import { useUser } from "@clerk/clerk-react"
+import { Navigate } from "react-router-dom"
 
-const ProtectedRoute = ({ children, role }) => {
-  const { user, loading } = useContext(AuthContext);
-  const location = useLocation();
+const ProtectedRoute = ({ children }) => {
+  const { isSignedIn, isLoaded } = useUser()
 
-  // ⏳ Wait until auth check completes
-  if (loading) {
-    return null; // or loader component
+  if (!isLoaded) return null
+
+  if (!isSignedIn) {
+    return <Navigate to="/login" replace />
   }
 
-  // ❌ Not logged in → go to login and remember page
-  if (!user) {
-    return (
-      <Navigate
-        to="/login"
-        state={{ from: location }}
-        replace
-      />
-    );
-  }
+  return children
+}
 
-  // ❌ Wrong role → redirect to correct dashboard
-  if (role && user.role !== role) {
-    return <Navigate to="/dashboard" replace />;
-  }
-
-  // ✅ Allowed
-  return children;
-};
-
-export default ProtectedRoute;
+export default ProtectedRoute

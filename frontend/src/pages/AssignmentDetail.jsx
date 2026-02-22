@@ -1,32 +1,37 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+import { useUser } from "@clerk/clerk-react";
 import DashboardLayout from "../components/common/DashboardLayout";
-import API_BASE from "../config/api";
+
+const API = import.meta.env.VITE_API_BASE;
 
 const AssignmentDetail = () => {
   const { id } = useParams();
+  const { user: clerkUser, isLoaded, isSignedIn } = useUser();
   const [assignment, setAssignment] = useState(null);
 
   useEffect(() => {
+    const fetchAssignment = async () => {
+      if (!isLoaded || !isSignedIn) return;
+
+      const token = await clerkUser.getToken();
+
+      const res = await fetch(`${API}/api/assignments`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        const found = data.assignments.find((a) => a._id === id);
+        setAssignment(found);
+      }
+    };
+
     fetchAssignment();
-  }, [id]);
-
-  const fetchAssignment = async () => {
-    const token = localStorage.getItem("token");
-
-    const res = await fetch(`${API_BASE}/api/assignments`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    const data = await res.json();
-
-    if (res.ok) {
-      const found = data.assignments.find((a) => a._id === id);
-      setAssignment(found);
-    }
-  };
+  }, [id, isLoaded, isSignedIn]);
 
   if (!assignment) {
     return (

@@ -1,54 +1,51 @@
-import { useEffect, useState, useContext } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import DashboardLayout from "../components/common/DashboardLayout";
 import { useNavigate } from "react-router-dom";
-import API_BASE from "../config/api";
-import { AuthContext } from "../context/AuthContext";
+import { useUser, useAuth } from "@clerk/clerk-react";
+import DashboardLayout from "../components/common/DashboardLayout";
+
+const API = import.meta.env.VITE_API_BASE;
 
 const StudentDashboard = () => {
-  const { user, loading } = useContext(AuthContext);
+  const { user, isLoaded, isSignedIn } = useUser();
+  const { getToken } = useAuth(); // ✅ THIS IS IMPORTANT
   const navigate = useNavigate();
 
   const [student, setStudent] = useState(null);
   const [fetching, setFetching] = useState(true);
 
   useEffect(() => {
-    if (loading) return;
-
-    if (!user) {
-      navigate("/login", { replace: true });
-      return;
-    }
-
-    if (user.role !== "student") {
-      navigate("/teacher", { replace: true });
-      return;
-    }
-
     const fetchProfile = async () => {
+      if (!isLoaded) return;
+
+      if (!isSignedIn) {
+        navigate("/login", { replace: true });
+        return;
+      }
+
       try {
-        const token = localStorage.getItem("token");
+        const token = await getToken(); // ✅ CORRECT WAY
 
-        if (!token) {
-          navigate("/login", { replace: true });
-          return;
-        }
-
-        const res = await fetch(`${API_BASE}/api/auth/me`, {
+        const res = await fetch(`${API}/api/auth/me`, {
           headers: {
-            Authorization: `Bearer ${token}`,
-          },
+            Authorization: `Bearer ${token}`
+          }
         });
 
         const data = await res.json();
 
         if (res.ok && data.success) {
+          if (data.user.role !== "student") {
+            navigate("/teacher", { replace: true });
+            return;
+          }
+
           setStudent(data.user);
         } else {
-          localStorage.removeItem("token");
           navigate("/login", { replace: true });
         }
-      } catch {
+      } catch (err) {
+        console.error("Profile fetch error:", err);
         navigate("/login", { replace: true });
       } finally {
         setFetching(false);
@@ -56,9 +53,9 @@ const StudentDashboard = () => {
     };
 
     fetchProfile();
-  }, [user, loading, navigate]);
+  }, [isLoaded, isSignedIn, getToken, navigate]);
 
-  if (loading || fetching || !student) {
+  if (fetching || !student) {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center h-[60vh] text-slate-500">
@@ -72,27 +69,28 @@ const StudentDashboard = () => {
     <DashboardLayout>
       <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-24 pb-12">
 
-        {/* Welcome Section */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 25 }}
           animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
           className="mb-10"
         >
           <h1 className="text-3xl sm:text-4xl font-bold text-slate-800">
-            Welcome back, {student.name.split(" ")[0]} 
+            Welcome back, {student.name?.split(" ")[0]}
           </h1>
           <p className="text-slate-500 mt-2">
             Stay consistent. Track your attendance effortlessly.
           </p>
         </motion.div>
 
-        {/* Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
 
-          {/* Profile Card */}
           <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1, duration: 0.6 }}
             whileHover={{ scale: 1.02 }}
-            className="bg-white/70 backdrop-blur-xl border border-slate-200 shadow-xl rounded-3xl p-8 transition-all"
+            className="bg-white/70 backdrop-blur-xl border border-slate-200 shadow-xl rounded-3xl p-8"
           >
             <h2 className="text-xl font-semibold text-slate-800 mb-6">
               👤 Profile
@@ -120,13 +118,13 @@ const StudentDashboard = () => {
             </div>
           </motion.div>
 
-          {/* Attendance Card */}
           <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2, duration: 0.6 }}
             whileHover={{ scale: 1.02 }}
-            className="bg-gradient-to-br from-indigo-600 to-purple-600 text-white rounded-3xl shadow-2xl p-8 transition-all relative overflow-hidden"
+            className="bg-gradient-to-br from-indigo-600 to-purple-600 text-white rounded-3xl shadow-2xl p-8 relative overflow-hidden"
           >
-            <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-2xl" />
-
             <h2 className="text-xl font-semibold mb-4">
               📊 Attendance
             </h2>
@@ -135,21 +133,22 @@ const StudentDashboard = () => {
               Track and mark your attendance instantly by scanning QR codes.
             </p>
 
-            <button
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              whileHover={{ scale: 1.05 }}
               onClick={() => navigate("/scan")}
-              className="px-6 py-3 bg-white text-indigo-600 font-semibold rounded-xl shadow hover:scale-105 active:scale-95 transition-all"
+              className="px-6 py-3 bg-white text-indigo-600 font-semibold rounded-xl shadow"
             >
               Scan QR for Attendance
-            </button>
+            </motion.button>
           </motion.div>
 
         </div>
 
-        {/* Motivational Section */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 0.3 }}
+          transition={{ delay: 0.4 }}
           className="mt-12 text-center"
         >
           <p className="text-slate-400 text-sm">

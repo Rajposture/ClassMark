@@ -1,22 +1,16 @@
-import { useContext } from "react";
-import { Navigate } from "react-router-dom";
-import { AuthContext } from "../context/AuthContext";
+import { useUser } from "@clerk/clerk-react"
+import { Navigate } from "react-router-dom"
 
 const PublicRoute = ({ children }) => {
-  const { user, loading } = useContext(AuthContext);
+  const { isSignedIn, isLoaded } = useUser()
 
-  if (loading) return null;
+  if (!isLoaded) return null
 
-  if (user) {
-    return (
-      <Navigate
-        to={user.role === "teacher" ? "/teacher" : "/student"}
-        replace
-      />
-    );
+  if (isSignedIn) {
+    return <Navigate to="/dashboard" replace />
   }
 
-  return children;
-};
+  return children
+}
 
-export default PublicRoute;
+export default PublicRoute

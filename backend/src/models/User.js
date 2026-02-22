@@ -2,10 +2,16 @@ import mongoose from "mongoose";
 
 const userSchema = new mongoose.Schema(
   {
+    clerkId: {
+      type: String,
+      required: true,
+      unique: true
+    },
+
     name: {
       type: String,
       required: true,
-      trim: true,
+      trim: true
     },
 
     email: {
@@ -13,20 +19,25 @@ const userSchema = new mongoose.Schema(
       required: true,
       trim: true,
       lowercase: true,
-      unique: true,
+      unique: true
     },
 
-    password: {
+    phoneNumber: {
       type: String,
-      required: true,
+      trim: true
     },
 
     role: {
       type: String,
       enum: ["teacher", "student"],
-      required: true,
+      required: true
     },
 
+    clerkId: {
+  type: String,
+  required: true,
+  unique: true
+},
     enrollmentNumber: {
       type: String,
       trim: true,
@@ -36,20 +47,13 @@ const userSchema = new mongoose.Schema(
         return this.role === "student";
       },
       default: null
-    },
-
-    resetPasswordToken: {
-      type: String,
-    },
-
-    resetPasswordExpire: {
-      type: Date,
-    },
+    }
   },
   { timestamps: true }
 );
 
 userSchema.index({ email: 1 }, { unique: true });
 userSchema.index({ enrollmentNumber: 1 }, { unique: true, sparse: true });
+userSchema.index({ clerkId: 1 }, { unique: true });
 
 export default mongoose.model("User", userSchema);

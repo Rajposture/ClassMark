@@ -1,30 +1,31 @@
-import { Html5Qrcode } from "html5-qrcode"
-import { useEffect, useRef, useState } from "react"
-import { useNavigate } from "react-router-dom"
-import Navbar from "../common/Navbar"
+import { Html5Qrcode } from "html5-qrcode";
+import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
+import Navbar from "../common/Navbar";
 
 const QRScanner = () => {
-  const navigate = useNavigate()
-  const scannerRef = useRef(null)
-  const [error, setError] = useState("")
+  const navigate = useNavigate();
+  const scannerRef = useRef(null);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     const startScanner = async () => {
       try {
-        const devices = await Html5Qrcode.getCameras()
+        const devices = await Html5Qrcode.getCameras();
 
         if (!devices || devices.length === 0) {
-          setError("No camera found")
-          return
+          setError("No camera found");
+          return;
         }
 
         const backCamera =
           devices.find((device) =>
             device.label.toLowerCase().includes("back")
-          ) || devices[0]
+          ) || devices[0];
 
-        const scanner = new Html5Qrcode("qr-reader")
-        scannerRef.current = scanner
+        const scanner = new Html5Qrcode("qr-reader");
+        scannerRef.current = scanner;
 
         await scanner.start(
           backCamera.id,
@@ -34,53 +35,58 @@ const QRScanner = () => {
             aspectRatio: 1.0
           },
           (decodedText) => {
-            if (!decodedText) return
+            if (!decodedText) return;
 
-            scanner.stop().catch(() => {})
-
-            const token = localStorage.getItem("token")
-
-            if (!token) {
-              navigate(`/login?redirect=/attendance/${decodedText}`)
-            } else {
-              navigate(`/attendance/${decodedText}`)
-            }
+            scanner.stop().catch(() => {});
+            navigate(`/attendance/${decodedText}`);
           },
           () => {}
-        )
-
+        );
       } catch {
-        setError("Camera permission denied or unavailable")
+        setError("Camera permission denied or unavailable");
       }
-    }
+    };
 
-    startScanner()
+    startScanner();
 
     return () => {
       if (scannerRef.current) {
-        scannerRef.current.stop().catch(() => {})
+        scannerRef.current.stop().catch(() => {});
       }
-    }
-  }, [navigate])
+    };
+  }, [navigate]);
 
   return (
     <>
       <Navbar />
+
       <div className="min-h-screen flex items-center justify-center bg-gray-100">
-        <div className="flex flex-col items-center">
+
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5 }}
+          className="flex flex-col items-center bg-white/70 backdrop-blur-xl border border-gray-200 rounded-3xl shadow-2xl p-8"
+        >
           <div
             id="qr-reader"
-            className="w-[320px] h-[320px] bg-black rounded-xl shadow-lg"
+            className="w-[320px] h-[320px] bg-black rounded-2xl shadow-lg"
           />
+
           {error && (
-            <p className="mt-4 text-sm text-red-600 text-center">
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="mt-4 text-sm text-red-600 text-center"
+            >
               {error}
-            </p>
+            </motion.p>
           )}
-        </div>
+        </motion.div>
+
       </div>
     </>
-  )
-}
+  );
+};
 
-export default QRScanner
+export default QRScanner;

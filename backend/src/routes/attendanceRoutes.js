@@ -1,9 +1,17 @@
-import express from "express";
-import { markAttendance } from "../controllers/attendanceController.js";
-import protect from "../middleware/authMiddleware.js";
+import express from "express"
+import { markAttendance } from "../controllers/attendanceController.js"
 
-const router = express.Router();
+import { requireAuth } from "@clerk/express";
+import roleProtect from "../middleware/roleProtect.js"
 
-router.post("/mark", protect, markAttendance);
+const router = express.Router()
 
-export default router;
+router.use(requireAuth())
+
+router.post(
+  "/mark",
+  roleProtect("student"),
+  markAttendance
+)
+
+export default router

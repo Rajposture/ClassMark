@@ -6,6 +6,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import http from "http";
 import { Server } from "socket.io";
+import { clerkMiddleware } from "@clerk/express";
 
 import connectDB from "./config/db.js";
 import authRoutes from "./routes/authRoutes.js";
@@ -22,23 +23,20 @@ app.set("trust proxy", 1);
 
 const origins = [
   "http://localhost:5173",
-  "http://127.0.0.1:5173",
   "https://class-mark1.vercel.app"
 ];
 
-app.use(
-  cors({
-    origin: origins,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-    credentials: true
-  })
-);
+app.use(cors({
+  origin: true,
+  credentials: true
+}));
 
 app.options("*", cors());
 
 app.use(express.json({ limit: "10mb" }));
 app.use(cookieParser());
+
+app.use(clerkMiddleware());
 
 const io = new Server(server, {
   cors: {

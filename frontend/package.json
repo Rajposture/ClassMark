@@ -10,6 +10,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@clerk/clerk-react": "^5.61.1",
+    "axios": "^1.13.5",
     "framer-motion": "^12.34.2",
     "html5-qrcode": "^2.3.8",
     "qrcode.react": "^4.2.0",
