@@ -20,27 +20,32 @@ const TeacherDashboard = () => {
 
   useEffect(() => {
     const loadLectures = async () => {
-      if (!isLoaded) return;
-
-      if (!isSignedIn) {
-        navigate("/login", { replace: true });
-        return;
-      }
-
-      const token = await getToken();
-
-      const meRes = await fetch(`${API}/api/auth/me`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
-      const meData = await meRes.json();
-
-      if (!meRes.ok || meData.user.role !== "teacher") {
-        navigate("/student", { replace: true });
+      if (!isLoaded || !isSignedIn) {
+        if (isLoaded && !isSignedIn) {
+          navigate("/login", { replace: true });
+        }
         return;
       }
 
       try {
+        const token = await getToken();
+
+        if (!token) {
+          navigate("/login", { replace: true });
+          return;
+        }
+
+        const meRes = await fetch(`${API}/api/auth/me`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        const meData = await meRes.json();
+
+        if (!meRes.ok || meData.user.role !== "teacher") {
+          navigate("/student", { replace: true });
+          return;
+        }
+
         const res = await fetch(`${API}/api/lectures/mine`, {
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -61,7 +66,7 @@ const TeacherDashboard = () => {
     };
 
     loadLectures();
-  }, [isLoaded, isSignedIn]);
+  }, [isLoaded, isSignedIn, getToken, navigate]);
 
   const handleLectureCreated = async (lectureData) => {
     const token = await getToken();
@@ -89,24 +94,23 @@ const TeacherDashboard = () => {
     return true;
   };
 
-const handleExcelDownload = async (lectureId, subject) => {
-  const token = await getToken();
+  const handleExcelDownload = async (lectureId, subject) => {
+    const token = await getToken();
 
-  const res = await fetch(
-    `${API}/api/lectures/${lectureId}/excel`,
-    {
-      headers: { Authorization: `Bearer ${token}` }
+    const res = await fetch(
+      `${API}/api/lectures/${lectureId}/excel`,
+      {
+        headers: { Authorization: `Bearer ${token}` }
+      }
+    );
+
+    if (!res.ok) {
+      alert("Failed to generate Excel");
+      return;
     }
-  );
 
-  if (!res.ok) {
-    alert("Failed to generate Excel");
-    return;
-  }
-
-  const blob = await res.blob();
-  const url = window.URL.createObjectURL(blob);
-
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
 
     const safeSubject = (subject || "attendance")
       .replace(/[^a-z0-9]/gi, "_")
@@ -135,8 +139,6 @@ const handleExcelDownload = async (lectureId, subject) => {
   return (
     <DashboardLayout>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-24 pb-16">
-
-        {/* HEADER */}
         <motion.div
           initial={{ opacity: 0, y: 25 }}
           animate={{ opacity: 1, y: 0 }}
@@ -155,10 +157,7 @@ const handleExcelDownload = async (lectureId, subject) => {
           <p className="text-red-500 mb-6">{fetchError}</p>
         )}
 
-        {/* GRID */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-
-          {/* CREATE LECTURE CARD */}
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
@@ -176,7 +175,6 @@ const handleExcelDownload = async (lectureId, subject) => {
             <CreateLecture onCreate={handleLectureCreated} />
           </motion.div>
 
-          {/* LECTURE LIST */}
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
@@ -209,7 +207,6 @@ const handleExcelDownload = async (lectureId, subject) => {
                     </div>
 
                     <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
-
                       <motion.button
                         whileTap={{ scale: 0.95 }}
                         whileHover={{ scale: 1.05 }}
@@ -232,7 +229,6 @@ const handleExcelDownload = async (lectureId, subject) => {
                       >
                         Download Excel
                       </motion.button>
-
                     </div>
                   </motion.div>
                 ))}
@@ -241,7 +237,6 @@ const handleExcelDownload = async (lectureId, subject) => {
           </motion.div>
         </div>
 
-        {/* QR MODAL */}
         <AnimatePresence>
           {activeLecture && (
             <GenerateQR
@@ -250,7 +245,6 @@ const handleExcelDownload = async (lectureId, subject) => {
             />
           )}
         </AnimatePresence>
-
       </div>
     </DashboardLayout>
   );

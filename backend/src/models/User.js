@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+import mongoose from "mongoose"
 
 const userSchema = new mongoose.Schema(
   {
@@ -10,50 +10,31 @@ const userSchema = new mongoose.Schema(
 
     name: {
       type: String,
-      required: true,
-      trim: true
+      required: true
     },
 
     email: {
       type: String,
-      required: true,
-      trim: true,
-      lowercase: true,
-      unique: true
-    },
-
-    phoneNumber: {
-      type: String,
-      trim: true
+      required: true
     },
 
     role: {
       type: String,
-      enum: ["teacher", "student"],
+      enum: ["student", "teacher"],
       required: true
     },
 
-    clerkId: {
-  type: String,
-  required: true,
-  unique: true
-},
     enrollmentNumber: {
       type: String,
-      trim: true,
       unique: true,
-      sparse: true,
-      required: function () {
-        return this.role === "student";
-      },
-      default: null
+      sparse: true
+    },
+
+    phoneNumber: {
+      type: String
     }
   },
   { timestamps: true }
-);
+)
 
-userSchema.index({ email: 1 }, { unique: true });
-userSchema.index({ enrollmentNumber: 1 }, { unique: true, sparse: true });
-userSchema.index({ clerkId: 1 }, { unique: true });
-
-export default mongoose.model("User", userSchema);
+export default mongoose.model("User", userSchema)

@@ -2,11 +2,15 @@ import User from "../models/User.js"
 
 export const syncUser = async (req, res) => {
   try {
-    const { userId } = req.auth;
+    if (!req.auth || !req.auth.userId) {
+      return res.status(401).json({ success: false, message: "Unauthorized" })
+    }
 
-    const { name, email, role, enrollmentNumber, phoneNumber } = req.body;
+    const userId = req.auth.userId
 
-    let user = await User.findOne({ clerkId: userId });
+    const { name, email, role, enrollmentNumber, phoneNumber } = req.body
+
+    let user = await User.findOne({ clerkId: userId })
 
     if (!user) {
       user = await User.create({
@@ -16,29 +20,30 @@ export const syncUser = async (req, res) => {
         role,
         enrollmentNumber,
         phoneNumber
-      });
+      })
     }
 
-    res.json({ success: true, user });
+    return res.json({ success: true, user })
 
   } catch (err) {
-    res.status(500).json({ success: false });
+    console.error(err)
+    return res.status(500).json({ success: false, message: err.message })
   }
-};
+}
 
 
 export const getMe = async (req, res) => {
   try {
-    const { userId } = req.auth || {}
-
-    if (!userId) {
-      return res.status(401).json({ success: false })
+    if (!req.auth || !req.auth.userId) {
+      return res.status(401).json({ success: false, message: "Unauthorized" })
     }
+
+    const userId = req.auth.userId
 
     const user = await User.findOne({ clerkId: userId })
 
     if (!user) {
-      return res.status(404).json({ success: false })
+      return res.status(404).json({ success: false, message: "User not found" })
     }
 
     return res.json({
@@ -54,8 +59,9 @@ export const getMe = async (req, res) => {
       }
     })
 
-  } catch {
-    return res.status(500).json({ success: false })
+  } catch (err) {
+    console.error(err)
+    return res.status(500).json({ success: false, message: err.message })
   }
 }
 

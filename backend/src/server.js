@@ -27,11 +27,12 @@ const origins = [
 ];
 
 app.use(cors({
-  origin: true,
+  origin: [
+    "http://localhost:5173",
+    "https://class-mark1.vercel.app"
+  ],
   credentials: true
 }));
-
-app.options("*", cors());
 
 app.use(express.json({ limit: "10mb" }));
 app.use(cookieParser());
@@ -64,7 +65,8 @@ app.use((req, res) => {
 });
 
 app.use((err, req, res, next) => {
-  res.status(500).json({ message: "Server error" });
+  console.error(err);
+  res.status(500).json({ message: err.message || "Server error" });
 });
 
 const PORT = process.env.PORT || 5001;

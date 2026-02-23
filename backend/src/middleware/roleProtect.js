@@ -3,16 +3,23 @@ import User from "../models/User.js"
 const roleProtect = (role) => {
   return async (req, res, next) => {
     try {
-      const { userId } = req.auth || {}
+      if (!req.auth || !req.auth.userId) {
+        return res.status(401).json({ message: "Unauthorized" })
+      }
 
-      const user = await User.findOne({ clerkId: userId })
+      const user = await User.findOne({ clerkId: req.auth.userId })
 
-      if (!user || user.role !== role) {
+      if (!user) {
+        return res.status(401).json({ message: "User not found" })
+      }
+
+      if (user.role !== role) {
         return res.status(403).json({ message: "Forbidden" })
       }
 
-      req.dbUser = user
+      req.user = user   // ✅ THIS IS THE FIX
       next()
+
     } catch {
       return res.status(500).json({ message: "Server error" })
     }
