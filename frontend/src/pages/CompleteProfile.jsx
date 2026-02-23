@@ -14,14 +14,12 @@ const CompleteProfile = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // 🔥 Proper redirect using useEffect
   useEffect(() => {
     if (isLoaded && !isSignedIn) {
       navigate("/login", { replace: true });
     }
   }, [isLoaded, isSignedIn, navigate]);
 
-  // Set phone if exists
   useEffect(() => {
     if (user?.phoneNumbers?.length > 0) {
       setPhone(user.phoneNumbers[0].phoneNumber);
@@ -50,35 +48,39 @@ const CompleteProfile = () => {
     try {
       const token = await getToken();
 
-      if (!token) {
-        throw new Error("No token");
-      }
+      if (!token) throw new Error("No token found");
 
       const res = await fetch(`${API_BASE}/api/auth/sync`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`,
+          Authorization: `Bearer ${token}`
         },
         body: JSON.stringify({
           name: user?.fullName,
           email: user?.primaryEmailAddress?.emailAddress,
           role,
           enrollmentNumber: role === "student" ? enrollmentNumber : null,
-          phoneNumber: phone,
-        }),
+          phoneNumber: phone
+        })
       });
 
+      const contentType = res.headers.get("content-type");
+
       if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.message || "Failed");
+        if (contentType && contentType.includes("application/json")) {
+          const data = await res.json();
+          throw new Error(data.message || "Server error");
+        } else {
+          throw new Error("Backend not reachable");
+        }
       }
 
       navigate("/dashboard", { replace: true });
 
     } catch (err) {
-      console.error(err);
-      setError("Failed to save profile");
+      console.error("CompleteProfile Error:", err.message);
+      setError(err.message || "Failed to save profile");
     }
 
     setLoading(false);
