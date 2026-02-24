@@ -1,50 +1,98 @@
-import { SignIn } from "@clerk/clerk-react";
-import { motion } from "framer-motion";
+import { useState } from "react"
+import { motion } from "framer-motion"
+import api from "../utils/axios"
+import { useNavigate } from "react-router-dom"
 
 const Login = () => {
+  const navigate = useNavigate()
+
+  const [formData, setFormData] = useState({
+    email: "",
+    password: ""
+  })
+
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value })
+  }
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+
+const res = await api.post("/auth/login", formData)
+
+    localStorage.setItem("token", res.data.token)
+    localStorage.setItem("user", JSON.stringify(res.data.user))
+
+    if (res.data.user.role === "teacher") {
+      navigate("/teacher-dashboard")
+    } else {
+      navigate("/student-dashboard")
+    }
+  }
+
   return (
-    <div className="min-h-screen bg-[#f7f6f2] flex items-center justify-center px-4 py-8">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#eef2f7] via-[#e6ecf5] to-[#dde4ee] px-4 relative overflow-hidden">
+
+      <div className="absolute w-72 h-72 bg-white/30 rounded-full blur-3xl top-10 left-10"></div>
+      <div className="absolute w-72 h-72 bg-blue-300/20 rounded-full blur-3xl bottom-10 right-10"></div>
 
       <motion.div
-        initial={{ opacity: 0, y: 25 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="w-full max-w-md"
+        initial={{ opacity: 0, y: 50, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+        className="w-full max-w-md backdrop-blur-xl bg-white/60 border border-white/40 shadow-2xl rounded-3xl p-8"
       >
         <div className="text-center mb-8">
-          <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900">
-            ClassMark
+          <h1 className="text-3xl font-semibold text-gray-900 tracking-tight">
+            Welcome Back
           </h1>
-          <div className="w-12 h-[3px] bg-purple-500 mx-auto mt-3 rounded-full" />
+          <p className="text-gray-500 text-sm mt-2">
+            Login to continue to ClassMark
+          </p>
         </div>
 
-        <SignIn
-          routing="path"
-          path="/login"
-          signUpUrl="/signup"
-          afterSignInUrl="/dashboard"
-          appearance={{
-            elements: {
-              card:
-                "shadow-[0_10px_40px_rgba(0,0,0,0.08)] border border-gray-200 rounded-2xl",
+        <form onSubmit={handleSubmit} className="space-y-5">
 
-              socialButtonsBlockButton:
-                "bg-white border border-gray-300 text-gray-800 hover:bg-gray-900 hover:text-white transition rounded-xl",
+          <motion.input
+            whileFocus={{ scale: 1.02 }}
+            type="email"
+            name="email"
+            placeholder="Email Address"
+            required
+            onChange={handleChange}
+            className="w-full px-4 py-3 bg-white/80 border border-gray-200 rounded-xl focus:ring-2 focus:ring-black outline-none transition"
+          />
 
-              formFieldInput:
-                "bg-white border border-gray-300 text-gray-900 focus:ring-2 focus:ring-purple-400 rounded-xl",
+          <motion.input
+            whileFocus={{ scale: 1.02 }}
+            type="password"
+            name="password"
+            placeholder="Password"
+            required
+            onChange={handleChange}
+            className="w-full px-4 py-3 bg-white/80 border border-gray-200 rounded-xl focus:ring-2 focus:ring-black outline-none transition"
+          />
 
-              formButtonPrimary:
-                "bg-gray-900 text-white hover:bg-purple-600 transition rounded-xl",
+          <button
+            type="submit"
+            className="w-full py-3 mt-4 bg-black text-white rounded-xl font-medium hover:bg-gray-800 transition-all duration-300 shadow-lg"
+          >
+            Login
+          </button>
+        </form>
 
-              footerActionLink:
-                "text-purple-600 hover:text-purple-800"
-            }
-          }}
-        />
+        <p className="text-center text-sm text-gray-500 mt-6">
+          Don’t have an account?{" "}
+          <span
+            onClick={() => navigate("/signup")}
+            className="text-black font-medium cursor-pointer hover:underline"
+          >
+            Create one
+          </span>
+        </p>
       </motion.div>
     </div>
-  );
-};
+  )
+}
 
-export default Login;
+export default Login

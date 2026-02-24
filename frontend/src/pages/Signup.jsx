@@ -1,48 +1,132 @@
-import { SignUp } from "@clerk/clerk-react"
+import { useState } from "react"
 import { motion } from "framer-motion"
+import api from "../utils/axios"
+import { useNavigate } from "react-router-dom"
 
-const Signup = () => {
+const Signup = async () => {
+  const navigate = useNavigate()
+
+  const [role, setRole] = useState("student")
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    password: "",
+    enrollment: ""
+  })
+const res = await api.post("/auth/register", formData)
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value })
+  }
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+
+    await axios.post("http://localhost:5001/api/auth/register", {
+      ...formData,
+      role
+    })
+
+    navigate("/login")
+  }
+
   return (
-    <div className="min-h-screen bg-[#f7f6f2] flex items-center justify-center px-4 py-10">
-
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#f5f7fa] via-[#eef1f6] to-[#e3e8f0] px-4">
       <motion.div
-        initial={{ opacity: 0, y: 40, scale: 0.98 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-        className="w-full max-w-md sm:max-w-lg"
+        initial={{ opacity: 0, y: 60 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+        className="w-full max-w-md backdrop-blur-xl bg-white/70 border border-white/40 shadow-2xl rounded-3xl p-8"
       >
         <div className="text-center mb-8">
-          <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900">
+          <h1 className="text-3xl font-semibold text-gray-900 tracking-tight">
             Create Account
           </h1>
           <p className="text-gray-500 text-sm mt-2">
-            Join ClassMark
+            Welcome to ClassMark
           </p>
-          <div className="w-12 h-[3px] bg-purple-500 mx-auto mt-4 rounded-full" />
         </div>
 
-<SignUp
-  routing="path"
-  path="/signup"
-  signInUrl="/login"
-  forceRedirectUrl="/complete-profile"
-  fallbackRedirectUrl="/complete-profile"
-  appearance={{
-    elements: {
-      card:
-        "shadow-[0_15px_50px_rgba(0,0,0,0.08)] border border-gray-200 rounded-2xl",
-      formFieldInput:
-        "bg-white border border-gray-300 text-gray-900 focus:ring-2 focus:ring-purple-400 rounded-xl",
-      formButtonPrimary:
-        "bg-gray-900 text-white hover:bg-purple-600 transition rounded-xl",
-      socialButtonsBlockButton:
-        "bg-white border border-gray-300 hover:bg-gray-900 hover:text-white transition rounded-xl",
-      footerActionLink:
-        "text-purple-600 hover:text-purple-800"
-    }
-  }}
-/>
+        <div className="flex bg-gray-100 rounded-2xl p-1 mb-6">
+          <button
+            onClick={() => setRole("student")}
+            className={`flex-1 py-2 rounded-xl text-sm font-medium transition ${
+              role === "student"
+                ? "bg-white shadow text-gray-900"
+                : "text-gray-500"
+            }`}
+          >
+            Student
+          </button>
+          <button
+            onClick={() => setRole("teacher")}
+            className={`flex-1 py-2 rounded-xl text-sm font-medium transition ${
+              role === "teacher"
+                ? "bg-white shadow text-gray-900"
+                : "text-gray-500"
+            }`}
+          >
+            Teacher
+          </button>
+        </div>
 
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <input
+            type="text"
+            name="name"
+            placeholder="Full Name"
+            required
+            onChange={handleChange}
+            className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-black outline-none transition"
+          />
+
+          <input
+            type="email"
+            name="email"
+            placeholder="Email Address"
+            required
+            onChange={handleChange}
+            className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-black outline-none transition"
+          />
+
+          <input
+            type="password"
+            name="password"
+            placeholder="Password"
+            required
+            onChange={handleChange}
+            className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-black outline-none transition"
+          />
+
+          {role === "student" && (
+            <motion.input
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              type="text"
+              name="enrollment"
+              placeholder="Enrollment Number"
+              required
+              onChange={handleChange}
+              className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-black outline-none transition"
+            />
+          )}
+
+          <button
+            type="submit"
+            className="w-full py-3 mt-4 bg-black text-white rounded-xl font-medium hover:bg-gray-800 transition-all duration-300 shadow-lg"
+          >
+            Create Account
+          </button>
+        </form>
+
+        <p className="text-center text-sm text-gray-500 mt-6">
+          Already have an account?{" "}
+          <span
+            onClick={() => navigate("/login")}
+            className="text-black font-medium cursor-pointer hover:underline"
+          >
+            Login
+          </span>
+        </p>
       </motion.div>
     </div>
   )

@@ -10,7 +10,7 @@ export const createLecture = async (req, res) => {
     if (!subject || !date || !startTime || !endTime)
       return res.status(400).json({ success: false, message: "Missing required fields" });
 
-    if (!req.user)
+    if (!req.user || req.user.role !== "teacher")
       return res.status(401).json({ success: false, message: "Unauthorized" });
 
     const qrSecret = crypto.randomBytes(32).toString("hex");
@@ -20,7 +20,7 @@ export const createLecture = async (req, res) => {
       date,
       startTime,
       endTime,
-      teacherId: req.user._id,
+      teacherId: req.user.id,
       qrSecret,
       latitude: Number(latitude),
       longitude: Number(longitude),
@@ -43,27 +43,24 @@ export const createLecture = async (req, res) => {
     }
 
     return res.status(201).json({ success: true, lecture });
-
-  } catch (err) {
-    console.log(err);
+  } catch {
     return res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
 export const getMyLectures = async (req, res) => {
   try {
-    if (!req.user)
+    if (!req.user || req.user.role !== "teacher")
       return res.status(401).json({ success: false, message: "Unauthorized" });
 
-    const lectures = await Lecture.find({ teacherId: req.user._id }).sort({ createdAt: -1 });
+    const lectures = await Lecture.find({ teacherId: req.user.id }).sort({ createdAt: -1 });
 
     return res.status(200).json({ success: true, lectures });
-
-  } catch (err) {
-    console.log(err);
+  } catch {
     return res.status(500).json({ success: false, message: "Server error" });
   }
 };
+
 export const generateQRToken = async (req, res) => {
   try {
     const lecture = await Lecture.findById(req.params.id);
@@ -71,21 +68,21 @@ export const generateQRToken = async (req, res) => {
     if (!lecture)
       return res.status(404).json({ success: false, message: "Lecture not found" });
 
-    if (lecture.teacherId.toString() !== req.user._id.toString())
+    if (!req.user || lecture.teacherId.toString() !== req.user.id)
       return res.status(403).json({ success: false, message: "Unauthorized access" });
 
-    const expirySeconds = 60;
-    const expiresAt = new Date(Date.now() + expirySeconds * 1000);
+    const expiryMinutes = 20;
+    const expiresAt = new Date(Date.now() + expiryMinutes * 60 * 1000);
 
     lecture.qrExpiresAt = expiresAt;
     await lecture.save();
 
     const token = jwt.sign(
       {
-        lectureId: lecture._id,
-        exp: Math.floor(Date.now() / 1000) + expirySeconds
+        lectureId: lecture._id
       },
-      lecture.qrSecret
+      lecture.qrSecret,
+      { expiresIn: "20m" }
     );
 
     return res.status(200).json({
@@ -94,13 +91,10 @@ export const generateQRToken = async (req, res) => {
       subject: lecture.subject,
       expiresAt
     });
-
-  } catch (err) {
-    console.log(err);
+  } catch {
     return res.status(500).json({ success: false, message: "Server error" });
   }
 };
-
 
 export const generateExcelSheet = async (req, res) => {
   try {
@@ -109,7 +103,7 @@ export const generateExcelSheet = async (req, res) => {
     if (!lecture)
       return res.status(404).json({ success: false, message: "Lecture not found" });
 
-    if (lecture.teacherId.toString() !== req.user._id.toString())
+    if (!req.user || lecture.teacherId.toString() !== req.user.id)
       return res.status(403).json({ success: false, message: "Unauthorized access" });
 
     const workbook = new ExcelJS.Workbook();
@@ -146,7 +140,7 @@ export const generateExcelSheet = async (req, res) => {
 
     worksheet.columns = [
       { header: "Name", key: "name", width: 25 },
-      { header: "Enrollment Number", key: "enrollmentNumber", width: 25 },
+      { header: "Enrollment", key: "enrollment", width: 25 },
       { header: "Submit Time", key: "submitTime", width: 25 },
       { header: "Device", key: "device", width: 30 },
       { header: "Latitude", key: "latitude", width: 15 },
@@ -156,17 +150,15 @@ export const generateExcelSheet = async (req, res) => {
 
     worksheet.getRow(6).font = { bold: true };
     worksheet.getRow(6).alignment = { horizontal: "center" };
-    
-    worksheet.views = [
-  { state: "frozen", ySplit: 6 }
-];
+
+    worksheet.views = [{ state: "frozen", ySplit: 6 }];
 
     lecture.attendance.forEach((entry) => {
       worksheet.addRow({
         name: entry.name || "",
-        enrollmentNumber: entry.enrollmentNumber || "",
-        submitTime: entry.markedAt
-          ? new Date(entry.markedAt).toLocaleString()
+        enrollment: entry.enrollment || "",
+        submitTime: entry.time
+          ? new Date(entry.time).toLocaleString()
           : "",
         device: entry.deviceInfo || "",
         latitude: entry.latitude || "",
@@ -191,14 +183,10 @@ export const generateExcelSheet = async (req, res) => {
 
     await workbook.xlsx.write(res);
     res.end();
-
-  } catch (err) {
-    console.log(err);
+  } catch {
     return res.status(500).json({ success: false, message: "Failed to generate Excel" });
   }
 };
-
-
 
 export const deleteLecture = async (req, res) => {
   try {
@@ -207,15 +195,13 @@ export const deleteLecture = async (req, res) => {
     if (!lecture)
       return res.status(404).json({ success: false, message: "Lecture not found" });
 
-    if (lecture.teacherId.toString() !== req.user._id.toString())
+    if (!req.user || lecture.teacherId.toString() !== req.user.id)
       return res.status(403).json({ success: false, message: "Unauthorized access" });
 
     await Lecture.findByIdAndDelete(req.params.id);
 
     return res.status(200).json({ success: true, message: "Lecture deleted" });
-
-  } catch (err) {
-    console.log(err);
+  } catch {
     return res.status(500).json({ success: false, message: "Server error" });
   }
 };

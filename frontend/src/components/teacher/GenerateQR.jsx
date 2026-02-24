@@ -1,10 +1,33 @@
 import { motion, AnimatePresence } from "framer-motion";
+import { useEffect, useState } from "react";
 import QRCode from "react-qr-code";
 
 const GenerateQR = ({ lecture, onClose }) => {
+  const [secondsLeft, setSecondsLeft] = useState(1200);
+
+  useEffect(() => {
+    setSecondsLeft(1200);
+
+    const interval = setInterval(() => {
+      setSecondsLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          onClose();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [lecture, onClose]);
+
   if (!lecture?._id) return null;
 
-  const attendanceUrl = `${window.location.origin}/attendance/${lecture._id}`;
+  const attendanceUrl = `${window.location.origin}/verify/${lecture._id}`;
+
+  const minutes = Math.floor(secondsLeft / 60);
+  const seconds = secondsLeft % 60;
 
   return (
     <AnimatePresence>
@@ -28,19 +51,25 @@ const GenerateQR = ({ lecture, onClose }) => {
             ✕
           </button>
 
-          <h2 className="text-2xl font-semibold mb-6">
-            Mark Attendance
+          <h2 className="text-2xl font-semibold mb-2">
+            Attendance QR
           </h2>
 
-          <div className="flex justify-center">
+          <p className="text-sm text-gray-500 mb-4">
+            Expires in {minutes}:{seconds.toString().padStart(2, "0")}
+          </p>
+
+          <div className="flex justify-center bg-white p-4 rounded-2xl shadow-inner">
             <QRCode
               value={attendanceUrl}
               size={220}
               level="H"
+              bgColor="#ffffff"
+              fgColor="#111827"
             />
           </div>
 
-          <div className="mt-4 text-xs text-gray-500 break-all">
+          <div className="mt-4 text-xs text-gray-400 break-all">
             {attendanceUrl}
           </div>
         </motion.div>

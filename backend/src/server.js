@@ -6,7 +6,6 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import http from "http";
 import { Server } from "socket.io";
-import { clerkMiddleware } from "@clerk/express";
 
 import connectDB from "./config/db.js";
 import authRoutes from "./routes/authRoutes.js";
@@ -26,18 +25,15 @@ const origins = [
   "https://class-mark1.vercel.app"
 ];
 
-app.use(cors({
-  origin: [
-    "http://localhost:5173",
-    "https://class-mark1.vercel.app"
-  ],
-  credentials: true
-}));
+app.use(
+  cors({
+    origin: origins,
+    credentials: true
+  })
+);
 
 app.use(express.json({ limit: "10mb" }));
 app.use(cookieParser());
-
-
 
 const io = new Server(server, {
   cors: {
@@ -65,7 +61,6 @@ app.use((req, res) => {
 });
 
 app.use((err, req, res, next) => {
-  console.error(err);
   res.status(500).json({ message: err.message || "Server error" });
 });
 

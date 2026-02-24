@@ -1,16 +1,16 @@
 import { useState, useRef, useEffect } from "react"
 import { Link, useNavigate } from "react-router-dom"
-import { useUser, useClerk } from "@clerk/clerk-react"
 import { FiMenu, FiX, FiLogOut } from "react-icons/fi"
 import { IoNotificationsOutline } from "react-icons/io5"
 import { io } from "socket.io-client"
+import { useAuth } from "../../context/AuthContext"
 
 const API_BASE = import.meta.env.VITE_API_BASE
 const socket = io(API_BASE)
 
 const Navbar = () => {
-  const { user, isSignedIn } = useUser()
-  const { signOut } = useClerk()
+  const { user, logout } = useAuth()
+  const isSignedIn = !!user
   const navigate = useNavigate()
 
   const dropdownRef = useRef(null)
@@ -71,8 +71,8 @@ const Navbar = () => {
     }
   }, [isSignedIn])
 
-  const handleLogout = async () => {
-    await signOut()
+  const handleLogout = () => {
+    logout()
     navigate("/login", { replace: true })
   }
 
@@ -81,7 +81,6 @@ const Navbar = () => {
       <div className="fixed top-4 left-0 right-0 z-50 flex justify-center px-4">
         <nav className="w-full max-w-7xl backdrop-blur-2xl bg-white/10 border border-white/20 shadow-xl rounded-2xl px-6 py-3 flex justify-between items-center text-slate-900">
 
-          {/* LEFT SECTION */}
           <div className="flex items-center gap-4">
             <button
               className="md:hidden text-2xl text-slate-900"
@@ -95,7 +94,6 @@ const Navbar = () => {
             </span>
           </div>
 
-          {/* DESKTOP LINKS */}
           {isSignedIn && (
             <div className="hidden md:flex gap-8 text-sm font-medium text-slate-800">
               <Link to="/dashboard" className="hover:text-indigo-600 transition">
@@ -117,7 +115,6 @@ const Navbar = () => {
             </div>
           )}
 
-          {/* RIGHT SECTION */}
           <div className="flex items-center gap-6">
 
             {!isSignedIn && (
@@ -131,7 +128,6 @@ const Navbar = () => {
 
             {isSignedIn && (
               <>
-                {/* NOTIFICATION BELL */}
                 <div ref={notificationRef} className="relative">
                   <button
                     onClick={() => setOpenNotifications(!openNotifications)}
@@ -189,14 +185,13 @@ const Navbar = () => {
                   )}
                 </div>
 
-                {/* PROFILE */}
                 <div ref={dropdownRef} className="relative">
                   <div
                     onClick={() => setOpenProfile(!openProfile)}
                     className="w-10 h-10 rounded-full overflow-hidden border border-white/30 cursor-pointer"
                   >
                     <img
-                      src={user.imageUrl}
+                      src={user?.image || "https://ui-avatars.com/api/?name=" + user?.name}
                       alt="profile"
                       className="w-full h-full object-cover"
                     />
@@ -206,16 +201,16 @@ const Navbar = () => {
                     <div className="absolute right-0 mt-4 w-72 backdrop-blur-xl bg-black/90 border border-white/20 shadow-2xl rounded-2xl p-6 text-white">
                       <div className="flex items-center gap-4">
                         <img
-                          src={user.imageUrl}
+                          src={user?.image || "https://ui-avatars.com/api/?name=" + user?.name}
                           alt="profile"
                           className="w-14 h-14 rounded-full object-cover"
                         />
                         <div>
                           <p className="font-semibold">
-                            {user.fullName}
+                            {user?.name}
                           </p>
                           <p className="text-sm text-white/60">
-                            {user.primaryEmailAddress?.emailAddress}
+                            {user?.email}
                           </p>
                         </div>
                       </div>
@@ -236,7 +231,6 @@ const Navbar = () => {
         </nav>
       </div>
 
-      {/* MOBILE SIDEBAR */}
       <div
         className={`fixed inset-0 z-40 md:hidden transition ${
           openSidebar ? "visible opacity-100" : "invisible opacity-0"

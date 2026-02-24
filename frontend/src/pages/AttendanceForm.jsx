@@ -1,49 +1,36 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { useUser } from "@clerk/clerk-react";
-
-const API = import.meta.env.VITE_API_BASE;
+import { useAuth } from "../context/AuthContext";
+import api from "../utils/axios";
 
 const AttendanceForm = () => {
   const navigate = useNavigate();
   const { lectureId } = useParams();
-  const { user: clerkUser, isLoaded, isSignedIn } = useUser();
+  const { user, loading } = useAuth();
 
   const [student, setStudent] = useState(null);
   const [latitude, setLatitude] = useState(null);
   const [longitude, setLongitude] = useState(null);
   const [message, setMessage] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
-    const init = async () => {
-      if (!isLoaded) return;
+    if (loading) return;
 
-      if (!isSignedIn) {
-        navigate(`/login`, { replace: true });
-        return;
-      }
+    if (!user) {
+      navigate("/login", { replace: true });
+      return;
+    }
 
-      const token = await clerkUser.getToken();
+    if (user.role !== "student") {
+      navigate("/teacher-dashboard", { replace: true });
+      return;
+    }
 
-      const res = await fetch(`${API}/api/auth/me`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
-      const data = await res.json();
-
-      if (!res.ok || data.user.role !== "student") {
-        navigate("/teacher", { replace: true });
-        return;
-      }
-
-      setStudent(data.user);
-    };
-
-    init();
-  }, [isLoaded, isSignedIn]);
+    setStudent(user);
+  }, [user, loading, navigate]);
 
   const handleSetLocation = () => {
     if (!navigator.geolocation) {
@@ -70,42 +57,32 @@ const AttendanceForm = () => {
       return;
     }
 
-    setLoading(true);
+    setSubmitting(true);
     setMessage("");
 
     try {
-      const token = await clerkUser.getToken();
-
-      const res = await fetch(`${API}/api/attendance/mark`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          token: lectureId,
-          latitude,
-          longitude
-        })
+      const res = await api.post("/attendance/mark", {
+        lectureId,
+        latitude,
+        longitude,
+        enrollment: student.enrollment
       });
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        setMessage(data.message || "Failed to mark attendance");
+      if (res.status !== 201) {
+        setMessage(res.data?.message || "Failed to mark attendance");
       } else {
         setSuccess(true);
         setMessage("Attendance marked successfully");
 
         setTimeout(() => {
-          navigate("/student", { replace: true });
+          navigate("/student-dashboard", { replace: true });
         }, 1500);
       }
-    } catch {
-      setMessage("Server error");
+    } catch (err) {
+      setMessage(err.response?.data?.message || "Server error");
     }
 
-    setLoading(false);
+    setSubmitting(false);
   };
 
   if (!student) {
@@ -149,7 +126,7 @@ const AttendanceForm = () => {
               Enrollment Number
             </p>
             <p className="font-semibold text-gray-900 mt-1">
-              {student.enrollmentNumber}
+              {student.enrollment}
             </p>
           </div>
         </motion.div>
@@ -169,10 +146,10 @@ const AttendanceForm = () => {
           whileHover={{ scale: 1.03 }}
           transition={{ type: "spring", stiffness: 260 }}
           onClick={submitAttendance}
-          disabled={loading || success}
+          disabled={submitting || success}
           className="w-full py-3 rounded-2xl bg-indigo-600 text-white font-medium transition disabled:opacity-60"
         >
-          {loading
+          {submitting
             ? "Submitting..."
             : success
             ? "Redirecting..."

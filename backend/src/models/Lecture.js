@@ -5,38 +5,36 @@ const attendanceSchema = new mongoose.Schema(
     studentId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true,
+      required: true
     },
     name: {
       type: String,
-      required: true,
-      trim: true,
+      required: true
     },
-    enrollmentNumber: {
+    enrollment: {
       type: String,
-      required: true,
-      trim: true,
-    },
-    ipAddress: {
-      type: String,
-      default: "",
-    },
-    deviceInfo: {
-      type: String,
-      default: "",
+      required: true
     },
     latitude: {
       type: Number,
-      required: true,
+      required: true
     },
     longitude: {
       type: Number,
-      required: true,
+      required: true
     },
-    markedAt: {
+    ipAddress: {
+      type: String,
+      default: ""
+    },
+    deviceInfo: {
+      type: String,
+      default: ""
+    },
+    time: {
       type: Date,
-      default: Date.now,
-    },
+      default: Date.now
+    }
   },
   { _id: false }
 );
@@ -45,60 +43,55 @@ const lectureSchema = new mongoose.Schema(
   {
     subject: {
       type: String,
-      required: true,
-      trim: true,
+      required: true
     },
     date: {
       type: String,
-      required: true,
+      required: true
     },
     startTime: {
       type: String,
-      required: true,
+      required: true
     },
     endTime: {
       type: String,
-      required: true,
+      required: true
     },
     teacherId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true,
-      index: true,
+      required: true
     },
     qrSecret: {
       type: String,
-      required: true,
-    },
-    isActive: {
-      type: Boolean,
-      default: true,
+      required: true
     },
     latitude: {
       type: Number,
-      required: true,
+      required: true
     },
     longitude: {
       type: Number,
-      required: true,
+      required: true
     },
     radius: {
       type: Number,
-      required: true,
-      default: 50,
+      default: 50
+    },
+    isActive: {
+      type: Boolean,
+      default: true
+    },
+    qrExpiresAt: {
+      type: Date,
+      default: null
     },
     attendance: {
       type: [attendanceSchema],
-      default: [],
-    },
-    excelFilePath: {
-      type: String,
-      default: null,
-    },
+      default: []
+    }
   },
   { timestamps: true }
 );
-
-lectureSchema.index({ teacherId: 1 });
 
 export default mongoose.model("Lecture", lectureSchema);

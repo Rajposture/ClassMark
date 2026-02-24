@@ -1,10 +1,14 @@
 import express from "express";
-import { syncUser, getMe } from "../controllers/authController.js";
-import { requireAuth } from "@clerk/express";
+import { register, login } from "../controllers/authController.js";
+import authMiddleware from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-router.post("/sync", requireAuth(), syncUser);
-router.get("/me", requireAuth(), getMe);
+router.post("/register", register);
+router.post("/login", login);
+
+router.get("/me", authMiddleware, (req, res) => {
+  res.json({ user: req.user });
+});
 
 export default router;

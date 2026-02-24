@@ -3,13 +3,27 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import Navbar from "../common/Navbar";
+import { useAuth } from "../../context/AuthContext";
 
 const QRScanner = () => {
   const navigate = useNavigate();
   const scannerRef = useRef(null);
+  const { user, loading } = useAuth();
   const [error, setError] = useState("");
 
   useEffect(() => {
+    if (loading) return;
+
+    if (!user) {
+      navigate("/login", { replace: true });
+      return;
+    }
+
+    if (user.role !== "student") {
+      navigate("/teacher-dashboard", { replace: true });
+      return;
+    }
+
     const startScanner = async () => {
       try {
         const devices = await Html5Qrcode.getCameras();
@@ -38,7 +52,7 @@ const QRScanner = () => {
             if (!decodedText) return;
 
             scanner.stop().catch(() => {});
-            navigate(`/attendance/${decodedText}`);
+            navigate(`/verify/${decodedText}`);
           },
           () => {}
         );
@@ -54,7 +68,7 @@ const QRScanner = () => {
         scannerRef.current.stop().catch(() => {});
       }
     };
-  }, [navigate]);
+  }, [user, loading, navigate]);
 
   return (
     <>

@@ -1,59 +1,32 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { useUser, useAuth } from "@clerk/clerk-react";
 import DashboardLayout from "../components/common/DashboardLayout";
-
-const API = import.meta.env.VITE_API_BASE;
+import { useAuth } from "../context/AuthContext";
 
 const StudentDashboard = () => {
-  const { user, isLoaded, isSignedIn } = useUser();
-  const { getToken } = useAuth(); // ✅ THIS IS IMPORTANT
+  const { user, loading } = useAuth();
   const navigate = useNavigate();
 
   const [student, setStudent] = useState(null);
   const [fetching, setFetching] = useState(true);
 
   useEffect(() => {
-    const fetchProfile = async () => {
-      if (!isLoaded) return;
+    if (loading) return;
 
-      if (!isSignedIn) {
-        navigate("/login", { replace: true });
-        return;
-      }
+    if (!user) {
+      navigate("/login", { replace: true });
+      return;
+    }
 
-      try {
-        const token = await getToken(); // ✅ CORRECT WAY
+    if (user.role !== "student") {
+      navigate("/teacher-dashboard", { replace: true });
+      return;
+    }
 
-        const res = await fetch(`${API}/api/auth/me`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
-
-        const data = await res.json();
-
-        if (res.ok && data.success) {
-          if (data.user.role !== "student") {
-            navigate("/teacher", { replace: true });
-            return;
-          }
-
-          setStudent(data.user);
-        } else {
-          navigate("/login", { replace: true });
-        }
-      } catch (err) {
-        console.error("Profile fetch error:", err);
-        navigate("/login", { replace: true });
-      } finally {
-        setFetching(false);
-      }
-    };
-
-    fetchProfile();
-  }, [isLoaded, isSignedIn, getToken, navigate]);
+    setStudent(user);
+    setFetching(false);
+  }, [user, loading, navigate]);
 
   if (fetching || !student) {
     return (
@@ -105,7 +78,7 @@ const StudentDashboard = () => {
               <div className="flex justify-between">
                 <span className="text-slate-500">Enrollment</span>
                 <span className="font-medium">
-                  {student.enrollmentNumber || "N/A"}
+                  {student.enrollment || "N/A"}
                 </span>
               </div>
 

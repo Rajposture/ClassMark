@@ -1,34 +1,34 @@
-import express from "express"
+import express from "express";
 import {
   createAssignment,
   getAllAssignments,
   deleteAssignment
-} from "../controllers/assignmentController.js"
+} from "../controllers/assignmentController.js";
 
-import { requireAuth } from "@clerk/express";
-import roleProtect from "../middleware/roleProtect.js"
-import upload from "../middleware/uploadMiddleware.js"
+import authMiddleware from "../middleware/authMiddleware.js";
+import roleProtect from "../middleware/roleProtect.js";
+import upload from "../middleware/uploadMiddleware.js";
 
-const router = express.Router()
+const router = express.Router();
 
-router.use(requireAuth())
+router.use(authMiddleware);
 
 router.post(
   "/",
   roleProtect("teacher"),
   upload.single("image"),
   createAssignment
-)
+);
 
 router.get(
   "/",
   getAllAssignments
-)
+);
 
 router.delete(
   "/:id",
   roleProtect("teacher"),
   deleteAssignment
-)
+);
 
-export default router
+export default router;

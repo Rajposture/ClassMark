@@ -1,16 +1,15 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { useUser, useAuth } from "@clerk/clerk-react";
+
 import DashboardLayout from "../components/common/DashboardLayout";
 import CreateLecture from "../components/teacher/CreateLecture";
 import GenerateQR from "../components/teacher/GenerateQR";
-
-const API = import.meta.env.VITE_API_BASE;
+import { useAuth } from "../context/AuthContext";
+import api from "../utils/axios";
 
 const TeacherDashboard = () => {
-  const { isLoaded, isSignedIn } = useUser();
-  const { getToken } = useAuth();
+  const { user, loading } = useAuth();
 
   const [lectures, setLectures] = useState([]);
   const [activeLecture, setActiveLecture] = useState(null);
@@ -20,110 +19,77 @@ const TeacherDashboard = () => {
 
   useEffect(() => {
     const loadLectures = async () => {
-      if (!isLoaded || !isSignedIn) {
-        if (isLoaded && !isSignedIn) {
-          navigate("/login", { replace: true });
-        }
+      if (loading) return;
+
+      if (!user) {
+        navigate("/login", { replace: true });
+        return;
+      }
+
+      if (user.role !== "teacher") {
+        navigate("/student-dashboard", { replace: true });
         return;
       }
 
       try {
-        const token = await getToken();
-
-        if (!token) {
-          navigate("/login", { replace: true });
-          return;
-        }
-
-        const meRes = await fetch(`${API}/api/auth/me`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-
-        const meData = await meRes.json();
-
-        if (!meRes.ok || meData.user.role !== "teacher") {
-          navigate("/student", { replace: true });
-          return;
-        }
-
-        const res = await fetch(`${API}/api/lectures/mine`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-
-        const data = await res.json();
-
-        if (!res.ok) {
-          setFetchError(data.message || "Failed to load lectures");
-          return;
-        }
-
+        const res = await api.get("/lectures/mine");
+        const data = res.data;
         setLectures(Array.isArray(data.lectures) ? data.lectures : []);
-      } catch {
-        setFetchError("Server error while fetching lectures");
+      } catch (err) {
+        setFetchError(
+          err.response?.data?.message || "Failed to load lectures"
+        );
       } finally {
         setFetching(false);
       }
     };
 
     loadLectures();
-  }, [isLoaded, isSignedIn, getToken, navigate]);
+  }, [user, loading, navigate]);
 
   const handleLectureCreated = async (lectureData) => {
-    const token = await getToken();
+    try {
+      const res = await api.post("/lectures", lectureData);
+      const data = res.data;
 
-    const res = await fetch(`${API}/api/lectures`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`
-      },
-      body: JSON.stringify(lectureData)
-    });
+      if (data.lecture) {
+        setLectures((prev) => [data.lecture, ...prev]);
+      }
 
-    const data = await res.json();
-
-    if (!res.ok) {
-      alert(data.message || "Failed to create lecture");
+      return true;
+    } catch (err) {
+      alert(err.response?.data?.message || "Failed to create lecture");
       return false;
     }
-
-    if (data.lecture) {
-      setLectures((prev) => [data.lecture, ...prev]);
-    }
-
-    return true;
   };
 
   const handleExcelDownload = async (lectureId, subject) => {
-    const token = await getToken();
+    try {
+      const res = await api.get(`/lectures/${lectureId}/excel`, {
+        responseType: "blob"
+      });
 
-    const res = await fetch(
-      `${API}/api/lectures/${lectureId}/excel`,
-      {
-        headers: { Authorization: `Bearer ${token}` }
-      }
-    );
+      const blob = new Blob([res.data], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      });
 
-    if (!res.ok) {
+      const url = window.URL.createObjectURL(blob);
+
+      const safeSubject = (subject || "attendance")
+        .replace(/[^a-z0-9]/gi, "_")
+        .toLowerCase();
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${safeSubject}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+
+      window.URL.revokeObjectURL(url);
+    } catch {
       alert("Failed to generate Excel");
-      return;
     }
-
-    const blob = await res.blob();
-    const url = window.URL.createObjectURL(blob);
-
-    const safeSubject = (subject || "attendance")
-      .replace(/[^a-z0-9]/gi, "_")
-      .toLowerCase();
-
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${safeSubject}.xlsx`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-
-    window.URL.revokeObjectURL(url);
   };
 
   if (fetching) {

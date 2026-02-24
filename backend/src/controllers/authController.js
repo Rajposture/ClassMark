@@ -1,71 +1,70 @@
-import User from "../models/User.js"
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import User from "../models/User.js";
 
-export const syncUser = async (req, res) => {
+export const register = async (req, res) => {
   try {
-    if (!req.auth || !req.auth.userId) {
-      return res.status(401).json({ success: false, message: "Unauthorized" })
-    }
+    const { name, email, password, role, enrollment } = req.body;
 
-    const userId = req.auth.userId
+    if (!name || !email || !password || !role)
+      return res.status(400).json({ message: "Missing required fields" });
 
-    const { name, email, role, enrollmentNumber, phoneNumber } = req.body
+    const existingUser = await User.findOne({ email });
+    if (existingUser)
+      return res.status(400).json({ message: "User already exists" });
 
-    let user = await User.findOne({ clerkId: userId })
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-    if (!user) {
-      user = await User.create({
-        clerkId: userId,
-        name,
-        email,
-        role,
-        enrollmentNumber,
-        phoneNumber
-      })
-    }
+    const user = await User.create({
+      name,
+      email,
+      password: hashedPassword,
+      role,
+      enrollment: role === "student" ? enrollment : undefined
+    });
 
-    return res.json({ success: true, user })
-
-  } catch (err) {
-    console.error(err)
-    return res.status(500).json({ success: false, message: err.message })
-  }
-}
-
-
-export const getMe = async (req, res) => {
-  try {
-    if (!req.auth || !req.auth.userId) {
-      return res.status(401).json({ success: false, message: "Unauthorized" })
-    }
-
-    const userId = req.auth.userId
-
-    const user = await User.findOne({ clerkId: userId })
-
-    if (!user) {
-      return res.status(404).json({ success: false, message: "User not found" })
-    }
-
-    return res.json({
+    return res.status(201).json({
       success: true,
+      message: "User registered successfully"
+    });
+  } catch {
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+export const login = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password)
+      return res.status(400).json({ message: "Missing credentials" });
+
+    const user = await User.findOne({ email });
+    if (!user)
+      return res.status(400).json({ message: "Invalid credentials" });
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch)
+      return res.status(400).json({ message: "Invalid credentials" });
+
+    const token = jwt.sign(
+      { id: user._id },
+      process.env.JWT_SECRET,
+      { expiresIn: "1d" }
+    );
+
+    return res.status(200).json({
+      success: true,
+      token,
       user: {
         id: user._id,
-        clerkId: user.clerkId,
         name: user.name,
         email: user.email,
         role: user.role,
-        enrollmentNumber: user.enrollmentNumber || null,
-        phoneNumber: user.phoneNumber || null
+        enrollment: user.enrollment
       }
-    })
-
-  } catch (err) {
-    console.error(err)
-    return res.status(500).json({ success: false, message: err.message })
+    });
+  } catch {
+    return res.status(500).json({ message: "Server error" });
   }
-}
-
-
-export const logout = async (req, res) => {
-  return res.json({ success: true })
-}
+};

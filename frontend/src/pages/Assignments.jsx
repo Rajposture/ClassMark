@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useUser } from "@clerk/clerk-react";
+
 import { FiTrash2, FiArrowRight } from "react-icons/fi";
 import DashboardLayout from "../components/common/DashboardLayout";
 import CreateAssignment from "../components/teacher/CreateAssignment";
@@ -17,7 +17,7 @@ const Assignments = () => {
     const init = async () => {
       if (!isLoaded || !isSignedIn) return;
 
-      const token = await clerkUser.getToken();
+
 
       const meRes = await fetch(`${API}/api/auth/me`, {
         headers: { Authorization: `Bearer ${token}` }

@@ -5,6 +5,7 @@ const CreateLecture = ({ onCreate }) => {
   const [date, setDate] = useState("");
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
+  const [radius, setRadius] = useState(50);
 
   const [latitude, setLatitude] = useState(null);
   const [longitude, setLongitude] = useState(null);
@@ -66,7 +67,8 @@ const CreateLecture = ({ onCreate }) => {
         startTime,
         endTime,
         latitude,
-        longitude
+        longitude,
+        radius
       });
 
       if (success) {
@@ -74,6 +76,7 @@ const CreateLecture = ({ onCreate }) => {
         setDate("");
         setStartTime("");
         setEndTime("");
+        setRadius(50);
         setLatitude(null);
         setLongitude(null);
         setMessage("Lecture created successfully");
@@ -129,6 +132,20 @@ const CreateLecture = ({ onCreate }) => {
             value={endTime}
             onChange={(e) => setEndTime(e.target.value)}
             className="px-4 py-2.5 rounded-lg border bg-slate-50"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm text-slate-600 mb-2">
+            Attendance Radius (meters)
+          </label>
+          <input
+            type="number"
+            min="10"
+            max="500"
+            value={radius}
+            onChange={(e) => setRadius(Number(e.target.value))}
+            className="w-full px-4 py-2.5 rounded-lg border bg-slate-50"
           />
         </div>
 

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { useUser } from "@clerk/clerk-react";
+
 import DashboardLayout from "../components/common/DashboardLayout";
 
 const API = import.meta.env.VITE_API_BASE;
@@ -14,7 +14,7 @@ const AssignmentDetail = () => {
     const fetchAssignment = async () => {
       if (!isLoaded || !isSignedIn) return;
 
-      const token = await clerkUser.getToken();
+
 
       const res = await fetch(`${API}/api/assignments`, {
         headers: {
