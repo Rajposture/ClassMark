@@ -49,22 +49,25 @@ const QRScanner = () => {
         const scanner = new Html5Qrcode("qr-reader");
         scannerRef.current = scanner;
 
-        await scanner.start(
-          backCamera.id,
-          {
-            fps: 15,
-            qrbox: { width: 280, height: 280 },
-            aspectRatio: 1.0
-          },
-          (decodedText) => {
-            if (!decodedText) return;
+await scanner.start(
+  backCamera.id,
+  {
+    fps: 15,
+    qrbox: { width: 280, height: 280 },
+    aspectRatio: 1.0
+  },
+  (decodedText) => {
+    if (!decodedText) return;
 
-            scanner.stop().catch(() => {});
-            navigate(`/verify/${decodedText}`);
-          },
-          () => {}
-        );
-      } catch {
+    scanner.stop().catch(() => {});
+
+    const lectureId = decodedText.split("/verify/")[1];
+
+    navigate(`/verify/${lectureId}`);
+  },
+  () => {}
+);
+      } catch (err) {
         setError("Camera permission denied or unavailable");
       }
     };
