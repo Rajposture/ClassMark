@@ -23,23 +23,28 @@ const Signup = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value })
   }
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
+const handleSubmit = async (e) => {
+  e.preventDefault();
 
-    try {
-      const res = await api.post("/auth/register", {
-        ...formData,
-        role
-      })
+  try {
+    const res = await api.post("/auth/register", {
+      ...formData,
+      role
+    });
 
-      login(res.data)
-      navigate("/dashboard")
-
-    } catch (err) {
-      alert(err.response?.data?.message || "Signup failed")
+    // Make sure backend actually returned success
+    if (res.data?.success) {
+      login(res.data);
+      navigate("/dashboard", { replace: true });
+    } else {
+      alert(res.data?.message || "Signup failed");
     }
-  }
 
+  } catch (err) {
+    console.error("Signup error:", err);
+    alert(err.response?.data?.message || "Signup failed");
+  }
+};
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#f5f7fa] via-[#eef1f6] to-[#e3e8f0] px-4">
       <motion.div
