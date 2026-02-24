@@ -32,18 +32,17 @@ export const createLecture = async (req, res) => {
 
     await lecture.save();
 
-    const io = req.app.get("io");
-    if (io) {
-      io.emit("newLecture", {
-        id: lecture._id,
-        subject: lecture.subject,
-        date: lecture.date,
-        teacher: req.user.name
-      });
-    }
+const io = req.app.get("io");
+
+io.emit("newLecture", {
+  subject: lecture.subject,
+  date: lecture.date,
+  teacher: req.user.name
+});
 
     return res.status(201).json({ success: true, lecture });
-  } catch {
+  } catch (error) {
+    console.error(error);
     return res.status(500).json({ success: false, message: "Server error" });
   }
 };

@@ -12,44 +12,55 @@ const CreateAssignment = ({ onCreated }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
+    if (loading) return;
 
-    const token = localStorage.getItem("token");
-    const formData = new FormData();
+    try {
+      setLoading(true);
 
-    formData.append("title", title);
-    formData.append("subject", subject);
-    formData.append("description", description);
-    formData.append("dueDate", dueDate);
+      const formData = new FormData();
+      formData.append("title", title);
+      formData.append("subject", subject);
+      formData.append("description", description);
+      formData.append("dueDate", dueDate);
 
-    if (image) {
-      formData.append("image", image);
+      if (image) {
+        formData.append("image", image);
+      }
+
+      const token = localStorage.getItem("token");
+
+      const res = await fetch(`${API_BASE}/assignments`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`
+        },
+        body: formData
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || "Failed to create assignment");
+      }
+
+      setTitle("");
+      setSubject("");
+      setDescription("");
+      setDueDate("");
+      setImage(null);
+      setPreview(null);
+
+      if (onCreated) {
+        onCreated(data.assignment);
+      }
+
+      alert("Assignment created successfully");
+    } catch (error) {
+      console.error(error);
+      alert(error.message);
+    } finally {
+      setLoading(false);
     }
-
-    const res = await fetch(`${API_BASE}/api/assignments`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      body: formData,
-    });
-
-    const data = await res.json();
-    setLoading(false);
-
-    if (!res.ok) {
-      alert(data.message || "Failed to create assignment");
-      return;
-    }
-
-    setTitle("");
-    setSubject("");
-    setDescription("");
-    setDueDate("");
-    setImage(null);
-    setPreview(null);
-
-    if (onCreated) onCreated(data.assignment);
   };
 
   const handleImageChange = (e) => {
@@ -62,7 +73,6 @@ const CreateAssignment = ({ onCreated }) => {
 
   return (
     <div className="bg-white/80 backdrop-blur-2xl border border-white/40 shadow-xl rounded-3xl p-8 transition duration-300 hover:shadow-2xl">
-      
       <h2 className="text-2xl font-semibold text-gray-900 mb-6 tracking-tight">
         Create Assignment
       </h2>

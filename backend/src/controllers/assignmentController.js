@@ -4,31 +4,50 @@ export const createAssignment = async (req, res) => {
   try {
     const { title, subject, dueDate } = req.body;
 
+    if (!title || !subject || !dueDate) {
+      return res.status(400).json({
+        success: false,
+        message: "All fields are required"
+      });
+    }
+
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized"
+      });
+    }
+
     const assignment = await Assignment.create({
       title,
       subject,
       dueDate,
-      teacherId: req.user.id,
-      imageUrl: req.file?.path
+      teacherId: req.user._id,
+      imageUrl: req.file ? req.file.path : null
     });
 
-    // 🔥 SOCKET EMIT HERE
     const io = req.app.get("io");
 
-    io.emit("newAssignment", {
-      title: assignment.title,
-      subject: assignment.subject,
-      dueDate: assignment.dueDate,
-      teacher: req.user.name
-    });
+    if (io) {
+      io.emit("newAssignment", {
+        title: assignment.title,
+        subject: assignment.subject,
+        dueDate: assignment.dueDate,
+        teacher: req.user.name || "Teacher"
+      });
+    }
 
-    res.status(201).json({
+    return res.status(201).json({
       success: true,
       assignment
     });
 
   } catch (error) {
-    res.status(500).json({ message: "Server error" });
+    console.error("Create Assignment Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Server error"
+    });
   }
 };
 
@@ -38,10 +57,17 @@ export const getAllAssignments = async (req, res) => {
       .populate("teacherId", "name")
       .sort({ createdAt: -1 });
 
-    return res.status(200).json({ success: true, assignments });
+    return res.status(200).json({
+      success: true,
+      assignments
+    });
 
   } catch (err) {
-    return res.status(500).json({ success: false, message: "Server error" });
+    console.error("Get Assignments Error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Server error"
+    });
   }
 };
 
@@ -49,17 +75,31 @@ export const deleteAssignment = async (req, res) => {
   try {
     const assignment = await Assignment.findById(req.params.id);
 
-    if (!assignment)
-      return res.status(404).json({ success: false, message: "Not found" });
+    if (!assignment) {
+      return res.status(404).json({
+        success: false,
+        message: "Not found"
+      });
+    }
 
-    if (assignment.teacherId.toString() !== req.user._id.toString())
-      return res.status(403).json({ success: false, message: "Unauthorized" });
+    if (assignment.teacherId.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: "Unauthorized"
+      });
+    }
 
     await assignment.deleteOne();
 
-    return res.status(200).json({ success: true });
+    return res.status(200).json({
+      success: true
+    });
 
   } catch (err) {
-    return res.status(500).json({ success: false, message: "Server error" });
+    console.error("Delete Assignment Error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Server error"
+    });
   }
 };

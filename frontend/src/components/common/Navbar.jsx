@@ -4,9 +4,6 @@ import { FiMenu, FiX, FiLogOut } from "react-icons/fi"
 import { IoNotificationsOutline } from "react-icons/io5"
 import { io } from "socket.io-client"
 import { useAuth } from "../../context/AuthContext"
-const socket = io(import.meta.env.VITE_API_BASE, {
-  withCredentials: true
-});
 
 const Navbar = () => {
   const { user, logout } = useAuth()
@@ -15,11 +12,13 @@ const Navbar = () => {
 
   const dropdownRef = useRef(null)
   const notificationRef = useRef(null)
+  const socketRef = useRef(null)
 
   const [openProfile, setOpenProfile] = useState(false)
   const [openSidebar, setOpenSidebar] = useState(false)
   const [openNotifications, setOpenNotifications] = useState(false)
   const [notifications, setNotifications] = useState([])
+  const [bellGlow, setBellGlow] = useState(false)
 
   useEffect(() => {
     const handleClick = (e) => {
@@ -37,6 +36,15 @@ const Navbar = () => {
   useEffect(() => {
     if (!isSignedIn) return
 
+    socketRef.current = io(import.meta.env.VITE_API_BASE.replace("/api", ""), {
+      transports: ["websocket"]
+    })
+
+    const triggerGlow = () => {
+      setBellGlow(true)
+      setTimeout(() => setBellGlow(false), 1500)
+    }
+
     const handleNewLecture = (lecture) => {
       setNotifications((prev) => [
         {
@@ -47,6 +55,7 @@ const Navbar = () => {
         },
         ...prev
       ])
+      triggerGlow()
     }
 
     const handleNewAssignment = (assignment) => {
@@ -60,14 +69,14 @@ const Navbar = () => {
         },
         ...prev
       ])
+      triggerGlow()
     }
 
-    socket.on("newLecture", handleNewLecture)
-    socket.on("newAssignment", handleNewAssignment)
+    socketRef.current.on("newLecture", handleNewLecture)
+    socketRef.current.on("newAssignment", handleNewAssignment)
 
     return () => {
-      socket.off("newLecture", handleNewLecture)
-      socket.off("newAssignment", handleNewAssignment)
+      socketRef.current.disconnect()
     }
   }, [isSignedIn])
 
@@ -116,7 +125,6 @@ const Navbar = () => {
           )}
 
           <div className="flex items-center gap-6">
-
             {!isSignedIn && (
               <Link
                 to="/login"
@@ -131,7 +139,11 @@ const Navbar = () => {
                 <div ref={notificationRef} className="relative">
                   <button
                     onClick={() => setOpenNotifications(!openNotifications)}
-                    className="relative text-xl text-slate-900 hover:text-indigo-600 transition"
+                    className={`relative text-xl text-slate-900 transition ${
+                      bellGlow
+                        ? "animate-pulse scale-110 text-indigo-600"
+                        : "hover:text-indigo-600"
+                    }`}
                   >
                     <IoNotificationsOutline />
                     {notifications.length > 0 && (
@@ -191,7 +203,10 @@ const Navbar = () => {
                     className="w-10 h-10 rounded-full overflow-hidden border border-white/30 cursor-pointer"
                   >
                     <img
-                      src={user?.image || "https://ui-avatars.com/api/?name=" + user?.name}
+                      src={
+                        user?.image ||
+                        "https://ui-avatars.com/api/?name=" + user?.name
+                      }
                       alt="profile"
                       className="w-full h-full object-cover"
                     />
@@ -201,14 +216,15 @@ const Navbar = () => {
                     <div className="absolute right-0 mt-4 w-72 backdrop-blur-xl bg-black/90 border border-white/20 shadow-2xl rounded-2xl p-6 text-white">
                       <div className="flex items-center gap-4">
                         <img
-                          src={user?.image || "https://ui-avatars.com/api/?name=" + user?.name}
+                          src={
+                            user?.image ||
+                            "https://ui-avatars.com/api/?name=" + user?.name
+                          }
                           alt="profile"
                           className="w-14 h-14 rounded-full object-cover"
                         />
                         <div>
-                          <p className="font-semibold">
-                            {user?.name}
-                          </p>
+                          <p className="font-semibold">{user?.name}</p>
                           <p className="text-sm text-white/60">
                             {user?.email}
                           </p>
@@ -231,18 +247,19 @@ const Navbar = () => {
         </nav>
       </div>
 
+      {/* MOBILE SIDEBAR */}
       <div
         className={`fixed inset-0 z-40 md:hidden transition ${
           openSidebar ? "visible opacity-100" : "invisible opacity-0"
         }`}
       >
         <div
-          className="absolute inset-0 bg-black/30 backdrop-blur-sm"
+          className="absolute inset-0 bg-black/30 backdrop-blur-md"
           onClick={() => setOpenSidebar(false)}
         />
 
         <div
-          className={`absolute top-0 left-0 h-full w-72 backdrop-blur-2xl bg-white/70 border-r border-white/30 shadow-2xl p-6 transform transition-transform duration-300 ${
+          className={`absolute top-0 left-0 h-full w-72 backdrop-blur-2xl bg-white/30 border-r border-white/20 shadow-2xl p-6 transform transition-transform duration-300 ${
             openSidebar ? "translate-x-0" : "-translate-x-full"
           }`}
         >
@@ -253,12 +270,20 @@ const Navbar = () => {
             </button>
           </div>
 
-          <div className="space-y-6 text-slate-800 font-medium text-sm">
-            <Link to="/dashboard" onClick={() => setOpenSidebar(false)} className="block hover:text-indigo-600 transition">
+          <div className="space-y-6 text-slate-900 font-medium text-sm">
+            <Link
+              to="/dashboard"
+              onClick={() => setOpenSidebar(false)}
+              className="block hover:text-indigo-600 transition"
+            >
               Dashboard
             </Link>
 
-            <Link to="/assignments" onClick={() => setOpenSidebar(false)} className="block hover:text-indigo-600 transition">
+            <Link
+              to="/assignments"
+              onClick={() => setOpenSidebar(false)}
+              className="block hover:text-indigo-600 transition"
+            >
               Assignments
             </Link>
 
