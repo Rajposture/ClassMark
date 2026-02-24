@@ -24,7 +24,8 @@ const GenerateQR = ({ lecture, onClose }) => {
 
   if (!lecture?._id) return null;
 
-  const attendanceUrl = `${window.location.origin}/verify/${lecture._id}`;
+  const FRONTEND_URL = import.meta.env.VITE_FRONTEND_URL;
+  const attendanceUrl = `${FRONTEND_URL}/verify/${lecture._id}`;
 
   const minutes = Math.floor(secondsLeft / 60);
   const seconds = secondsLeft % 60;
