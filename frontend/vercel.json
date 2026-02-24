@@ -1,5 +1,8 @@
 {
   "rewrites": [
+    { "source": "/verify/(.*)", "destination": "/" },
+    { "source": "/attendance/(.*)", "destination": "/" },
+    { "source": "/scan", "destination": "/" },
     { "source": "/(.*)", "destination": "/" }
   ]
 }
