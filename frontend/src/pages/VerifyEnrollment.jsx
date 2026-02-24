@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import { motion } from "framer-motion"
 import { useAuth } from "../context/AuthContext"
@@ -6,17 +6,30 @@ import { useAuth } from "../context/AuthContext"
 const VerifyEnrollment = () => {
   const { lectureId } = useParams()
   const navigate = useNavigate()
-  const { user } = useAuth()
+  const { user, loading } = useAuth()
 
   const [enrollment, setEnrollment] = useState("")
   const [error, setError] = useState("")
 
-  if (!user || user.role !== "student") {
-    navigate("/login")
-    return null
+  useEffect(() => {
+    if (loading) return
+
+    if (!user) {
+      navigate("/login", { replace: true })
+    }
+  }, [user, loading, navigate])
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        Loading...
+      </div>
+    )
   }
 
   const handleVerify = () => {
+    if (!user) return
+
     if (enrollment !== user.enrollment) {
       setError("Invalid Enrollment Number")
       return
@@ -27,7 +40,6 @@ const VerifyEnrollment = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 px-4">
-
       <motion.div
         initial={{ opacity: 0, y: 40 }}
         animate={{ opacity: 1, y: 0 }}
