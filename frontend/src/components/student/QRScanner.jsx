@@ -4,7 +4,16 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import Navbar from "../common/Navbar";
 import { useAuth } from "../../context/AuthContext";
+import { useSearchParams, useNavigate } from "react-router-dom";
+const [searchParams] = useSearchParams();
+const navigate = useNavigate();
 
+useEffect(() => {
+  const lectureId = searchParams.get("lectureId");
+  if (lectureId) {
+    navigate(`/verify/${lectureId}`);
+  }
+}, [searchParams, navigate]);
 const QRScanner = () => {
   const navigate = useNavigate();
   const scannerRef = useRef(null);
