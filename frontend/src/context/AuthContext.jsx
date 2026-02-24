@@ -7,14 +7,20 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const storedUser = localStorage.getItem("user")
-    const storedToken = localStorage.getItem("token")
+    try {
+      const storedUser = localStorage.getItem("user")
+      const storedToken = localStorage.getItem("token")
 
-    if (storedUser && storedToken) {
-      setUser(JSON.parse(storedUser))
+      if (storedUser && storedToken) {
+        setUser(JSON.parse(storedUser))
+      }
+    } catch (err) {
+      console.error("Auth parse error:", err)
+      localStorage.removeItem("user")
+      localStorage.removeItem("token")
+    } finally {
+      setLoading(false)
     }
-
-    setLoading(false)
   }, [])
 
   const login = (data) => {
@@ -31,7 +37,7 @@ export const AuthProvider = ({ children }) => {
 
   return (
     <AuthContext.Provider value={{ user, login, logout, loading }}>
-      {!loading && children}
+      {children}
     </AuthContext.Provider>
   )
 }

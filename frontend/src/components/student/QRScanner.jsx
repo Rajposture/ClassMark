@@ -1,23 +1,15 @@
 import { Html5Qrcode } from "html5-qrcode";
 import { useEffect, useRef, useState } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import Navbar from "../common/Navbar";
 import { useAuth } from "../../context/AuthContext";
 
 const QRScanner = () => {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
   const scannerRef = useRef(null);
   const { user, loading } = useAuth();
   const [error, setError] = useState("");
-
-  useEffect(() => {
-    const lectureId = searchParams.get("lectureId");
-    if (lectureId) {
-      navigate(`/verify/${lectureId}`);
-    }
-  }, [searchParams, navigate]);
 
   useEffect(() => {
     if (loading) return;
@@ -49,23 +41,33 @@ const QRScanner = () => {
         const scanner = new Html5Qrcode("qr-reader");
         scannerRef.current = scanner;
 
-await scanner.start(
-  backCamera.id,
-  {
-    fps: 15,
-    qrbox: { width: 280, height: 280 },
-    aspectRatio: 1.0
-  },
-(decodedText) => {
-  if (!decodedText) return;
+        await scanner.start(
+          backCamera.id,
+          {
+            fps: 15,
+            qrbox: { width: 280, height: 280 },
+            aspectRatio: 1.0
+          },
+          async (decodedText) => {
+            if (!decodedText) return;
 
-  scanner.stop().catch(() => {});
+            await scanner.stop().catch(() => {});
 
-  navigate(`/verify/${decodedText}`);
-},
-  () => {}
-);
-      } catch (err) {
+            let lectureId;
+
+            try {
+              const url = new URL(decodedText);
+              const parts = url.pathname.split("/");
+              lectureId = parts[parts.length - 1];
+            } catch {
+              lectureId = decodedText;
+            }
+
+            navigate(`/verify/${lectureId}`, { replace: true });
+          },
+          () => {}
+        );
+      } catch {
         setError("Camera permission denied or unavailable");
       }
     };

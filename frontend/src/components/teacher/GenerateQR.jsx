@@ -25,7 +25,7 @@ const GenerateQR = ({ lecture, onClose }) => {
   if (!lecture?._id) return null;
 
   // 🔥 Updated QR URL
-const attendanceUrl = lecture._id;
+const attendanceUrl = `${window.location.origin}/verify/${lecture._id}`;
   const minutes = Math.floor(secondsLeft / 60);
   const seconds = secondsLeft % 60;
 
