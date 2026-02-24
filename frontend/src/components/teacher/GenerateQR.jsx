@@ -25,7 +25,7 @@ const GenerateQR = ({ lecture, onClose }) => {
   if (!lecture?._id) return null;
 
   const FRONTEND_URL = import.meta.env.VITE_FRONTEND_URL;
-  const attendanceUrl = `${FRONTEND_URL}/verify/${lecture._id}`;
+const attendanceUrl = `https://class-mark1.vercel.app/verify/${lecture._id}`;
 
   const minutes = Math.floor(secondsLeft / 60);
   const seconds = secondsLeft % 60;
