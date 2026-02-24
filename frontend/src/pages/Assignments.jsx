@@ -1,62 +1,43 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-
 import { FiTrash2, FiArrowRight } from "react-icons/fi";
 import DashboardLayout from "../components/common/DashboardLayout";
 import CreateAssignment from "../components/teacher/CreateAssignment";
-
-const API = import.meta.env.VITE_API_BASE;
+import { useAuth } from "../context/AuthContext";
+import api from "../utils/axios";
 
 const Assignments = () => {
-  const { user: clerkUser, isLoaded, isSignedIn } = useUser();
-  const [dbUser, setDbUser] = useState(null);
+  const { user } = useAuth();
   const [assignments, setAssignments] = useState([]);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const init = async () => {
-      if (!isLoaded || !isSignedIn) return;
-
-
-
-      const meRes = await fetch(`${API}/api/auth/me`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
-      const meData = await meRes.json();
-      if (meRes.ok) {
-        setDbUser(meData.user);
+    const fetchAssignments = async () => {
+      try {
+        const res = await api.get("/assignments");
+        setAssignments(res.data.assignments || []);
+      } catch (err) {
+        console.error(err);
       }
-
-      const res = await fetch(`${API}/api/assignments`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
-      const data = await res.json();
-      if (res.ok) setAssignments(data.assignments || []);
     };
 
-    init();
-  }, [isLoaded, isSignedIn]);
+    fetchAssignments();
+  }, []);
 
   const handleDelete = async (id) => {
-    const token = await clerkUser.getToken();
-
-    const res = await fetch(`${API}/api/assignments/${id}`, {
-      method: "DELETE",
-      headers: { Authorization: `Bearer ${token}` }
-    });
-
-    if (res.ok) {
+    try {
+      await api.delete(`/assignments/${id}`);
       setAssignments((prev) => prev.filter((a) => a._id !== id));
+    } catch (err) {
+      console.error(err);
     }
   };
 
   const isTeacher =
-    dbUser?.role?.toLowerCase() === "teacher";
+    user?.role?.toLowerCase() === "teacher";
 
   const filteredAssignments = isTeacher
-    ? assignments.filter((a) => a.teacherId?._id === dbUser?._id)
+    ? assignments.filter((a) => a.teacherId?._id === user?._id)
     : assignments;
 
   return (

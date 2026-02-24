@@ -2,9 +2,11 @@ import { useState } from "react"
 import { motion } from "framer-motion"
 import api from "../utils/axios"
 import { useNavigate } from "react-router-dom"
+import { useAuth } from "../context/AuthContext"
 
 const Login = () => {
   const navigate = useNavigate()
+  const { login } = useAuth()
 
   const [formData, setFormData] = useState({
     email: "",
@@ -18,78 +20,55 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault()
 
-const res = await api.post("/auth/login", formData)
+    try {
+      const res = await api.post("/auth/login", formData)
 
-    localStorage.setItem("token", res.data.token)
-    localStorage.setItem("user", JSON.stringify(res.data.user))
+      login(res.data)   // 🔥 THIS IS IMPORTANT
 
-    if (res.data.user.role === "teacher") {
-      navigate("/teacher-dashboard")
-    } else {
-      navigate("/student-dashboard")
+      navigate("/dashboard")
+    } catch (err) {
+      alert(err.response?.data?.message || "Login failed")
     }
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#eef2f7] via-[#e6ecf5] to-[#dde4ee] px-4 relative overflow-hidden">
-
-      <div className="absolute w-72 h-72 bg-white/30 rounded-full blur-3xl top-10 left-10"></div>
-      <div className="absolute w-72 h-72 bg-blue-300/20 rounded-full blur-3xl bottom-10 right-10"></div>
-
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#f5f7fa] via-[#eef1f6] to-[#e3e8f0] px-4">
       <motion.div
-        initial={{ opacity: 0, y: 50, scale: 0.98 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-        className="w-full max-w-md backdrop-blur-xl bg-white/60 border border-white/40 shadow-2xl rounded-3xl p-8"
+        initial={{ opacity: 0, y: 60 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.8 }}
+        className="w-full max-w-md backdrop-blur-xl bg-white/70 border border-white/40 shadow-2xl rounded-3xl p-8"
       >
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-semibold text-gray-900 tracking-tight">
-            Welcome Back
-          </h1>
-          <p className="text-gray-500 text-sm mt-2">
-            Login to continue to ClassMark
-          </p>
-        </div>
+        <h1 className="text-3xl font-semibold text-gray-900 text-center mb-6">
+          Login
+        </h1>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-
-          <motion.input
-            whileFocus={{ scale: 1.02 }}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <input
             type="email"
             name="email"
-            placeholder="Email Address"
+            placeholder="Email"
             required
             onChange={handleChange}
-            className="w-full px-4 py-3 bg-white/80 border border-gray-200 rounded-xl focus:ring-2 focus:ring-black outline-none transition"
+            className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl"
           />
 
-          <motion.input
-            whileFocus={{ scale: 1.02 }}
+          <input
             type="password"
             name="password"
             placeholder="Password"
             required
             onChange={handleChange}
-            className="w-full px-4 py-3 bg-white/80 border border-gray-200 rounded-xl focus:ring-2 focus:ring-black outline-none transition"
+            className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl"
           />
 
           <button
             type="submit"
-            className="w-full py-3 mt-4 bg-black text-white rounded-xl font-medium hover:bg-gray-800 transition-all duration-300 shadow-lg"
+            className="w-full py-3 bg-black text-white rounded-xl"
           >
             Login
           </button>
         </form>
-
-        <p className="text-center text-sm text-gray-500 mt-6">
-          Don’t have an account?{" "}
-          <span
-            onClick={() => navigate("/signup")}
-            className="text-black font-medium cursor-pointer hover:underline"
-          >
-            Create one
-          </span>
-        </p>
       </motion.div>
     </div>
   )

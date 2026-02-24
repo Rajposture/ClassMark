@@ -4,9 +4,9 @@ import { FiMenu, FiX, FiLogOut } from "react-icons/fi"
 import { IoNotificationsOutline } from "react-icons/io5"
 import { io } from "socket.io-client"
 import { useAuth } from "../../context/AuthContext"
-
-const API_BASE = import.meta.env.VITE_API_BASE
-const socket = io(API_BASE)
+const socket = io(import.meta.env.VITE_API_BASE, {
+  withCredentials: true
+});
 
 const Navbar = () => {
   const { user, logout } = useAuth()

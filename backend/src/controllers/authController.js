@@ -23,10 +23,24 @@ export const register = async (req, res) => {
       enrollment: role === "student" ? enrollment : undefined
     });
 
+    const token = jwt.sign(
+      { id: user._id },
+      process.env.JWT_SECRET,
+      { expiresIn: "1d" }
+    );
+
     return res.status(201).json({
       success: true,
-      message: "User registered successfully"
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        enrollment: user.enrollment
+      }
     });
+
   } catch {
     return res.status(500).json({ message: "Server error" });
   }

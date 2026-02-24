@@ -1,4 +1,9 @@
-/* Reset */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ---------------- RESET ---------------- */
+
 * {
   margin: 0;
   padding: 0;
@@ -12,14 +17,12 @@ html, body {
   background: #f8fafc;
 }
 
+/* ---------------- ANIMATIONS ---------------- */
+
 /* Slide In (Sidebar) */
 @keyframes slideIn {
-  from {
-    transform: translateX(-100%);
-  }
-  to {
-    transform: translateX(0);
-  }
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
 }
 
 .animate-slideIn {

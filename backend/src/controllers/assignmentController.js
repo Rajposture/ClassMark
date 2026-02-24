@@ -2,42 +2,33 @@ import Assignment from "../models/Assignment.js";
 
 export const createAssignment = async (req, res) => {
   try {
-    const { title, description, subject, dueDate } = req.body;
-
-    if (!req.user || req.user.role?.toLowerCase() !== "teacher") {
-      return res.status(403).json({ success: false, message: "Unauthorized" });
-    }
-
-    if (!title || !subject || !dueDate) {
-      return res.status(400).json({ success: false, message: "Missing required fields" });
-    }
-
-    const imageUrl = req.file ? req.file.path || req.file.secure_url : null;
+    const { title, subject, dueDate } = req.body;
 
     const assignment = await Assignment.create({
       title,
-      description: description || "",
       subject,
       dueDate,
-      imageUrl,
-      teacherId: req.user._id,
+      teacherId: req.user.id,
+      imageUrl: req.file?.path
     });
 
+    // 🔥 SOCKET EMIT HERE
     const io = req.app.get("io");
-    if (io) {
-      io.emit("newAssignment", {
-        id: assignment._id,
-        title: assignment.title,
-        subject: assignment.subject,
-        dueDate: assignment.dueDate,
-        teacher: req.user.name,
-      });
-    }
 
-    return res.status(201).json({ success: true, assignment });
+    io.emit("newAssignment", {
+      title: assignment.title,
+      subject: assignment.subject,
+      dueDate: assignment.dueDate,
+      teacher: req.user.name
+    });
 
-  } catch (err) {
-    return res.status(500).json({ success: false, message: "Server error" });
+    res.status(201).json({
+      success: true,
+      assignment
+    });
+
+  } catch (error) {
+    res.status(500).json({ message: "Server error" });
   }
 };
 

@@ -2,18 +2,23 @@ import { useState } from "react"
 import { motion } from "framer-motion"
 import api from "../utils/axios"
 import { useNavigate } from "react-router-dom"
+import { FiEye, FiEyeOff } from "react-icons/fi"
+import { useAuth } from "../context/AuthContext"
 
-const Signup = async () => {
+const Signup = () => {
   const navigate = useNavigate()
+  const { login } = useAuth()
 
   const [role, setRole] = useState("student")
+  const [showPassword, setShowPassword] = useState(false)
+
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     password: "",
     enrollment: ""
   })
-const res = await api.post("/auth/register", formData)
+
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value })
   }
@@ -21,12 +26,18 @@ const res = await api.post("/auth/register", formData)
   const handleSubmit = async (e) => {
     e.preventDefault()
 
-    await axios.post("http://localhost:5001/api/auth/register", {
-      ...formData,
-      role
-    })
+    try {
+      const res = await api.post("/auth/register", {
+        ...formData,
+        role
+      })
 
-    navigate("/login")
+      login(res.data)
+      navigate("/dashboard")
+
+    } catch (err) {
+      alert(err.response?.data?.message || "Signup failed")
+    }
   }
 
   return (
@@ -48,6 +59,7 @@ const res = await api.post("/auth/register", formData)
 
         <div className="flex bg-gray-100 rounded-2xl p-1 mb-6">
           <button
+            type="button"
             onClick={() => setRole("student")}
             className={`flex-1 py-2 rounded-xl text-sm font-medium transition ${
               role === "student"
@@ -57,7 +69,9 @@ const res = await api.post("/auth/register", formData)
           >
             Student
           </button>
+
           <button
+            type="button"
             onClick={() => setRole("teacher")}
             className={`flex-1 py-2 rounded-xl text-sm font-medium transition ${
               role === "teacher"
@@ -70,6 +84,7 @@ const res = await api.post("/auth/register", formData)
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+
           <input
             type="text"
             name="name"
@@ -88,14 +103,22 @@ const res = await api.post("/auth/register", formData)
             className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-black outline-none transition"
           />
 
-          <input
-            type="password"
-            name="password"
-            placeholder="Password"
-            required
-            onChange={handleChange}
-            className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-black outline-none transition"
-          />
+          <div className="relative">
+            <input
+              type={showPassword ? "text" : "password"}
+              name="password"
+              placeholder="Password"
+              required
+              onChange={handleChange}
+              className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-black outline-none transition pr-12"
+            />
+            <div
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-4 top-1/2 -translate-y-1/2 cursor-pointer text-gray-500"
+            >
+              {showPassword ? <FiEyeOff /> : <FiEye />}
+            </div>
+          </div>
 
           {role === "student" && (
             <motion.input
@@ -103,7 +126,8 @@ const res = await api.post("/auth/register", formData)
               animate={{ opacity: 1, y: 0 }}
               type="text"
               name="enrollment"
-              placeholder="Enrollment Number"
+              placeholder="Enrollment Number (Example: FS24CO0XX)"
+              pattern="FS[0-9]{2}CO0[0-9]{2}"
               required
               onChange={handleChange}
               className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-black outline-none transition"
@@ -116,6 +140,7 @@ const res = await api.post("/auth/register", formData)
           >
             Create Account
           </button>
+
         </form>
 
         <p className="text-center text-sm text-gray-500 mt-6">
@@ -127,6 +152,7 @@ const res = await api.post("/auth/register", formData)
             Login
           </span>
         </p>
+
       </motion.div>
     </div>
   )
