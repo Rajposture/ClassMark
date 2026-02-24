@@ -1,24 +1,23 @@
 import { Html5Qrcode } from "html5-qrcode";
 import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import Navbar from "../common/Navbar";
 import { useAuth } from "../../context/AuthContext";
-import { useSearchParams, useNavigate } from "react-router-dom";
-const [searchParams] = useSearchParams();
-const navigate = useNavigate();
 
-useEffect(() => {
-  const lectureId = searchParams.get("lectureId");
-  if (lectureId) {
-    navigate(`/verify/${lectureId}`);
-  }
-}, [searchParams, navigate]);
 const QRScanner = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const scannerRef = useRef(null);
   const { user, loading } = useAuth();
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    const lectureId = searchParams.get("lectureId");
+    if (lectureId) {
+      navigate(`/verify/${lectureId}`);
+    }
+  }, [searchParams, navigate]);
 
   useEffect(() => {
     if (loading) return;
@@ -84,7 +83,6 @@ const QRScanner = () => {
       <Navbar />
 
       <div className="min-h-screen flex items-center justify-center bg-gray-100">
-
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -106,7 +104,6 @@ const QRScanner = () => {
             </motion.p>
           )}
         </motion.div>
-
       </div>
     </>
   );
