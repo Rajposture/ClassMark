@@ -15,6 +15,8 @@ import VerifyEnrollment from "../pages/VerifyEnrollment"
 
 /* ================= DASHBOARD REDIRECT ================= */
 
+/* ================= DASHBOARD REDIRECT ================= */
+
 const DashboardRedirect = () => {
   const { user, loading } = useAuth()
 
