@@ -61,16 +61,7 @@ await scanner.start(
 
   scanner.stop().catch(() => {});
 
-  try {
-    const url = new URL(decodedText);
-    const lectureId = url.pathname.split("/verify/")[1];
-
-    if (lectureId) {
-      navigate(`/verify/${lectureId}`);
-    }
-  } catch {
-    console.error("Invalid QR format");
-  }
+  navigate(`/verify/${decodedText}`);
 },
   () => {}
 );
