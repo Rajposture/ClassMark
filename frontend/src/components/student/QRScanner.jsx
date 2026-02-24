@@ -56,15 +56,22 @@ await scanner.start(
     qrbox: { width: 280, height: 280 },
     aspectRatio: 1.0
   },
-  (decodedText) => {
-    if (!decodedText) return;
+(decodedText) => {
+  if (!decodedText) return;
 
-    scanner.stop().catch(() => {});
+  scanner.stop().catch(() => {});
 
-    const lectureId = decodedText.split("/verify/")[1];
+  try {
+    const url = new URL(decodedText);
+    const lectureId = url.pathname.split("/verify/")[1];
 
-    navigate(`/verify/${lectureId}`);
-  },
+    if (lectureId) {
+      navigate(`/verify/${lectureId}`);
+    }
+  } catch {
+    console.error("Invalid QR format");
+  }
+},
   () => {}
 );
       } catch (err) {
