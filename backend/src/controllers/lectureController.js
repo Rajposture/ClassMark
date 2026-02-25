@@ -134,7 +134,6 @@ export const generateExcelSheet = async (req, res) => {
 
     const totalPresent = lecture.attendance.length;
 
-    // ===== HEADER SECTION =====
     worksheet.mergeCells("A1:F1");
     worksheet.getCell("A1").value = `Attendance Sheet - ${lecture.subject}`;
     worksheet.getCell("A1").font = { bold: true, size: 16 };
@@ -159,7 +158,6 @@ export const generateExcelSheet = async (req, res) => {
 
     worksheet.addRow([]);
 
-    // ===== TABLE HEADERS =====
     worksheet.columns = [
       { header: "Sr No", key: "sr", width: 10 },
       { header: "Name", key: "name", width: 25 },
@@ -173,7 +171,6 @@ export const generateExcelSheet = async (req, res) => {
     headerRow.font = { bold: true };
     headerRow.alignment = { horizontal: "center" };
 
-    // ===== DATA ROWS =====
     lecture.attendance.forEach((entry, index) => {
       worksheet.addRow({
         sr: index + 1,
@@ -185,7 +182,6 @@ export const generateExcelSheet = async (req, res) => {
       });
     });
 
-    // ===== BORDER STYLING =====
     worksheet.eachRow((row) => {
       row.eachCell((cell) => {
         cell.border = {
@@ -211,7 +207,6 @@ export const generateExcelSheet = async (req, res) => {
 
     await workbook.xlsx.write(res);
     res.end();
-
   } catch {
     return res.status(500).json({ success: false, message: "Failed to generate Excel" });
   }
@@ -265,14 +260,12 @@ export const generateMonthlyExcel = async (req, res) => {
     const daysInMonth = new Date(year, month + 1, 0).getDate();
 
     const isSunday = (date) => date.getDay() === 0;
-
     const isSecondOrFourthSaturday = (date) => {
       if (date.getDay() !== 6) return false;
       const weekNumber = Math.ceil(date.getDate() / 7);
       return weekNumber === 2 || weekNumber === 4;
     };
 
-    // Calculate total working days
     let totalWorkingDays = 0;
     for (let d = 1; d <= daysInMonth; d++) {
       const date = new Date(year, month, d);
@@ -281,7 +274,6 @@ export const generateMonthlyExcel = async (req, res) => {
       }
     }
 
-    // ===== HEADER SECTION =====
     worksheet.mergeCells("A1:D1");
     worksheet.getCell("A1").value = `Monthly Attendance - ${subject}`;
     worksheet.getCell("A1").font = { bold: true, size: 16 };
@@ -296,7 +288,6 @@ export const generateMonthlyExcel = async (req, res) => {
 
     worksheet.addRow([]);
 
-    // ===== TABLE HEADER =====
     const headers = ["Sr No", "Name", "Enrollment"];
     for (let d = 1; d <= daysInMonth; d++) {
       headers.push(d.toString());
@@ -304,18 +295,8 @@ export const generateMonthlyExcel = async (req, res) => {
     headers.push("Attendance %");
 
     worksheet.addRow(headers);
-    const headerRow = worksheet.getRow(5);
-    headerRow.font = { bold: true };
-    headerRow.alignment = { horizontal: "center" };
-
-    // Freeze first row & first 3 columns
-    worksheet.views = [
-      {
-        state: "frozen",
-        xSplit: 3,
-        ySplit: 5
-      }
-    ];
+    worksheet.getRow(5).font = { bold: true };
+    worksheet.views = [{ state: "frozen", xSplit: 3, ySplit: 5 }];
 
     let sr = 1;
 
@@ -352,33 +333,19 @@ export const generateMonthlyExcel = async (req, res) => {
 
       const addedRow = worksheet.addRow(row);
 
-      // Style Name & Enrollment
-      addedRow.getCell(2).font = { bold: true };
-      addedRow.getCell(3).font = { bold: true };
-
-      // Color P / A
       for (let i = 4; i < row.length; i++) {
         const cell = addedRow.getCell(i);
-
-        if (cell.value === "P") {
-          cell.font = { color: { argb: "FF008000" }, bold: true };
-        }
-
-        if (cell.value === "A") {
-          cell.font = { color: { argb: "FFFF0000" }, bold: true };
-        }
+        if (cell.value === "P") cell.font = { color: { argb: "FF008000" }, bold: true };
+        if (cell.value === "A") cell.font = { color: { argb: "FFFF0000" }, bold: true };
       }
 
-      // Highlight low attendance
       const percentCell = addedRow.getCell(row.length);
-      if (percentage < 75) {
-        percentCell.font = { color: { argb: "FFFF0000" }, bold: true };
-      } else {
-        percentCell.font = { color: { argb: "FF006400" }, bold: true };
-      }
+      percentCell.font =
+        percentage < 75
+          ? { color: { argb: "FFFF0000" }, bold: true }
+          : { color: { argb: "FF006400" }, bold: true };
     });
 
-    // Borders
     worksheet.eachRow((row) => {
       row.eachCell((cell) => {
         cell.border = {
@@ -404,12 +371,12 @@ export const generateMonthlyExcel = async (req, res) => {
 
     await workbook.xlsx.write(res);
     res.end();
-
   } catch (error) {
     console.error(error);
     return res.status(500).json({ success: false, message: "Failed to generate monthly Excel" });
   }
 };
+
 export const deleteLecture = async (req, res) => {
   try {
     const lecture = await Lecture.findById(req.params.id);
