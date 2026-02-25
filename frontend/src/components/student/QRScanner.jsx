@@ -10,6 +10,7 @@ const QRScanner = () => {
   const scannerRef = useRef(null);
   const { user, loading } = useAuth();
   const [error, setError] = useState("");
+  const [scanning, setScanning] = useState(false);
 
   useEffect(() => {
     if (loading) return;
@@ -41,6 +42,8 @@ const QRScanner = () => {
         const scanner = new Html5Qrcode("qr-reader");
         scannerRef.current = scanner;
 
+        setScanning(true);
+
         await scanner.start(
           backCamera.id,
           {
@@ -51,7 +54,11 @@ const QRScanner = () => {
           async (decodedText) => {
             if (!decodedText) return;
 
-            await scanner.stop().catch(() => {});
+            try {
+              await scanner.stop();
+            } catch {}
+
+            setScanning(false);
 
             let lectureId;
 
@@ -63,12 +70,19 @@ const QRScanner = () => {
               lectureId = decodedText;
             }
 
-            navigate(`/verify/${lectureId}`, { replace: true });
+            // Small delay for smooth transition
+            setTimeout(() => {
+              navigate(`/verify/${lectureId}`, {
+                replace: true,
+                state: { scanned: true }
+              });
+            }, 300);
           },
           () => {}
         );
       } catch {
         setError("Camera permission denied or unavailable");
+        setScanning(false);
       }
     };
 
@@ -85,26 +99,42 @@ const QRScanner = () => {
     <>
       <Navbar />
 
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-100 to-indigo-100 px-4">
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5 }}
-          className="flex flex-col items-center bg-white/70 backdrop-blur-xl border border-gray-200 rounded-3xl shadow-2xl p-8"
+          transition={{ duration: 0.4 }}
+          className="relative flex flex-col items-center bg-white/70 backdrop-blur-2xl border border-white/40 rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.15)] p-8"
         >
-          <div
-            id="qr-reader"
-            className="w-[320px] h-[320px] bg-black rounded-2xl shadow-lg"
-          />
+          <div className="relative">
+            <div
+              id="qr-reader"
+              className="w-[320px] h-[320px] rounded-2xl overflow-hidden"
+            />
+
+            {scanning && (
+              <motion.div
+                initial={{ y: 0 }}
+                animate={{ y: 280 }}
+                transition={{
+                  repeat: Infinity,
+                  repeatType: "reverse",
+                  duration: 1.8,
+                  ease: "easeInOut"
+                }}
+                className="absolute left-0 w-full h-[3px] bg-gradient-to-r from-transparent via-indigo-500 to-transparent"
+              />
+            )}
+          </div>
+
+          <p className="mt-6 text-gray-600 text-sm text-center">
+            Align the QR code inside the frame
+          </p>
 
           {error && (
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="mt-4 text-sm text-red-600 text-center"
-            >
+            <p className="mt-4 text-red-600 text-sm text-center">
               {error}
-            </motion.p>
+            </p>
           )}
         </motion.div>
       </div>

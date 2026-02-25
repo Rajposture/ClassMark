@@ -90,11 +90,13 @@ const LectureHistory = () => {
   return (
     <DashboardLayout>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-24 pb-16">
+
+        {/* HEADER */}
         <motion.div
           initial={{ opacity: 0, y: 25 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="mb-10"
+          className="mb-12"
         >
           <h1 className="text-3xl sm:text-4xl font-bold text-gray-900">
             Lecture History
@@ -110,80 +112,113 @@ const LectureHistory = () => {
           </div>
         ) : (
           <>
-            {/* DESKTOP VIEW */}
+            {/* ================= DESKTOP ================= */}
             <div className="hidden md:grid grid-cols-3 gap-8">
-              <div className="col-span-1 bg-white rounded-3xl shadow-xl border p-6 space-y-4 max-h-[600px] overflow-y-auto">
+
+              {/* LEFT PANEL – PREMIUM LIST */}
+              <div className="col-span-1 space-y-4 max-h-[600px] overflow-y-auto pr-2">
+
                 {lectures.map((lecture) => (
-                  <div
+                  <motion.div
                     key={lecture._id}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
                     onClick={() => setSelectedLecture(lecture)}
-                    className={`p-4 rounded-2xl cursor-pointer transition ${
-                      selectedLecture?._id === lecture._id
-                        ? "bg-indigo-100"
-                        : "bg-gray-50 hover:bg-gray-100"
-                    }`}
+                    className="relative group cursor-pointer"
                   >
-                    <h3 className="font-semibold text-gray-900">
-                      {lecture.subject}
-                    </h3>
-                    <p className="text-sm text-gray-500 mt-1">
-                      {new Date(lecture.startDateTime).toLocaleDateString()}
-                    </p>
-                  </div>
+                    <div className="absolute -inset-[1px] bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-3xl opacity-0 group-hover:opacity-100 blur-sm transition duration-500" />
+
+                    <div className={`relative bg-white/80 backdrop-blur-xl border border-white/40 shadow-xl rounded-3xl p-5 transition ${
+                      selectedLecture?._id === lecture._id
+                        ? "ring-2 ring-indigo-500"
+                        : ""
+                    }`}>
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h3 className="font-semibold text-gray-900">
+                            {lecture.subject}
+                          </h3>
+                          <p className="text-sm text-gray-500 mt-1">
+                            {new Date(lecture.startDateTime).toLocaleDateString()}
+                          </p>
+                        </div>
+
+                        <span className="px-3 py-1 text-xs bg-green-100 text-green-700 rounded-full">
+                          Completed
+                        </span>
+                      </div>
+                    </div>
+                  </motion.div>
                 ))}
               </div>
 
-              <div className="col-span-2 bg-white rounded-3xl shadow-xl border p-8">
-                {selectedLecture ? (
-                  <>
-                    <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                      {selectedLecture.subject}
-                    </h2>
+              {/* RIGHT PANEL – PREMIUM DETAIL */}
+              <div className="col-span-2 relative overflow-hidden rounded-3xl p-[1px] bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 shadow-2xl">
 
-                    <p className="text-gray-600 mb-2">
-                      {new Date(
-                        selectedLecture.startDateTime
-                      ).toLocaleDateString()}
-                    </p>
+                <div className="bg-white/90 backdrop-blur-xl rounded-3xl p-10 min-h-[400px]">
 
-                    <div className="flex gap-4 mt-6">
-                      <button
-                        onClick={() =>
-                          handleExcelDownload(
-                            selectedLecture._id,
-                            selectedLecture.subject
-                          )
-                        }
-                        className="px-6 py-3 rounded-xl bg-gray-900 text-white"
-                      >
-                        Daily Excel
-                      </button>
+                  {selectedLecture ? (
+                    <>
+                      <h2 className="text-2xl font-bold text-gray-900 mb-4">
+                        {selectedLecture.subject}
+                      </h2>
 
-                      <button
-                        onClick={() =>
-                          handleMonthlyDownload(
-                            selectedLecture._id,
-                            selectedLecture.subject
-                          )
-                        }
-                        className="px-6 py-3 rounded-xl bg-indigo-600 text-white"
-                      >
-                        Monthly Excel
-                      </button>
+                      <p className="text-gray-600 mb-2">
+                        {new Date(selectedLecture.startDateTime).toLocaleDateString()}
+                      </p>
+
+                      <p className="text-gray-600 mb-8">
+                        {new Date(selectedLecture.startDateTime).toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit"
+                        })}{" "}
+                        –{" "}
+                        {new Date(selectedLecture.endDateTime).toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit"
+                        })}
+                      </p>
+
+                      <div className="flex gap-6">
+                        <button
+                          onClick={() =>
+                            handleExcelDownload(
+                              selectedLecture._id,
+                              selectedLecture.subject
+                            )
+                          }
+                          className="px-6 py-3 rounded-xl bg-gray-900 text-white font-medium hover:scale-105 transition"
+                        >
+                          Daily Excel
+                        </button>
+
+                        <button
+                          onClick={() =>
+                            handleMonthlyDownload(
+                              selectedLecture._id,
+                              selectedLecture.subject
+                            )
+                          }
+                          className="px-6 py-3 rounded-xl bg-indigo-600 text-white font-medium hover:scale-105 transition"
+                        >
+                          Monthly Excel
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-gray-400 text-sm">
+                      Select a lecture
                     </div>
-                  </>
-                ) : (
-                  <div className="text-gray-400 text-sm">
-                    Select a lecture
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             </div>
 
-            {/* MOBILE PREMIUM CHAT STYLE */}
+            {/* ================= MOBILE ================= */}
             <div className="md:hidden relative overflow-hidden">
 
               <AnimatePresence mode="wait">
+
                 {!selectedLecture ? (
                   <motion.div
                     key="list"
@@ -191,34 +226,33 @@ const LectureHistory = () => {
                     animate={{ x: 0 }}
                     exit={{ x: -300 }}
                     transition={{ duration: 0.3 }}
-                    className="space-y-3"
+                    className="space-y-4"
                   >
                     {lectures.map((lecture) => (
-                      <div
+                      <motion.div
                         key={lecture._id}
+                        whileTap={{ scale: 0.97 }}
                         onClick={() => setSelectedLecture(lecture)}
-                        className="bg-white p-4 rounded-2xl shadow-sm border cursor-pointer active:scale-95 transition"
+                        className="relative overflow-hidden rounded-3xl p-[1px] bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 shadow-lg"
                       >
-                        <div className="flex justify-between items-center">
-                          <h3 className="font-semibold text-gray-900">
-                            {lecture.subject}
-                          </h3>
-                          <span className="text-xs text-gray-400">
-                            {new Date(
-                              lecture.startDateTime
-                            ).toLocaleDateString()}
-                          </span>
-                        </div>
+                        <div className="bg-white/90 backdrop-blur-xl rounded-3xl p-4">
+                          <div className="flex justify-between items-center">
+                            <h3 className="font-semibold text-gray-900">
+                              {lecture.subject}
+                            </h3>
+                            <span className="text-xs text-gray-400">
+                              {new Date(lecture.startDateTime).toLocaleDateString()}
+                            </span>
+                          </div>
 
-                        <p className="text-sm text-gray-500 mt-1">
-                          {new Date(
-                            lecture.startDateTime
-                          ).toLocaleTimeString([], {
-                            hour: "2-digit",
-                            minute: "2-digit"
-                          })}
-                        </p>
-                      </div>
+                          <p className="text-sm text-gray-500 mt-1">
+                            {new Date(lecture.startDateTime).toLocaleTimeString([], {
+                              hour: "2-digit",
+                              minute: "2-digit"
+                            })}
+                          </p>
+                        </div>
+                      </motion.div>
                     ))}
                   </motion.div>
                 ) : (
@@ -228,70 +262,67 @@ const LectureHistory = () => {
                     animate={{ x: 0 }}
                     exit={{ x: 300 }}
                     transition={{ duration: 0.3 }}
-                    className="bg-white rounded-3xl shadow-xl border p-6"
+                    className="relative overflow-hidden rounded-3xl p-[1px] bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 shadow-2xl"
                   >
-                    <button
-                      onClick={() => setSelectedLecture(null)}
-                      className="text-indigo-600 text-sm mb-6"
-                    >
-                      ← Back
-                    </button>
-
-                    <h2 className="text-2xl font-bold text-gray-900 mb-3">
-                      {selectedLecture.subject}
-                    </h2>
-
-                    <p className="text-gray-600 mb-2">
-                      {new Date(
-                        selectedLecture.startDateTime
-                      ).toLocaleDateString()}
-                    </p>
-
-                    <p className="text-gray-600 mb-6">
-                      {new Date(
-                        selectedLecture.startDateTime
-                      ).toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit"
-                      })}{" "}
-                      –{" "}
-                      {new Date(
-                        selectedLecture.endDateTime
-                      ).toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit"
-                      })}
-                    </p>
-
-                    <div className="space-y-3">
-                      <button
-                        onClick={() =>
-                          handleExcelDownload(
-                            selectedLecture._id,
-                            selectedLecture.subject
-                          )
-                        }
-                        className="w-full py-3 rounded-xl bg-gray-900 text-white font-medium"
-                      >
-                        Download Daily Excel
-                      </button>
+                    <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-6">
 
                       <button
-                        onClick={() =>
-                          handleMonthlyDownload(
-                            selectedLecture._id,
-                            selectedLecture.subject
-                          )
-                        }
-                        className="w-full py-3 rounded-xl bg-indigo-600 text-white font-medium"
+                        onClick={() => setSelectedLecture(null)}
+                        className="text-indigo-600 text-sm mb-6"
                       >
-                        Download Monthly Excel
+                        ← Back
                       </button>
+
+                      <h2 className="text-2xl font-bold text-gray-900 mb-3">
+                        {selectedLecture.subject}
+                      </h2>
+
+                      <p className="text-gray-600 mb-2">
+                        {new Date(selectedLecture.startDateTime).toLocaleDateString()}
+                      </p>
+
+                      <p className="text-gray-600 mb-8">
+                        {new Date(selectedLecture.startDateTime).toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit"
+                        })}{" "}
+                        –{" "}
+                        {new Date(selectedLecture.endDateTime).toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit"
+                        })}
+                      </p>
+
+                      <div className="space-y-4">
+                        <button
+                          onClick={() =>
+                            handleExcelDownload(
+                              selectedLecture._id,
+                              selectedLecture.subject
+                            )
+                          }
+                          className="w-full py-3 rounded-xl bg-gray-900 text-white font-medium active:scale-95 transition"
+                        >
+                          Download Daily Excel
+                        </button>
+
+                        <button
+                          onClick={() =>
+                            handleMonthlyDownload(
+                              selectedLecture._id,
+                              selectedLecture.subject
+                            )
+                          }
+                          className="w-full py-3 rounded-xl bg-indigo-600 text-white font-medium active:scale-95 transition"
+                        >
+                          Download Monthly Excel
+                        </button>
+                      </div>
                     </div>
                   </motion.div>
                 )}
-              </AnimatePresence>
 
+              </AnimatePresence>
             </div>
           </>
         )}
