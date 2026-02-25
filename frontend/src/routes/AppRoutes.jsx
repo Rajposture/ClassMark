@@ -12,10 +12,7 @@ import AttendanceForm from "../pages/AttendanceForm"
 import Assignments from "../pages/Assignments"
 import AssignmentDetail from "../pages/AssignmentDetail"
 import VerifyEnrollment from "../pages/VerifyEnrollment"
-
-/* ================= DASHBOARD REDIRECT ================= */
-
-/* ================= DASHBOARD REDIRECT ================= */
+import LectureHistory from "../components/teacher/LectureHistory"
 
 const DashboardRedirect = () => {
   const { user, loading } = useAuth()
@@ -36,18 +33,14 @@ const DashboardRedirect = () => {
   )
 }
 
-/* ================= ROUTES ================= */
-
 const AppRoutes = () => {
   return (
     <Routes>
 
-      {/* Public Routes */}
       <Route path="/" element={<Landing />} />
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
 
-      {/* Dashboard Auto Redirect */}
       <Route
         path="/dashboard"
         element={
@@ -57,7 +50,6 @@ const AppRoutes = () => {
         }
       />
 
-      {/* Student Routes */}
       <Route
         path="/student-dashboard"
         element={
@@ -75,10 +67,11 @@ const AppRoutes = () => {
           </ProtectedRoute>
         }
       />
-<Route
-  path="/verify/:lectureId"
-  element={<VerifyEnrollment />}
-/>
+
+      <Route
+        path="/verify/:lectureId"
+        element={<VerifyEnrollment />}
+      />
 
       <Route
         path="/attendance/:lectureId"
@@ -89,7 +82,6 @@ const AppRoutes = () => {
         }
       />
 
-      {/* Teacher Routes */}
       <Route
         path="/teacher-dashboard"
         element={
@@ -99,7 +91,15 @@ const AppRoutes = () => {
         }
       />
 
-      {/* Shared Routes */}
+      <Route
+        path="/teacher/history"
+        element={
+          <ProtectedRoute role="teacher">
+            <LectureHistory />
+          </ProtectedRoute>
+        }
+      />
+
       <Route
         path="/assignments"
         element={
@@ -118,8 +118,7 @@ const AppRoutes = () => {
         }
       />
 
-      {/* Fallback */}
- <Route path="*" element={<Landing />} />
+      <Route path="*" element={<Landing />} />
 
     </Routes>
   )

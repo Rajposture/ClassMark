@@ -168,7 +168,9 @@ const TeacherDashboard = () => {
                         {lecture.subject}
                       </h3>
                       <p className="text-sm text-gray-500 mt-1">
-                        {lecture.date} • {lecture.startTime} – {lecture.endTime}
+                        {new Date(lecture.startDateTime).toLocaleDateString()} •{" "}
+                        {new Date(lecture.startDateTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} –{" "}
+                        {new Date(lecture.endDateTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                       </p>
                     </div>
 

@@ -1,8 +1,12 @@
 import { useEffect, useState } from "react";
+import { Link, useLocation } from "react-router-dom";
 import Navbar from "./Navbar";
+import { useAuth } from "../../context/AuthContext";
 
 const DashboardLayout = ({ children }) => {
   const [openSidebar, setOpenSidebar] = useState(false);
+  const { user } = useAuth();
+  const location = useLocation();
 
   useEffect(() => {
     const handleEsc = (e) => {
@@ -15,6 +19,8 @@ const DashboardLayout = ({ children }) => {
     return () =>
       window.removeEventListener("keydown", handleEsc);
   }, []);
+
+  const isActive = (path) => location.pathname === path;
 
   return (
     <div className="min-h-screen bg-slate-100">
@@ -33,10 +39,38 @@ const DashboardLayout = ({ children }) => {
         ${openSidebar ? "translate-x-0" : "-translate-x-full"}
         md:hidden`}
       >
-        <div className="p-6 space-y-4">
+        <div className="p-6 space-y-6">
           <h2 className="text-xl font-bold text-indigo-600">
             ClassMark
           </h2>
+
+          {user?.role === "teacher" && (
+            <div className="flex flex-col space-y-3">
+              <Link
+                to="/teacher-dashboard"
+                onClick={() => setOpenSidebar(false)}
+                className={`px-4 py-2 rounded-xl font-medium transition ${
+                  isActive("/teacher-dashboard")
+                    ? "bg-indigo-600 text-white"
+                    : "text-gray-700 hover:bg-gray-100"
+                }`}
+              >
+                Dashboard
+              </Link>
+
+              <Link
+                to="/teacher/history"
+                onClick={() => setOpenSidebar(false)}
+                className={`px-4 py-2 rounded-xl font-medium transition ${
+                  isActive("/teacher/history")
+                    ? "bg-indigo-600 text-white"
+                    : "text-gray-700 hover:bg-gray-100"
+                }`}
+              >
+                History
+              </Link>
+            </div>
+          )}
         </div>
       </aside>
 

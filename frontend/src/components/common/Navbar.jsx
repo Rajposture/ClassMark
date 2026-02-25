@@ -109,6 +109,12 @@ const Navbar = () => {
                 Dashboard
               </Link>
 
+              {user?.role === "teacher" && (
+                <Link to="/teacher/history" className="hover:text-indigo-600 transition">
+                  History
+                </Link>
+              )}
+
               <Link to="/assignments" className="hover:text-indigo-600 transition">
                 Assignments
               </Link>
@@ -247,7 +253,6 @@ const Navbar = () => {
         </nav>
       </div>
 
-      {/* MOBILE SIDEBAR */}
       <div
         className={`fixed inset-0 z-40 md:hidden transition ${
           openSidebar ? "visible opacity-100" : "invisible opacity-0"
@@ -278,6 +283,16 @@ const Navbar = () => {
             >
               Dashboard
             </Link>
+
+            {user?.role === "teacher" && (
+              <Link
+                to="/teacher/history"
+                onClick={() => setOpenSidebar(false)}
+                className="block hover:text-indigo-600 transition"
+              >
+                History
+              </Link>
+            )}
 
             <Link
               to="/assignments"

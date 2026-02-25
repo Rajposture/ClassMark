@@ -45,16 +45,12 @@ const lectureSchema = new mongoose.Schema(
       type: String,
       required: true
     },
-    date: {
-      type: String,
+    startDateTime: {
+      type: Date,
       required: true
     },
-    startTime: {
-      type: String,
-      required: true
-    },
-    endTime: {
-      type: String,
+    endDateTime: {
+      type: Date,
       required: true
     },
     teacherId: {
@@ -76,7 +72,7 @@ const lectureSchema = new mongoose.Schema(
     },
     radius: {
       type: Number,
-      default: 50
+      default: 300
     },
     isActive: {
       type: Boolean,
