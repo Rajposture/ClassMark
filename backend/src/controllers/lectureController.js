@@ -264,33 +264,130 @@ export const generateMonthlyExcel = async (req, res) => {
 
     const daysInMonth = new Date(year, month + 1, 0).getDate();
 
+    const isSunday = (date) => date.getDay() === 0;
+
+    const isSecondOrFourthSaturday = (date) => {
+      if (date.getDay() !== 6) return false;
+      const weekNumber = Math.ceil(date.getDate() / 7);
+      return weekNumber === 2 || weekNumber === 4;
+    };
+
+    // Calculate total working days
+    let totalWorkingDays = 0;
+    for (let d = 1; d <= daysInMonth; d++) {
+      const date = new Date(year, month, d);
+      if (!isSunday(date) && !isSecondOrFourthSaturday(date)) {
+        totalWorkingDays++;
+      }
+    }
+
+    // ===== HEADER SECTION =====
+    worksheet.mergeCells("A1:D1");
+    worksheet.getCell("A1").value = `Monthly Attendance - ${subject}`;
+    worksheet.getCell("A1").font = { bold: true, size: 16 };
+
+    worksheet.mergeCells("A2:D2");
+    worksheet.getCell("A2").value = `Month: ${lecture.startDateTime.toLocaleString("default", { month: "long" })} ${year}`;
+    worksheet.getCell("A2").font = { bold: true };
+
+    worksheet.mergeCells("A3:D3");
+    worksheet.getCell("A3").value = `Total Working Days: ${totalWorkingDays}`;
+    worksheet.getCell("A3").font = { bold: true };
+
+    worksheet.addRow([]);
+
+    // ===== TABLE HEADER =====
     const headers = ["Sr No", "Name", "Enrollment"];
     for (let d = 1; d <= daysInMonth; d++) {
       headers.push(d.toString());
     }
-    headers.push("Total");
+    headers.push("Attendance %");
 
     worksheet.addRow(headers);
-    worksheet.getRow(1).font = { bold: true };
+    const headerRow = worksheet.getRow(5);
+    headerRow.font = { bold: true };
+    headerRow.alignment = { horizontal: "center" };
+
+    // Freeze first row & first 3 columns
+    worksheet.views = [
+      {
+        state: "frozen",
+        xSplit: 3,
+        ySplit: 5
+      }
+    ];
 
     let sr = 1;
 
     Object.values(studentMap).forEach((student) => {
       const row = [sr++, student.name, student.enrollment];
 
-      let total = 0;
+      let presentCount = 0;
+      let workingDays = 0;
 
       for (let d = 1; d <= daysInMonth; d++) {
+        const currentDate = new Date(year, month, d);
+
+        if (isSunday(currentDate) || isSecondOrFourthSaturday(currentDate)) {
+          row.push("");
+          continue;
+        }
+
+        workingDays++;
+
         if (student.days[d] === "P") {
           row.push("P");
-          total++;
+          presentCount++;
         } else {
           row.push("A");
         }
       }
 
-      row.push(total);
-      worksheet.addRow(row);
+      const percentage =
+        workingDays > 0
+          ? ((presentCount / workingDays) * 100).toFixed(2)
+          : 0;
+
+      row.push(`${percentage}%`);
+
+      const addedRow = worksheet.addRow(row);
+
+      // Style Name & Enrollment
+      addedRow.getCell(2).font = { bold: true };
+      addedRow.getCell(3).font = { bold: true };
+
+      // Color P / A
+      for (let i = 4; i < row.length; i++) {
+        const cell = addedRow.getCell(i);
+
+        if (cell.value === "P") {
+          cell.font = { color: { argb: "FF008000" }, bold: true };
+        }
+
+        if (cell.value === "A") {
+          cell.font = { color: { argb: "FFFF0000" }, bold: true };
+        }
+      }
+
+      // Highlight low attendance
+      const percentCell = addedRow.getCell(row.length);
+      if (percentage < 75) {
+        percentCell.font = { color: { argb: "FFFF0000" }, bold: true };
+      } else {
+        percentCell.font = { color: { argb: "FF006400" }, bold: true };
+      }
+    });
+
+    // Borders
+    worksheet.eachRow((row) => {
+      row.eachCell((cell) => {
+        cell.border = {
+          top: { style: "thin" },
+          left: { style: "thin" },
+          bottom: { style: "thin" },
+          right: { style: "thin" }
+        };
+      });
     });
 
     const safeSubject = subject.replace(/[^a-z0-9]/gi, "_").toLowerCase();
@@ -307,7 +404,9 @@ export const generateMonthlyExcel = async (req, res) => {
 
     await workbook.xlsx.write(res);
     res.end();
+
   } catch (error) {
+    console.error(error);
     return res.status(500).json({ success: false, message: "Failed to generate monthly Excel" });
   }
 };
