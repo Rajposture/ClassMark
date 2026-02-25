@@ -124,21 +124,18 @@ const handleSubmit = async (e) => {
               {showPassword ? <FiEyeOff /> : <FiEye />}
             </div>
           </div>
-
-          {role === "student" && (
-            <motion.input
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              type="text"
-              name="enrollment"
-              placeholder="Enrollment Number (Example: FS24CO0XX)"
-              pattern="FS[0-9]{2}CO0[0-9]{2}"
-              required
-              onChange={handleChange}
-              className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-black outline-none transition"
-            />
-          )}
-
+{role === "student" && (
+  <motion.input
+    initial={{ opacity: 0, y: 10 }}
+    animate={{ opacity: 1, y: 0 }}
+    type="text"
+    name="enrollment"
+    placeholder="Enrollment Number"
+    required
+    onChange={handleChange}
+    className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-black outline-none"
+  />
+)}
           <button
             type="submit"
             className="w-full py-3 mt-4 bg-black text-white rounded-xl font-medium hover:bg-gray-800 transition-all duration-300 shadow-lg"
