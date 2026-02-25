@@ -260,6 +260,7 @@ export const generateMonthlyExcel = async (req, res) => {
     const daysInMonth = new Date(year, month + 1, 0).getDate();
 
     const isSunday = (date) => date.getDay() === 0;
+
     const isSecondOrFourthSaturday = (date) => {
       if (date.getDay() !== 6) return false;
       const weekNumber = Math.ceil(date.getDate() / 7);
@@ -276,7 +277,7 @@ export const generateMonthlyExcel = async (req, res) => {
 
     worksheet.mergeCells("A1:D1");
     worksheet.getCell("A1").value = `Monthly Attendance - ${subject}`;
-    worksheet.getCell("A1").font = { bold: true, size: 16 };
+    worksheet.getCell("A1").font = { bold: true, size: 18 };
 
     worksheet.mergeCells("A2:D2");
     worksheet.getCell("A2").value = `Month: ${lecture.startDateTime.toLocaleString("default", { month: "long" })} ${year}`;
@@ -295,8 +296,23 @@ export const generateMonthlyExcel = async (req, res) => {
     headers.push("Attendance %");
 
     worksheet.addRow(headers);
-    worksheet.getRow(5).font = { bold: true };
-    worksheet.views = [{ state: "frozen", xSplit: 3, ySplit: 5 }];
+
+    const headerRow = worksheet.getRow(5);
+    headerRow.font = { bold: true, size: 13 };
+    headerRow.alignment = { horizontal: "center", vertical: "middle" };
+    headerRow.height = 25;
+
+    worksheet.columns[0].width = 8;
+    worksheet.columns[1].width = 25;
+    worksheet.columns[2].width = 22;
+
+    worksheet.views = [
+      {
+        state: "frozen",
+        xSplit: 3,
+        ySplit: 5
+      }
+    ];
 
     let sr = 1;
 
@@ -333,17 +349,33 @@ export const generateMonthlyExcel = async (req, res) => {
 
       const addedRow = worksheet.addRow(row);
 
+      addedRow.getCell(2).font = { bold: true, size: 13 };
+      addedRow.getCell(3).font = { bold: true, size: 14, color: { argb: "FF000000" } };
+      addedRow.getCell(3).alignment = { horizontal: "center" };
+      addedRow.getCell(3).fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FFE8F0FE" }
+      };
+
       for (let i = 4; i < row.length; i++) {
         const cell = addedRow.getCell(i);
-        if (cell.value === "P") cell.font = { color: { argb: "FF008000" }, bold: true };
-        if (cell.value === "A") cell.font = { color: { argb: "FFFF0000" }, bold: true };
+
+        if (cell.value === "P") {
+          cell.font = { color: { argb: "FF008000" }, bold: true };
+        }
+
+        if (cell.value === "A") {
+          cell.font = { color: { argb: "FFFF0000" }, bold: true };
+        }
       }
 
       const percentCell = addedRow.getCell(row.length);
-      percentCell.font =
-        percentage < 75
-          ? { color: { argb: "FFFF0000" }, bold: true }
-          : { color: { argb: "FF006400" }, bold: true };
+      if (percentage < 75) {
+        percentCell.font = { color: { argb: "FFFF0000" }, bold: true, size: 13 };
+      } else {
+        percentCell.font = { color: { argb: "FF006400" }, bold: true, size: 13 };
+      }
     });
 
     worksheet.eachRow((row) => {
@@ -371,6 +403,7 @@ export const generateMonthlyExcel = async (req, res) => {
 
     await workbook.xlsx.write(res);
     res.end();
+
   } catch (error) {
     console.error(error);
     return res.status(500).json({ success: false, message: "Failed to generate monthly Excel" });
