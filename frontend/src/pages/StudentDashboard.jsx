@@ -3,10 +3,16 @@ import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import DashboardLayout from "../components/common/DashboardLayout";
 import { useAuth } from "../context/AuthContext";
-
+import AIRobo from "../components/ai/AIRobo";
+import PageSkeleton from "../components/ui/PageSkeleton"
 const StudentDashboard = () => {
-  const { user, loading } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
+  const { loading } = useAuth()
+
+  if (loading) {
+    return <PageSkeleton />
+  }
 
   const [student, setStudent] = useState(null);
   const [fetching, setFetching] = useState(true);
@@ -130,7 +136,9 @@ const StudentDashboard = () => {
         </motion.div>
 
       </div>
+      <AIRobo />
     </DashboardLayout>
+    
   );
 };
 

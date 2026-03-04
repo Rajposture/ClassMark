@@ -7,7 +7,7 @@ import CreateLecture from "../components/teacher/CreateLecture";
 import GenerateQR from "../components/teacher/GenerateQR";
 import { useAuth } from "../context/AuthContext";
 import api from "../utils/axios";
-
+import AIRobo from "../components/ai/AIRobo";
 const TeacherDashboard = () => {
   const { user, loading } = useAuth();
 
@@ -214,6 +214,7 @@ const TeacherDashboard = () => {
           )}
         </AnimatePresence>
       </div>
+      <AIRobo/>
     </DashboardLayout>
   );
 };

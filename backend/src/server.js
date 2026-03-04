@@ -12,6 +12,7 @@ import authRoutes from "./routes/authRoutes.js";
 import lectureRoutes from "./routes/lectureRoutes.js";
 import attendanceRoutes from "./routes/attendanceRoutes.js";
 import assignmentRoutes from "./routes/assignmentRoutes.js";
+import aiRoutes from "./routes/aiRoutes.js";
 
 const app = express();
 const server = http.createServer(app);
@@ -20,20 +21,40 @@ connectDB();
 
 app.set("trust proxy", 1);
 
+
 const origins = [
   "http://localhost:5173",
-  "https://class-mark1.vercel.app"
-];
+  "https://class-mark1.vercel.app",
+  "https://classmark.online",
+  "https://www.classmark.online",
+  process.env.FRONTEND_URL
+].filter(Boolean);
+
 
 app.use(
   cors({
-    origin: origins,
+    origin: function (origin, callback) {
+      if (!origin || origins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("CORS not allowed"));
+      }
+    },
     credentials: true
   })
 );
 
 app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+
+
+app.use("/api/auth", authRoutes);
+app.use("/api/lectures", lectureRoutes);
+app.use("/api/attendance", attendanceRoutes);
+app.use("/api/assignments", assignmentRoutes);
+app.use("/api/ai", aiRoutes);
+
 
 const io = new Server(server, {
   cors: {
@@ -45,23 +66,25 @@ const io = new Server(server, {
 
 app.set("io", io);
 
-io.on("connection", () => {});
-
-app.use("/api/auth", authRoutes);
-app.use("/api/lectures", lectureRoutes);
-app.use("/api/attendance", attendanceRoutes);
-app.use("/api/assignments", assignmentRoutes);
+io.on("connection", (socket) => {
+  console.log("User connected:", socket.id);
+});
 
 app.get("/", (req, res) => {
-  res.status(200).json({ message: "ClassMark API running" });
+  res.status(200).json({ message: "ClassMark API running 🚀" });
 });
+
 
 app.use((req, res) => {
   res.status(404).json({ message: "Route not found" });
 });
 
+
 app.use((err, req, res, next) => {
-  res.status(500).json({ message: err.message || "Server error" });
+  console.error("SERVER ERROR:", err);
+  res.status(500).json({
+    message: err.message || "Internal server error"
+  });
 });
 
 const PORT = process.env.PORT || 5001;

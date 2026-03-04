@@ -5,6 +5,7 @@ import ProtectedRoute from "../context/ProtectedRoute"
 import Landing from "../pages/Landing"
 import Login from "../pages/Login"
 import Signup from "../pages/Signup"
+import ResetPassword from "../pages/ResetPassword"
 import TeacherDashboard from "../pages/TeacherDashboard"
 import StudentDashboard from "../pages/StudentDashboard"
 import QRScanner from "../components/student/QRScanner"
@@ -38,8 +39,24 @@ const AppRoutes = () => {
     <Routes>
 
       <Route path="/" element={<Landing />} />
-      <Route path="/login" element={<Login />} />
-      <Route path="/signup" element={<Signup />} />
+<Route
+  path="/login"
+  element={
+    <PublicRoute>
+      <Login />
+    </PublicRoute>
+  }
+/>
+
+<Route
+  path="/signup"
+  element={
+    <PublicRoute>
+      <Signup />
+    </PublicRoute>
+  }
+/>
+      <Route path="/reset-password/:token" element={<ResetPassword />} />
 
       <Route
         path="/dashboard"
