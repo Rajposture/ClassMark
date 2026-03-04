@@ -188,12 +188,14 @@ export const verifyLoginOtp = async (req, res) => {
 
 export const forgotPassword = async (req, res) => {
   try {
+
     const { email } = req.body;
 
     const user = await User.findOne({ email });
 
-    if (!user)
+    if (!user) {
       return res.status(404).json({ message: "User not found" });
+    }
 
     const resetToken = crypto.randomBytes(32).toString("hex");
 
@@ -212,8 +214,14 @@ export const forgotPassword = async (req, res) => {
 
     res.json({ message: "Password reset email sent" });
 
-  } catch {
-    res.status(500).json({ message: "Server error" });
+  } catch (err) {
+
+    console.error("Forgot Password Error:", err);
+
+    res.status(500).json({
+      message: "Error sending reset email"
+    });
+
   }
 };
 
