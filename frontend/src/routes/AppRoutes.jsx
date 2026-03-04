@@ -14,6 +14,7 @@ import Assignments from "../pages/Assignments"
 import AssignmentDetail from "../pages/AssignmentDetail"
 import VerifyEnrollment from "../pages/VerifyEnrollment"
 import LectureHistory from "../components/teacher/LectureHistory"
+import ResetPassword from "../pages/ResetPassword"
 
 const DashboardRedirect = () => {
   const { user, loading } = useAuth()
@@ -116,6 +117,7 @@ const AppRoutes = () => {
           </ProtectedRoute>
         }
       />
+      <Route path="/reset-password/:token" element={<ResetPassword />} />
 
       <Route
         path="/assignments"
