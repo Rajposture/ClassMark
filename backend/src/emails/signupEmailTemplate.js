@@ -19,17 +19,23 @@ export const signupEmailTemplate = (otp) => {
           Use the verification code below to complete your signup.
         </p>
 
-        <div style="
-          font-size:36px;
-          letter-spacing:8px;
-          font-weight:bold;
-          background:#eef2ff;
-          color:#4f46e5;
-          padding:18px;
-          border-radius:8px;
-          margin:25px 0">
-          ${otp}
-        </div>
+<div style="
+  font-size:40px;
+  font-weight:700;
+  letter-spacing:8px;
+  text-align:center;
+  background:#111827;
+  padding:22px;
+  border-radius:12px;
+  color:#a78bfa;
+  font-family:'Courier New', monospace;
+">
+  ${otp}
+  
+</div>
+<p style="text-align:center;color:#9ca3af;margin-top:10px;">
+Copy this code and paste it in ClassMark to verify your account.
+</p>
 
         <p style="color:#666;font-size:14px">
           This OTP will expire in <b>5 minutes</b>.

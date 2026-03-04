@@ -11,9 +11,14 @@ const ResetPassword = () => {
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [loading, setLoading] = useState(false)
+  const [success, setSuccess] = useState(false)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+
+    if (!password || !confirmPassword) {
+      return alert("Please fill all fields")
+    }
 
     if (password !== confirmPassword) {
       return alert("Passwords do not match")
@@ -27,15 +32,23 @@ const ResetPassword = () => {
         password
       })
 
-      alert("Password reset successful")
+      setSuccess(true)
 
-      navigate("/login")
+      setTimeout(() => {
+        navigate("/login")
+      }, 2000)
 
     } catch (err) {
-      alert(err.response?.data?.message || "Reset failed")
-    }
 
-    setLoading(false)
+      const message =
+        err.response?.data?.message ||
+        "Reset link expired. Please request again."
+
+      alert(message)
+
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -44,41 +57,61 @@ const ResetPassword = () => {
       <motion.div
         initial={{ opacity: 0, y: 60 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8 }}
+        transition={{ duration: 0.7 }}
         className="w-full max-w-md backdrop-blur-xl bg-white/70 border border-white/40 shadow-2xl rounded-3xl p-8"
       >
 
-        <h1 className="text-3xl font-semibold text-gray-900 text-center mb-6">
-          Reset Password
-        </h1>
+        {!success && (
+          <>
+            <h1 className="text-3xl font-semibold text-gray-900 text-center mb-6">
+              Reset Password
+            </h1>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4">
 
-          <input
-            type="password"
-            placeholder="New Password"
-            required
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl"
-          />
+              <input
+                type="password"
+                placeholder="New Password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-black outline-none"
+              />
 
-          <input
-            type="password"
-            placeholder="Confirm Password"
-            required
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl"
-          />
+              <input
+                type="password"
+                placeholder="Confirm Password"
+                required
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-black outline-none"
+              />
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-3 bg-black text-white rounded-xl"
-          >
-            {loading ? "Updating..." : "Update Password"}
-          </button>
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-3 bg-black text-white rounded-xl font-medium transition hover:bg-gray-800 disabled:opacity-70"
+              >
+                {loading ? "Updating..." : "Update Password"}
+              </button>
 
-        </form>
+            </form>
+          </>
+        )}
+
+        {success && (
+          <div className="text-center">
+
+            <h2 className="text-2xl font-semibold text-green-600 mb-3">
+              Password Updated
+            </h2>
+
+            <p className="text-gray-500 text-sm">
+              Redirecting to login...
+            </p>
+
+          </div>
+        )}
 
       </motion.div>
 
