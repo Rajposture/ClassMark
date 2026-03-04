@@ -1,11 +1,11 @@
 import { Routes, Route, Navigate } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
 import ProtectedRoute from "../context/ProtectedRoute"
+import PublicRoute from "../context/PublicRoute"
 
 import Landing from "../pages/Landing"
 import Login from "../pages/Login"
 import Signup from "../pages/Signup"
-import ResetPassword from "../pages/ResetPassword"
 import TeacherDashboard from "../pages/TeacherDashboard"
 import StudentDashboard from "../pages/StudentDashboard"
 import QRScanner from "../components/student/QRScanner"
