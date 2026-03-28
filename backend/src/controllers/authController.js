@@ -8,6 +8,18 @@ import { signupEmailTemplate } from "../emails/signupEmailTemplate.js";
 import { loginOtpTemplate } from "../emails/loginOtpTemplate.js";
 import { resetPasswordTemplate } from "../emails/resetPasswordTemplate.js";
 
+const resolveFrontendUrl = () => {
+  const envUrl = process.env.FRONTEND_URL?.trim();
+
+  if (!envUrl) return null;
+
+  const withProtocol = /^https?:\/\//i.test(envUrl)
+    ? envUrl
+    : `https://${envUrl}`;
+
+  return withProtocol.replace(/\/+$/, "");
+};
+
 export const register = async (req, res) => {
   try {
     const { name, email, password, role, enrollment } = req.body;
@@ -204,7 +216,15 @@ export const forgotPassword = async (req, res) => {
 
     await user.save();
 
-    const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
+    const frontendUrl = resolveFrontendUrl();
+
+    if (!frontendUrl) {
+      return res.status(500).json({
+        message: "FRONTEND_URL is not configured on server"
+      });
+    }
+
+    const resetUrl = `${frontendUrl}/reset-password/${resetToken}`;
 
     await sendEmail({
       to: email,
