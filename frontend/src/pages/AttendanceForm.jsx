@@ -95,7 +95,6 @@ const AttendanceForm = () => {
 
           <div style={s.divider} />
 
-          {/* ── student info card ───────────────────────────── */}
           <motion.div
             style={s.infoCard}
             initial={{ opacity: 0, y: 8 }}
@@ -120,7 +119,6 @@ const AttendanceForm = () => {
             </div>
           </motion.div>
 
-          {/* ── step tracker ────────────────────────────────── */}
           <div style={s.stepRow}>
             <StepDot n={1} done={isLocated || isSubmitting || isSuccess} active={isLocating} label="Location" />
             <div style={s.stepLine(isLocated || isSubmitting || isSuccess)} />
