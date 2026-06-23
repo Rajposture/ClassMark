@@ -1,4 +1,5 @@
 import Assignment from "../models/Assignment.js";
+import Notification from "../models/Notification.js";
 
 export const createAssignment = async (req, res) => {
   try {
@@ -29,12 +30,13 @@ export const createAssignment = async (req, res) => {
     const io = req.app.get("io");
 
     if (io) {
-      io.emit("newAssignment", {
-        title: assignment.title,
-        subject: assignment.subject,
-        dueDate: assignment.dueDate,
-        teacher: req.user.name || "Teacher"
-      });
+     const notification = await Notification.create({
+  title: "New Assignment Posted",
+  message: `${assignment.title} has been posted by ${req.user.name}`,
+  type: "assignment"
+});
+
+io.emit("newAssignment", notification);
     }
 
     return res.status(201).json({

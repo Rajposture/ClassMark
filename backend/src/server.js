@@ -13,6 +13,7 @@ import lectureRoutes from "./routes/lectureRoutes.js";
 import attendanceRoutes from "./routes/attendanceRoutes.js";
 import assignmentRoutes from "./routes/assignmentRoutes.js";
 import aiRoutes from "./routes/aiRoutes.js";
+import notificationRoutes from "./routes/notificationRoutes.js";
 
 const app = express();
 const server = http.createServer(app);
@@ -48,6 +49,7 @@ app.use("/api/lectures", lectureRoutes);
 app.use("/api/attendance", attendanceRoutes);
 app.use("/api/assignments", assignmentRoutes);
 app.use("/api/ai", aiRoutes);
+app.use("/api/notifications",notificationRoutes);
 
 const io = new Server(server, {
   cors: {

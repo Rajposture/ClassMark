@@ -19,6 +19,28 @@ const Navbar = () => {
   const [openNotifications, setOpenNotifications] = useState(false)
   const [notifications, setNotifications] = useState([])
   const [bellGlow, setBellGlow] = useState(false)
+  const fetchNotifications = async () => {
+  try {
+    const token = localStorage.getItem("token")
+
+    const res = await fetch(
+      `${import.meta.env.VITE_API_BASE}/notifications`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    )
+
+    const data = await res.json()
+
+    if (data.success) {
+      setNotifications(data.notifications || [])
+    }
+  } catch (error) {
+    console.error("Notification fetch error:", error)
+  }
+}
 
   useEffect(() => {
     const handleClick = (e) => {
@@ -34,51 +56,51 @@ const Navbar = () => {
   }, [])
 
   useEffect(() => {
-    if (!isSignedIn) return
+  if (isSignedIn) {
+    fetchNotifications()
+  }
+}, [isSignedIn])
 
-    socketRef.current = io(import.meta.env.VITE_API_BASE.replace("/api", ""), {
+useEffect(() => {
+  if (!isSignedIn) return
+
+  socketRef.current = io(
+    import.meta.env.VITE_API_BASE.replace("/api", ""),
+    {
       transports: ["websocket"]
-    })
-
-    const triggerGlow = () => {
-      setBellGlow(true)
-      setTimeout(() => setBellGlow(false), 1500)
     }
+  )
 
-    const handleNewLecture = (lecture) => {
-      setNotifications((prev) => [
-        {
-          type: "lecture",
-          subject: lecture.subject,
-          date: lecture.date,
-          teacher: lecture.teacher
-        },
-        ...prev
-      ])
-      triggerGlow()
-    }
+  const triggerGlow = () => {
+    setBellGlow(true)
+    setTimeout(() => setBellGlow(false), 1500)
+  }
 
-    const handleNewAssignment = (assignment) => {
-      setNotifications((prev) => [
-        {
-          type: "assignment",
-          title: assignment.title,
-          subject: assignment.subject,
-          dueDate: assignment.dueDate,
-          teacher: assignment.teacher
-        },
-        ...prev
-      ])
-      triggerGlow()
-    }
+  const handleNewLecture = (notification) => {
+    setNotifications((prev) => [
+      notification,
+      ...prev
+    ])
+    triggerGlow()
+  }
 
-    socketRef.current.on("newLecture", handleNewLecture)
-    socketRef.current.on("newAssignment", handleNewAssignment)
+  const handleNewAssignment = (notification) => {
+    setNotifications((prev) => [
+      notification,
+      ...prev
+    ])
+    triggerGlow()
+  }
 
-    return () => {
-      socketRef.current.disconnect()
-    }
-  }, [isSignedIn])
+  socketRef.current.on("newLecture", handleNewLecture)
+  socketRef.current.on("newAssignment", handleNewAssignment)
+
+  return () => {
+    socketRef.current.off("newLecture", handleNewLecture)
+    socketRef.current.off("newAssignment", handleNewAssignment)
+    socketRef.current.disconnect()
+  }
+}, [isSignedIn])
 
   const handleLogout = () => {
     logout()
@@ -165,7 +187,25 @@ const Navbar = () => {
                         <h3 className="font-semibold">Notifications</h3>
                         {notifications.length > 0 && (
                           <button
-                            onClick={() => setNotifications([])}
+                            onClick={async () => {
+  try {
+    const token = localStorage.getItem("token")
+
+    await fetch(
+      `${import.meta.env.VITE_API_BASE}/notifications/read`,
+      {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    )
+
+    setNotifications([])
+  } catch (err) {
+    console.error(err)
+  }
+}}
                             className="text-xs underline"
                           >
                             Mark all as read
@@ -181,20 +221,22 @@ const Navbar = () => {
                         <div className="space-y-3">
                           {notifications.map((n, index) => (
                             <div
-                              key={index}
+                              key={n._id || index}
                               className="p-3 rounded-xl bg-white/10 hover:bg-white/20 transition"
                             >
                               <p className="text-sm font-medium">
-                                {n.type === "assignment"
-                                  ? "New Assignment Posted"
-                                  : "New Lecture Scheduled"}
-                              </p>
-                              <p className="text-xs text-white/70 mt-1">
-                                {n.title || n.subject}
-                              </p>
-                              <p className="text-xs text-white/60">
-                                By {n.teacher}
-                              </p>
+  {n.title}
+</p>
+
+<p className="text-xs text-white/70 mt-1">
+  {n.message}
+</p>
+
+<p className="text-xs text-white/60">
+  {n.createdAt
+    ? new Date(n.createdAt).toLocaleString()
+    : ""}
+</p>
                             </div>
                           ))}
                         </div>

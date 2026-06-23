@@ -2,6 +2,7 @@ import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import ExcelJS from "exceljs";
 import Lecture from "../models/Lecture.js";
+import Notification from "../models/Notification.js";
 
 export const createLecture = async (req, res) => {
   try {
@@ -36,10 +37,13 @@ export const createLecture = async (req, res) => {
 
     const io = req.app.get("io");
 
-    io.emit("newLecture", {
-      subject: lecture.subject,
-      teacher: req.user.name
-    });
+const notification = await Notification.create({
+  title: "New Lecture Scheduled",
+  message: `${lecture.subject} has been scheduled by ${req.user.name}`,
+  type: "lecture"
+});
+
+io.emit("newLecture", notification);
 
     return res.status(201).json({ success: true, lecture });
   } catch (error) {
