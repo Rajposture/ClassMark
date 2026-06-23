@@ -95,7 +95,7 @@ const CreateLecture = ({ onCreate }) => {
             type="text"
             value={subject}
             onChange={(e) => setSubject(e.target.value)}
-            placeholder="e.g. Introduction to Organic Chemistry"
+            placeholder=""
             required
             style={s.input}
             onFocus={(e) => applyFocus(e.target)}
