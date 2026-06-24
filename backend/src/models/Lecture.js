@@ -62,6 +62,10 @@ const lectureSchema = new mongoose.Schema(
       type: String,
       required: true
     },
+    lectureCode: {
+  type: String,
+  required: true
+},
     latitude: {
       type: Number,
       required: true

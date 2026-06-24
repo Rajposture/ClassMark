@@ -15,6 +15,9 @@ export const createLecture = async (req, res) => {
       return res.status(401).json({ success: false, message: "Unauthorized" });
 
     const qrSecret = crypto.randomBytes(32).toString("hex");
+    const lectureCode = Math.floor(
+  1000 + Math.random() * 9000
+).toString();
 
     const startDateTime = new Date(`${date}T${startTime}`);
     const endDateTime = new Date(`${date}T${endTime}`);
@@ -25,6 +28,7 @@ export const createLecture = async (req, res) => {
       endDateTime,
       teacherId: req.user.id,
       qrSecret,
+      lectureCode,
       latitude: Number(latitude),
       longitude: Number(longitude),
       radius: radius ? Number(radius) : 300,
@@ -113,11 +117,12 @@ export const generateQRToken = async (req, res) => {
     );
 
     return res.status(200).json({
-      success: true,
-      token,
-      subject: lecture.subject,
-      expiresAt
-    });
+  success: true,
+  token,
+  subject: lecture.subject,
+  lectureCode: lecture.lectureCode,
+  expiresAt
+});
   } catch {
     return res.status(500).json({ success: false, message: "Server error" });
   }

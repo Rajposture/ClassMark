@@ -129,6 +129,17 @@ const GenerateQR = ({ lecture, onClose }) => {
             </div>
           </div>
 
+          {/* Lecture Code */}
+          <div style={s.codeContainer}>
+            <p style={s.codeLabel}>Lecture Code</p>
+            <div style={s.codeBox}>
+              {lecture.lectureCode || "----"}
+            </div>
+            <p style={s.codeHint}>
+              Students can enter this code manually if QR scanning is unavailable
+            </p>
+          </div>
+
           {/* Info chips */}
           <div style={s.chipsRow}>
             <div style={s.chip}>
@@ -244,6 +255,36 @@ const s = {
   },
   corner: {
     position: "absolute", width: "14px", height: "14px", borderRadius: "2px",
+  },
+
+  // Lecture Code styles
+  codeContainer: {
+    padding: "0 22px 18px",
+    textAlign: "center",
+  },
+  codeLabel: {
+    fontSize: "13px",
+    fontWeight: "600",
+    color: "#6b7280",
+    margin: "0 0 8px",
+  },
+  codeBox: {
+    fontSize: "32px",
+    fontWeight: "700",
+    letterSpacing: "10px",
+    color: "#111827",
+    background: "#f9fafb",
+    border: "1px solid #e5e7eb",
+    borderRadius: "14px",
+    padding: "16px",
+    marginBottom: "8px",
+    fontVariantNumeric: "tabular-nums",
+    fontFamily: "'DM Mono', 'Menlo', monospace",
+  },
+  codeHint: {
+    fontSize: "11px",
+    color: "#9ca3af",
+    margin: 0,
   },
 
   chipsRow: {

@@ -28,16 +28,54 @@ const QRScanner = () => {
   const [uiState, setUiState] = useState(STATE.IDLE);
   const [errorMsg, setErrorMsg]   = useState("");
   const [successMsg, setSuccessMsg] = useState("");
+  const [lectureCode, setLectureCode] = useState("")
+  const fileInputRef = useRef(null)
+  const handleLectureCodeSubmit = async () => {
+    if (!lectureCode.trim()) {
+      alert("Enter lecture code")
+      return
+    }
+
+    navigate(`/attendance/code/${lectureCode}`)
+  }
+
+  const stopScanner = useCallback(async () => {
+    if (scannerRef.current) {
+      try {
+        await scannerRef.current.stop()
+      } catch {}
+
+      scannerRef.current = null
+    }
+  }, [])
 
   /* pulse ring count for scanning state */
   const rings = [0, 1, 2];
 
-  const stopScanner = useCallback(async () => {
-    if (scannerRef.current) {
-      try { await scannerRef.current.stop(); } catch {}
-      scannerRef.current = null;
+  const handleGalleryUpload = async (event) => {
+    const file = event.target.files?.[0]
+
+    if (!file) return
+
+    try {
+      const html5QrCode = new Html5Qrcode("temp-reader")
+
+      const decodedText = await html5QrCode.scanFile(file, true)
+
+      let lectureId
+
+      try {
+        const url = new URL(decodedText)
+        lectureId = url.pathname.split("/").pop()
+      } catch {
+        lectureId = decodedText
+      }
+
+      navigate(`/attendance/${lectureId}`)
+    } catch (err) {
+      alert("Invalid QR image")
     }
-  }, []);
+  }
 
   useEffect(() => {
     if (loading) return;
@@ -245,57 +283,166 @@ const QRScanner = () => {
 
           {/* ── footer text ─────────────────────────────────────── */}
           <div style={s.footer}>
-            <AnimatePresence mode="wait">
-              {isSuccess ? (
-                <motion.div key="ok" style={s.footerInner}
-                  initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}>
-                  <div style={s.footerIcon("#dcfce7")}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5">
-                      <polyline points="20 6 9 17 4 12"/>
-                    </svg>
-                  </div>
-                  <div>
-                    <p style={{ ...s.footerTitle, color: "#16a34a" }}>QR code detected</p>
-                    <p style={s.footerSub}>Redirecting you now...</p>
-                  </div>
-                </motion.div>
-              ) : isError ? (
-                <motion.div key="err" style={s.footerInner}
-                  initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}>
-                  <div style={s.footerIcon("#fee2e2")}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2.5">
-                      <circle cx="12" cy="12" r="10"/>
-                      <line x1="12" y1="8" x2="12" y2="12"/>
-                      <line x1="12" y1="16" x2="12.01" y2="16"/>
-                    </svg>
-                  </div>
-                  <div>
-                    <p style={{ ...s.footerTitle, color: "#dc2626" }}>Camera unavailable</p>
-                    <p style={s.footerSub}>{errorMsg}</p>
-                  </div>
-                </motion.div>
-              ) : (
-                <motion.div key="scan" style={s.footerInner}
-                  initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}>
-                  <div style={s.footerIcon("#f3f4f6")}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2">
-                      <rect x="3" y="3" width="7" height="7" rx="1"/>
-                      <rect x="14" y="3" width="7" height="7" rx="1"/>
-                      <rect x="3" y="14" width="7" height="7" rx="1"/>
-                      <rect x="14" y="14" width="3" height="3" rx="0.5"/>
-                      <rect x="18" y="14" width="3" height="3" rx="0.5"/>
-                      <rect x="14" y="18" width="3" height="3" rx="0.5"/>
-                      <rect x="18" y="18" width="3" height="3" rx="0.5"/>
-                    </svg>
-                  </div>
-                  <div>
-                    <p style={s.footerTitle}>Point camera at the QR code</p>
-                    <p style={s.footerSub}>Hold steady — detection is automatic</p>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+  <AnimatePresence mode="wait">
+    {isSuccess ? (
+      <motion.div
+        key="ok"
+        style={s.footerInner}
+        initial={{ opacity: 0, y: 6 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -6 }}
+      >
+        <div style={s.footerIcon("#dcfce7")}>
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#16a34a"
+            strokeWidth="2.5"
+          >
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+        </div>
+
+        <div>
+          <p style={{ ...s.footerTitle, color: "#16a34a" }}>
+            QR code detected
+          </p>
+          <p style={s.footerSub}>Redirecting you now...</p>
+        </div>
+      </motion.div>
+    ) : isError ? (
+      <motion.div
+        key="err"
+        style={s.footerInner}
+        initial={{ opacity: 0, y: 6 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -6 }}
+      >
+        <div style={s.footerIcon("#fee2e2")}>
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#dc2626"
+            strokeWidth="2.5"
+          >
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+            <line x1="12" y1="16" x2="12.01" y2="16" />
+          </svg>
+        </div>
+
+        <div>
+          <p style={{ ...s.footerTitle, color: "#dc2626" }}>
+            Camera unavailable
+          </p>
+          <p style={s.footerSub}>{errorMsg}</p>
+        </div>
+      </motion.div>
+    ) : (
+      <motion.div
+        key="scan"
+        style={s.footerInner}
+        initial={{ opacity: 0, y: 6 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -6 }}
+      >
+        <div style={s.footerIcon("#f3f4f6")}>
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#6b7280"
+            strokeWidth="2"
+          >
+            <rect x="3" y="3" width="7" height="7" rx="1" />
+            <rect x="14" y="3" width="7" height="7" rx="1" />
+            <rect x="3" y="14" width="7" height="7" rx="1" />
+            <rect x="14" y="14" width="3" height="3" rx="0.5" />
+            <rect x="18" y="14" width="3" height="3" rx="0.5" />
+            <rect x="14" y="18" width="3" height="3" rx="0.5" />
+            <rect x="18" y="18" width="3" height="3" rx="0.5" />
+          </svg>
+        </div>
+
+        <div>
+          <p style={s.footerTitle}>
+            Point camera at the QR code
+          </p>
+          <p style={s.footerSub}>
+            Hold steady — detection is automatic
+          </p>
+        </div>
+      </motion.div>
+    )}
+  </AnimatePresence>
+
+  <div
+    style={{
+      marginTop: "20px",
+      display: "flex",
+      flexDirection: "column",
+      gap: "12px"
+    }}
+  >
+    <input
+      type="text"
+      value={lectureCode}
+      onChange={(e) =>
+        setLectureCode(
+          e.target.value.replace(/\D/g, "")
+        )
+      }
+      maxLength={4}
+      placeholder="Enter Lecture Code"
+      style={{
+        width: "100%",
+        padding: "12px",
+        borderRadius: "12px",
+        border: "1px solid #e5e7eb",
+        outline: "none",
+        textAlign: "center",
+        fontSize: "15px",
+        fontWeight: "600"
+      }}
+    />
+
+    <button
+      onClick={handleLectureCodeSubmit}
+      style={{
+        width: "100%",
+        padding: "12px",
+        borderRadius: "12px",
+        border: "none",
+        background: "#111827",
+        color: "#fff",
+        cursor: "pointer",
+        fontWeight: "600"
+      }}
+    >
+      Submit Lecture Code
+    </button>
+
+    <button
+      onClick={() => fileInputRef.current?.click()}
+      style={{
+        width: "100%",
+        padding: "12px",
+        borderRadius: "12px",
+        border: "1px solid #e5e7eb",
+        background: "#fff",
+        cursor: "pointer",
+        fontWeight: "600"
+      }}
+    >
+      Upload QR Screenshot
+    </button>
+  </div>
+</div>
 
         </motion.div>
 
@@ -309,6 +456,13 @@ const QRScanner = () => {
           University Learning Management System &mdash; Attendance
         </motion.p>
       </div>
+      <input
+  type="file"
+  accept="image/*"
+  ref={fileInputRef}
+  onChange={handleGalleryUpload}
+  className="hidden"
+/>
     </>
   );
 };

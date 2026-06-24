@@ -5,7 +5,7 @@ import { useAuth } from "../context/AuthContext"
 import confetti from "canvas-confetti"
 
 const VerifyEnrollment = () => {
-  const { lectureId } = useParams()
+  const { lectureId, lectureCode } = useParams()
   const navigate = useNavigate()
   const { user, loading } = useAuth()
 
@@ -73,8 +73,16 @@ const VerifyEnrollment = () => {
       setSuccess(true)
 
       setTimeout(() => {
-        navigate(`/attendance/${lectureId}`, { replace: true })
-      }, 1500)
+  if (lectureId) {
+    navigate(`/attendance/${lectureId}`, {
+      replace: true
+    })
+  } else if (lectureCode) {
+    navigate(`/attendance/code/${lectureCode}`, {
+      replace: true
+    })
+  }
+}, 1500)
 
     }, 500)
   }
@@ -113,9 +121,15 @@ const VerifyEnrollment = () => {
           >
             <div className="bg-white/90 backdrop-blur-xl rounded-3xl p-8">
 
-              <h2 className="text-2xl font-semibold text-center text-gray-900 mb-6">
-                Verify Enrollment
-              </h2>
+              <h2 className="text-2xl font-semibold text-center text-gray-900 mb-2">
+  Verify Enrollment
+</h2>
+
+<p className="text-center text-gray-500 text-sm mb-6">
+  {lectureCode
+    ? `Lecture Code: ${lectureCode}`
+    : "QR Attendance Verification"}
+</p>
 
               <input
                 ref={inputRef}

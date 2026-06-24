@@ -9,7 +9,7 @@ const STEP = { IDLE: "idle", LOCATING: "locating", LOCATED: "located", SUBMITTIN
 
 const AttendanceForm = () => {
   const navigate      = useNavigate();
-  const { lectureId } = useParams();
+ const { lectureId, lectureCode } = useParams();
   const { user, loading } = useAuth();
 
   const [student,   setStudent]   = useState(null);
@@ -17,6 +17,7 @@ const AttendanceForm = () => {
   const [longitude, setLongitude] = useState(null);
   const [step,      setStep]      = useState(STEP.IDLE);
   const [errorMsg,  setErrorMsg]  = useState("");
+  const [attendanceMethod, setAttendanceMethod] = useState("QR Scan");
 
   useEffect(() => {
     if (loading) return;
@@ -24,6 +25,14 @@ const AttendanceForm = () => {
     if (user.role !== "student") { navigate("/teacher-dashboard", { replace: true }); return; }
     setStudent(user);
   }, [user, loading, navigate]);
+
+  useEffect(() => {
+  if (lectureCode) {
+    setAttendanceMethod("Lecture Code");
+  } else {
+    setAttendanceMethod("QR Scan");
+  }
+}, [lectureCode]);
 
   const handleSetLocation = () => {
     if (!navigator.geolocation) { setErrorMsg("Geolocation is not supported by this browser."); setStep(STEP.ERROR); return; }
@@ -37,10 +46,28 @@ const AttendanceForm = () => {
   };
 
   const submitAttendance = async () => {
-    if (!latitude || !longitude) { setErrorMsg("Please capture your location first."); return; }
+    if (latitude === null || longitude === null)  { setErrorMsg("Please capture your location first."); return; }
     setStep(STEP.SUBMITTING); setErrorMsg("");
     try {
-      const res = await api.post("/attendance/mark", { lectureId, latitude, longitude, enrollment: student.enrollment });
+      const endpoint = lectureCode
+  ? "/attendance/mark-by-code"
+  : "/attendance/mark";
+
+const payload = lectureCode
+  ? {
+      lectureCode,
+      latitude,
+      longitude,
+      enrollment: student.enrollment
+    }
+  : {
+      lectureId,
+      latitude,
+      longitude,
+      enrollment: student.enrollment
+    };
+
+const res = await api.post(endpoint, payload);
       if (res.status !== 201) { setErrorMsg(res.data?.message || "Failed to mark attendance."); setStep(STEP.LOCATED); }
       else {
         setStep(STEP.SUCCESS);
@@ -86,9 +113,31 @@ const AttendanceForm = () => {
                 </svg>
               </div>
               <div>
-                <h1 style={s.headerTitle}>Mark Attendance</h1>
-                <p style={s.headerSub}>Verify your presence for this session</p>
-              </div>
+  <h1 style={s.headerTitle}>Mark Attendance</h1>
+
+  <p style={s.headerSub}>
+    Verify your presence for this session
+  </p>
+
+  <div
+    style={{
+      marginTop: "6px",
+      display: "inline-flex",
+      alignItems: "center",
+      gap: "6px",
+      padding: "4px 10px",
+      borderRadius: "999px",
+      background: "#f3f4f6",
+      fontSize: "11px",
+      fontWeight: "600",
+      color: "#374151"
+    }}
+  >
+    {lectureCode
+      ? `Lecture Code • ${lectureCode}`
+      : "QR Attendance"}
+  </div>
+</div>
             </div>
             <StatusPill step={step} />
           </div>
@@ -115,7 +164,7 @@ const AttendanceForm = () => {
               <InfoCell label="Department" value={student.department || "—"} />
               <InfoCell label="Semester"   value={student.semester   ? `Sem ${student.semester}` : "—"} />
               <InfoCell label="Session"    value="Present" accent="#16a34a" />
-              <InfoCell label="Method"     value="QR Scan" />
+              <InfoCell label="Method" value={attendanceMethod}/>
             </div>
           </motion.div>
 
