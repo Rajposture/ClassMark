@@ -62,9 +62,11 @@ const lectureSchema = new mongoose.Schema(
       type: String,
       required: true
     },
-    lectureCode: {
+   lectureCode: {
   type: String,
-  required: true
+  required: true,
+  unique: true,
+  trim: true
 },
     latitude: {
       type: Number,
@@ -75,9 +77,9 @@ const lectureSchema = new mongoose.Schema(
       required: true
     },
     radius: {
-      type: Number,
-      default: 300
-    },
+  type: Number,
+  default: 800
+},
     isActive: {
       type: Boolean,
       default: true

@@ -7,7 +7,7 @@ import GenerateQR from "../components/teacher/GenerateQR";
 import { useAuth } from "../context/AuthContext";
 import api from "../utils/axios";
 import AIRobo from "../components/ai/AIRobo";
-
+import { io } from "socket.io-client";
 const POLL_INTERVAL = 30000;
 
 const fade = (delay = 0) => ({
@@ -70,6 +70,8 @@ const ICONS = {
   chevron:     ["M6 9l6 6 6-6"],
   menu:        ["M3 12h18M3 6h18M3 18h18"],
   user:        ["M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2", "M12 11a4 4 0 100-8 4 4 0 000 8z"],
+  check:       ["M20 6L9 17l-5-5"],
+  xmark:       ["M18 6L6 18M6 6l12 12"],
 };
 
 function Spinner({ size = 18, color = "#0052cc" }) {
@@ -205,7 +207,9 @@ export default function TeacherDashboard() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
 
+  // ── State ──────────────────────────────────────────────────────────────
   const [lectures, setLectures] = useState([]);
+  const [attendanceRequests, setAttendanceRequests] = useState([]); // FIX 1: was missing
   const [activeLecture, setActiveLecture] = useState(null);
   const [fetchError, setFetchError] = useState("");
   const [fetching, setFetching] = useState(true);
@@ -216,9 +220,12 @@ export default function TeacherDashboard() {
   const [lastUpdated, setLastUpdated] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [liveRequest, setLiveRequest] = useState(null);
 
   const pollingRef = useRef(null);
+  const socketRef = useRef(null);
 
+  // ── Data fetching ───────────────────────────────────────────────────────
   const fetchLectures = useCallback(async (silent = false) => {
     if (!silent) setRefreshing(true);
     try {
@@ -234,20 +241,63 @@ export default function TeacherDashboard() {
     }
   }, []);
 
+  const fetchAttendanceRequests = useCallback(async () => {
+    try {
+      const res = await api.get("/attendance/requests");
+      setAttendanceRequests(res.data?.requests || []);
+    } catch (err) {
+      console.error(err);
+    }
+  }, []);
+
+  // ── Effects ─────────────────────────────────────────────────────────────
   useEffect(() => {
     if (loading) return;
-    if (!user) { navigate("/login", { replace: true }); return; }
-    if (user.role !== "teacher") { navigate("/student-dashboard", { replace: true }); return; }
+
+    if (!user) {
+      navigate("/login", { replace: true });
+      return;
+    }
+
+    if (user.role !== "teacher") {
+      navigate("/student-dashboard", { replace: true });
+      return;
+    }
+
     fetchLectures();
-    pollingRef.current = setInterval(() => fetchLectures(true), POLL_INTERVAL);
+    fetchAttendanceRequests();
+
+    pollingRef.current = setInterval(() => {
+      fetchLectures(true);
+      fetchAttendanceRequests();
+    }, POLL_INTERVAL);
+
     return () => clearInterval(pollingRef.current);
-  }, [user, loading, navigate, fetchLectures]);
+  }, [user, loading, navigate, fetchLectures, fetchAttendanceRequests]); // FIX 4: full dep array
 
   useEffect(() => {
     const tick = setInterval(() => setNow(new Date()), 10000);
     return () => clearInterval(tick);
   }, []);
 
+useEffect(() => {
+  socketRef.current = io(
+    import.meta.env.VITE_API_BASE.replace("/api", "")
+  );
+
+  socketRef.current.on(
+    "attendanceRequest",
+    (data) => {
+      setLiveRequest(data);
+      fetchAttendanceRequests();
+    }
+  );
+
+  return () => {
+    socketRef.current?.disconnect();
+  };
+}, [fetchAttendanceRequests]);
+  // ── Handlers ────────────────────────────────────────────────────────────
   const handleLectureCreated = async (data) => {
     try {
       const res = await api.post("/lectures", data);
@@ -266,12 +316,40 @@ export default function TeacherDashboard() {
       const res = await api.get(`/lectures/${id}/excel`, { responseType: "blob" });
       const blob = new Blob([res.data], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
       const url = window.URL.createObjectURL(blob);
-      const a = Object.assign(document.createElement("a"), { href: url, download: `${(subject || "attendance").replace(/[^a-z0-9]/gi, "_").toLowerCase()}.xlsx` });
+      const a = Object.assign(document.createElement("a"), {
+        href: url,
+        download: `${(subject || "attendance").replace(/[^a-z0-9]/gi, "_").toLowerCase()}.xlsx`,
+      });
       document.body.appendChild(a); a.click(); a.remove();
       window.URL.revokeObjectURL(url);
-    } catch { alert("Failed to export attendance sheet."); }
+    } catch {
+      alert("Failed to export attendance sheet.");
+    }
   };
 
+  const approveRequest = async (id) => {
+    try {
+      await api.put(`/attendance/approve/${id}`);
+      fetchAttendanceRequests();
+      fetchLectures();
+      alert("Attendance approved");
+    } catch (err) {
+      alert(err.response?.data?.message || "Approval failed");
+    }
+  };
+
+  // FIX 2: rejectRequest was missing
+  const rejectRequest = async (id) => {
+    try {
+      await api.put(`/attendance/reject/${id}`);
+      fetchAttendanceRequests();
+      alert("Request rejected");
+    } catch (err) {
+      alert(err.response?.data?.message || "Reject failed");
+    }
+  };
+
+  // ── Derived data ─────────────────────────────────────────────────────────
   const stats = useMemo(() => ({
     total: lectures.length,
     today: lectures.filter(l => isToday(l.startDateTime)).length,
@@ -296,6 +374,7 @@ export default function TeacherDashboard() {
   const initials = user?.name?.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase() || "—";
   const greeting = now.getHours() < 12 ? "Good morning" : now.getHours() < 17 ? "Good afternoon" : "Good evening";
 
+  // ── Loading screen ────────────────────────────────────────────────────────
   if (fetching) {
     return (
       <DashboardLayout>
@@ -307,6 +386,7 @@ export default function TeacherDashboard() {
     );
   }
 
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <DashboardLayout>
       <style>{`
@@ -346,9 +426,7 @@ export default function TeacherDashboard() {
           overflow: hidden;
           text-overflow: ellipsis;
         }
-        .topbar-brand span {
-          color: #0052cc;
-        }
+        .topbar-brand span { color: #0052cc; }
         .topbar-right {
           display: flex;
           align-items: center;
@@ -376,7 +454,7 @@ export default function TeacherDashboard() {
           margin: 0 auto;
           padding: 20px 16px 48px;
         }
-        @media (min-width: 640px) { .td-page { padding: 24px 24px 48px; } }
+        @media (min-width: 640px)  { .td-page { padding: 24px 24px 48px; } }
         @media (min-width: 1024px) { .td-page { padding: 28px 32px 48px; } }
 
         /* ── Page header ── */
@@ -388,7 +466,6 @@ export default function TeacherDashboard() {
           margin-bottom: 20px;
           flex-wrap: wrap;
         }
-        .page-header-left {}
         .page-eyebrow {
           font-size: .72rem;
           font-weight: 600;
@@ -468,28 +545,14 @@ export default function TeacherDashboard() {
           white-space: nowrap;
         }
         .btn:disabled { opacity: .6; cursor: not-allowed; }
-        .btn-primary {
-          background: #0052cc;
-          color: #fff;
-        }
+        .btn-primary { background: #0052cc; color: #fff; }
         .btn-primary:hover:not(:disabled) { background: #0065ff; }
-        .btn-secondary {
-          background: #fff;
-          color: #0052cc;
-          border: 1px solid #dfe1e6;
-        }
+        .btn-secondary { background: #fff; color: #0052cc; border: 1px solid #dfe1e6; }
         .btn-secondary:hover:not(:disabled) { background: #f4f5f7; }
-        .btn-subtle {
-          background: transparent;
-          color: #5e6c84;
-          border: 1px solid #dfe1e6;
-        }
+        .btn-subtle { background: transparent; color: #5e6c84; border: 1px solid #dfe1e6; }
         .btn-subtle:hover:not(:disabled) { background: #f4f5f7; }
-        .btn-danger-subtle {
-          background: #fff0f0;
-          color: #c0392b;
-          border: 1px solid #ffbdad;
-        }
+        .btn-danger-subtle { background: #fff0f0; color: #c0392b; border: 1px solid #ffbdad; }
+        .btn-danger-subtle:hover:not(:disabled) { background: #ffe0e0; }
 
         /* ── Stats grid ── */
         .stats-grid {
@@ -582,7 +645,7 @@ export default function TeacherDashboard() {
         /* ── Sidebar ── */
         .sidebar { display: flex; flex-direction: column; gap: 12px; }
 
-        /* ── Cards ── */
+        /* ── Panels ── */
         .panel {
           background: #fff;
           border: 1px solid #dfe1e6;
@@ -611,7 +674,7 @@ export default function TeacherDashboard() {
         }
         .panel-body { padding: 0 16px 16px; }
 
-        /* profile */
+        /* ── Profile ── */
         .profile-top {
           display: flex;
           align-items: center;
@@ -672,7 +735,7 @@ export default function TeacherDashboard() {
           min-width: 0;
         }
 
-        /* snapshot */
+        /* ── Snapshot ── */
         .snapshot-row {
           display: flex;
           justify-content: space-between;
@@ -684,10 +747,49 @@ export default function TeacherDashboard() {
         .snapshot-label { font-size: .8rem; color: #5e6c84; font-weight: 500; }
         .snapshot-value { font-size: .9rem; font-weight: 800; color: #0052cc; }
 
+        /* ── Attendance Requests ── */
+        .req-card {
+          border: 1px solid #dfe1e6;
+          border-radius: 4px;
+          padding: 10px 12px;
+          margin-bottom: 8px;
+          background: #fafbfc;
+        }
+        .req-card:last-child { margin-bottom: 0; }
+        .req-name {
+          font-size: .82rem;
+          font-weight: 700;
+          color: #172b4d;
+          margin-bottom: 2px;
+        }
+        .req-meta {
+          font-size: .72rem;
+          color: #7a869a;
+          margin-bottom: 10px;
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+        }
+        .req-actions {
+          display: flex;
+          gap: 6px;
+        }
+        .req-actions .btn {
+          flex: 1;
+          height: 30px;
+          font-size: .74rem;
+        }
+        .req-empty {
+          font-size: .8rem;
+          color: #97a0af;
+          text-align: center;
+          padding: 8px 0 4px;
+        }
+
         /* ── Main panel ── */
         .main-panel { flex: 1; min-width: 0; }
 
-        /* toolbar */
+        /* ── Toolbar ── */
         .toolbar {
           display: flex;
           align-items: center;
@@ -736,7 +838,7 @@ export default function TeacherDashboard() {
         .search-input:focus { border-color: #4c9aff; box-shadow: 0 0 0 2px rgba(76,154,255,.25); }
         .search-input::placeholder { color: #b3bac5; }
 
-        /* filter tabs */
+        /* ── Filter tabs ── */
         .filter-tabs {
           display: flex;
           gap: 0;
@@ -846,10 +948,7 @@ export default function TeacherDashboard() {
         }
         .lc-att-label { font-size: .75rem; color: #5e6c84; font-weight: 500; }
         .lc-att-value { font-size: .88rem; font-weight: 800; color: #0052cc; }
-        .lc-actions {
-          display: flex;
-          gap: 8px;
-        }
+        .lc-actions { display: flex; gap: 8px; }
         .lc-actions .btn { flex: 1; height: 32px; font-size: .78rem; }
 
         /* ── Create form panel ── */
@@ -901,9 +1000,7 @@ export default function TeacherDashboard() {
           justify-content: space-between;
         }
         .sidebar-toggle:hover { background: #f4f5f7; }
-        .chevron-icon {
-          transition: transform .2s;
-        }
+        .chevron-icon { transition: transform .2s; }
         .chevron-icon.open { transform: rotate(180deg); }
         @media (min-width: 1024px) { .sidebar-toggle { display: none; } }
 
@@ -913,26 +1010,20 @@ export default function TeacherDashboard() {
           gap: 12px;
         }
         .sidebar-content.open { display: flex; }
-        @media (min-width: 1024px) {
-          .sidebar-content {
-            display: flex !important;
-          }
-        }
+        @media (min-width: 1024px) { .sidebar-content { display: flex !important; } }
 
         /* ── Animations ── */
         @keyframes tdSpin { to { transform: rotate(360deg); } }
         @keyframes tdPulse {
           0%, 100% { opacity: .9; transform: scale(1); }
-          50% { opacity: .4; transform: scale(1.5); }
+          50%       { opacity: .4; transform: scale(1.5); }
         }
       `}</style>
 
       <div className="td">
-        {/* Top bar */}
-
         <div className="td-page">
 
-          {/* Page header */}
+          {/* ── Page header ── */}
           <motion.div {...fade(0)} className="page-header">
             <div className="page-header-left">
               <div className="page-eyebrow">
@@ -976,13 +1067,13 @@ export default function TeacherDashboard() {
             </div>
           </motion.div>
 
-          {/* Stats */}
+          {/* ── Stats ── */}
           <div className="stats-grid">
-            <StatCard delay={0.04} icon={ICONS.lectures}  label="Total"    value={stats.total}    accent="#0052cc" accentLight="#deebff" />
-            <StatCard delay={0.07} icon={ICONS.today}     label="Today"    value={stats.today}    accent="#00875a" accentLight="#e3fcec" />
-            <StatCard delay={0.10} icon={ICONS.live}      label="Live"     value={stats.live}     accent="#0b6e31" accentLight="#e3fcec" live />
-            <StatCard delay={0.13} icon={ICONS.upcoming}  label="Upcoming" value={stats.upcoming} accent="#ff8b00" accentLight="#fffae6" />
-            <StatCard delay={0.16} icon={ICONS.subjects}  label="Subjects" value={stats.subjects} accent="#6554c0" accentLight="#eae6ff" />
+            <StatCard delay={0.04} icon={ICONS.lectures} label="Total"    value={stats.total}    accent="#0052cc" accentLight="#deebff" />
+            <StatCard delay={0.07} icon={ICONS.today}    label="Today"    value={stats.today}    accent="#00875a" accentLight="#e3fcec" />
+            <StatCard delay={0.10} icon={ICONS.live}     label="Live"     value={stats.live}     accent="#0b6e31" accentLight="#e3fcec" live />
+            <StatCard delay={0.13} icon={ICONS.upcoming} label="Upcoming" value={stats.upcoming} accent="#ff8b00" accentLight="#fffae6" />
+            <StatCard delay={0.16} icon={ICONS.subjects} label="Subjects" value={stats.subjects} accent="#6554c0" accentLight="#eae6ff" />
           </div>
 
           {fetchError && (
@@ -992,10 +1083,10 @@ export default function TeacherDashboard() {
             </div>
           )}
 
-          {/* Body */}
+          {/* ── Body ── */}
           <div className="td-body">
 
-            {/* Sidebar */}
+            {/* ── Sidebar ── */}
             <div className="sidebar">
 
               {/* Mobile toggle */}
@@ -1009,30 +1100,66 @@ export default function TeacherDashboard() {
                 </span>
               </button>
 
-              <div className={`sidebar-content ${sidebarOpen ? "open" : ""}`}>
+              {/* FIX 3: all sidebar panels are now correctly inside sidebar-content */}
+        <div className={`sidebar-content ${sidebarOpen ? "open" : ""}`}>
 
-                {/* Create lecture */}
-                <AnimatePresence>
-                  {showCreate && (
-                    <motion.div
-                      key="create"
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: "auto" }}
-                      exit={{ opacity: 0, height: 0 }}
-                      transition={{ duration: .3, ease: [.22, 1, .36, 1] }}
-                      style={{ overflow: "hidden" }}
-                    >
-                      <div className="create-panel">
-                        <div className="panel-header">New Lecture</div>
-                        <div className="panel-body">
-                          <CreateLecture onCreate={handleLectureCreated} />
-                        </div>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+  {liveRequest && (
+    <motion.div
+      initial={{ opacity: 0, y: -15 }}
+      animate={{ opacity: 1, y: 0 }}
+      style={{
+        background: "#fff7ed",
+        border: "1px solid #f59e0b",
+        color: "#92400e",
+        padding: "12px",
+        borderRadius: "10px",
+        marginBottom: "12px",
+        fontWeight: "600"
+      }}
+    >
+      🔔 {liveRequest.studentName} requested attendance approval
 
-                {/* Profile */}
+      <div
+        style={{
+          fontSize: ".8rem",
+          marginTop: "4px"
+        }}
+      >
+        {liveRequest.subject}
+      </div>
+    </motion.div>
+  )}
+
+  {/* Create lecture */}
+  <AnimatePresence>
+    {showCreate && (
+      <motion.div
+        key="create"
+        initial={{ opacity: 0, height: 0 }}
+        animate={{ opacity: 1, height: "auto" }}
+        exit={{ opacity: 0, height: 0 }}
+        transition={{
+          duration: 0.3,
+          ease: [0.22, 1, 0.36, 1]
+        }}
+        style={{ overflow: "hidden" }}
+      >
+        <div className="create-panel">
+          <div className="panel-header">
+            New Lecture
+          </div>
+
+          <div className="panel-body">
+            <CreateLecture
+              onCreate={handleLectureCreated}
+            />
+          </div>
+        </div>
+      </motion.div>
+    )}
+  </AnimatePresence>
+
+  {/* Faculty Profile */}
                 <motion.div {...fade(0.1)} className="panel">
                   <div className="panel-header">Faculty Profile</div>
                   <div className="panel-body">
@@ -1057,27 +1184,66 @@ export default function TeacherDashboard() {
                   </div>
                 </motion.div>
 
-                {/* Semester snapshot */}
+                {/* Semester Snapshot */}
                 <motion.div {...fade(0.14)} className="panel">
                   <div className="panel-header">Semester Snapshot</div>
                   <div className="panel-body">
                     {[
-                      { label: "Total Lectures",   value: stats.total },
-                      { label: "Ended",            value: stats.ended },
-                      { label: "Unique Subjects",  value: stats.subjects },
-                      { label: "This Week",        value: stats.thisWeek },
+                      { label: "Total Lectures",  value: stats.total },
+                      { label: "Ended",           value: stats.ended },
+                      { label: "Unique Subjects", value: stats.subjects },
+                      { label: "This Week",       value: stats.thisWeek },
                     ].map((r, i) => (
                       <div key={i} className="snapshot-row">
                         <span className="snapshot-label">{r.label}</span>
-                        <motion.span key={r.value} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="snapshot-value">{r.value}</motion.span>
+                        <motion.span key={r.value} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="snapshot-value">
+                          {r.value}
+                        </motion.span>
                       </div>
                     ))}
                   </div>
                 </motion.div>
-              </div>
-            </div>
 
-            {/* Main panel */}
+                {/* Attendance Requests — FIX 3: now inside sidebar-content */}
+                <motion.div {...fade(0.18)} className="panel">
+                  <div className="panel-header">Attendance Requests</div>
+                  <div className="panel-body">
+                    {attendanceRequests.length === 0 ? (
+                      <p className="req-empty">No pending requests</p>
+                    ) : (
+                      attendanceRequests.map((request) => (
+                        <div key={request._id} className="req-card">
+                          <div className="req-name">{request.studentId?.name}</div>
+                          <div className="req-meta">
+                            <span>{request.studentId?.enrollment}</span>
+                            <span>{request.lectureId?.subject}</span>
+                          </div>
+                          <div className="req-actions">
+                            <button
+                              className="btn btn-primary"
+                              onClick={() => approveRequest(request._id)}
+                            >
+                              <Icon d={ICONS.check} size={12} color="#fff" />
+                              Approve
+                            </button>
+                            <button
+                              className="btn btn-danger-subtle"
+                              onClick={() => rejectRequest(request._id)}
+                            >
+                              <Icon d={ICONS.xmark} size={12} color="#c0392b" />
+                              Reject
+                            </button>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </motion.div>
+
+              </div>{/* end sidebar-content */}
+            </div>{/* end sidebar */}
+
+            {/* ── Main panel ── */}
             <motion.div {...fade(0.12)} className="panel main-panel">
               {/* Toolbar */}
               <div className="toolbar">
@@ -1127,9 +1293,9 @@ export default function TeacherDashboard() {
               }
             </motion.div>
 
-          </div>
-        </div>
-      </div>
+          </div>{/* end td-body */}
+        </div>{/* end td-page */}
+      </div>{/* end td */}
 
       <AnimatePresence>
         {activeLecture && <GenerateQR lecture={activeLecture} onClose={() => setActiveLecture(null)} />}

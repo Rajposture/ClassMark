@@ -397,7 +397,7 @@ const QRScanner = () => {
           e.target.value.replace(/\D/g, "")
         )
       }
-      maxLength={4}
+      maxLength={6}
       placeholder="Enter Lecture Code"
       style={{
         width: "100%",

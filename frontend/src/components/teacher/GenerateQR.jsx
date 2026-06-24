@@ -24,7 +24,7 @@ const GenerateQR = ({ lecture, onClose }) => {
 
   if (!lecture?._id) return null;
 
-  const attendanceUrl = `${window.location.origin}/verify/${lecture._id}`;
+const attendanceUrl =`${window.location.origin}/verify/code/${lecture.lectureCode}`;
   const minutes = Math.floor(secondsLeft / 60);
   const seconds = secondsLeft % 60;
   const progress = (secondsLeft / DURATION) * 100;

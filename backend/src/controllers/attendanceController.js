@@ -1,4 +1,6 @@
 import Lecture from "../models/Lecture.js";
+import AttendanceRequest from "../models/AttendanceRequest.js";
+
 
 const calculateDistance = (lat1, lon1, lat2, lon2) => {
   const toRad = (value) => (value * Math.PI) / 180;
@@ -209,6 +211,200 @@ export const markAttendanceByCode = async (req, res) => {
     );
   } catch (error) {
     console.error("Lecture Code Error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Server error"
+    });
+  }
+};
+export const createAttendanceRequest = async (req, res) => {
+  try {
+    const {
+      lectureId,
+      lectureCode,
+      latitude,
+      longitude
+    } = req.body;
+
+    let lecture = null;
+
+    if (lectureId) {
+      lecture = await Lecture.findById(lectureId);
+    }
+
+    if (!lecture && lectureCode) {
+      lecture = await Lecture.findOne({
+        lectureCode: lectureCode.trim()
+      });
+    }
+
+    if (!lecture) {
+      return res.status(404).json({
+        success: false,
+        message: "Lecture not found"
+      });
+    }
+
+    const existingRequest =
+      await AttendanceRequest.findOne({
+        studentId: req.user.id,
+        lectureId: lecture._id,
+        status: "pending"
+      });
+
+    if (existingRequest) {
+      return res.status(400).json({
+        success: false,
+        message: "Request already sent"
+      });
+    }
+
+    await AttendanceRequest.create({
+      studentId: req.user.id,
+      lectureId: lecture._id,
+      latitude,
+      longitude
+    });
+const io = req.app.get("io");
+
+io.emit("attendanceRequest", {
+  studentName: req.user.name,
+  enrollment: req.user.enrollment,
+  lectureId: lecture._id,
+  subject: lecture.subject
+});
+    return res.status(201).json({
+      success: true,
+      message: "Request sent successfully"
+    });
+
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Server error"
+    });
+  }
+};
+
+export const getAttendanceRequests = async (req, res) => {
+  try {
+    const requests = await AttendanceRequest.find({
+      status: "pending"
+    })
+      .populate("studentId", "name enrollment")
+      .populate({
+        path: "lectureId",
+        match: {
+          teacherId: req.user.id
+        },
+        select: "subject teacherId"
+      });
+
+    const filteredRequests = requests.filter(
+      (request) => request.lectureId
+    );
+
+    return res.status(200).json({
+      success: true,
+      requests: filteredRequests
+    });
+
+  } catch (error) {
+    console.error("Get Attendance Requests Error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Server error"
+    });
+  }
+};
+
+export const approveAttendanceRequest = async (req, res) => {
+  try {
+    const request =
+      await AttendanceRequest.findById(req.params.id)
+      .populate("studentId")
+      .populate("lectureId");
+
+    if (!request) {
+      return res.status(404).json({
+        success: false,
+        message: "Request not found"
+      });
+    }
+
+    const lecture = request.lectureId;
+    const student = request.studentId;
+
+    const alreadyMarked =
+      lecture.attendance.some(
+        (a) =>
+          a.studentId.toString() ===
+          student._id.toString()
+      );
+
+    if (!alreadyMarked) {
+      lecture.attendance.push({
+        studentId: student._id,
+        name: student.name,
+        enrollment: student.enrollment,
+        latitude: request.latitude,
+        longitude: request.longitude,
+        ipAddress: "Teacher Approved",
+        deviceInfo: "Teacher Override",
+        time: new Date()
+      });
+
+      await lecture.save();
+    }
+
+    request.status = "approved";
+    request.approvedBy = req.user.id;
+    request.approvedAt = new Date();
+
+    await request.save();
+
+    return res.json({
+      success: true,
+      message: "Attendance approved"
+    });
+
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Server error"
+    });
+  }
+};
+
+export const rejectAttendanceRequest = async (req, res) => {
+  try {
+    const request =
+      await AttendanceRequest.findById(req.params.id);
+
+    if (!request) {
+      return res.status(404).json({
+        success: false,
+        message: "Request not found"
+      });
+    }
+
+    request.status = "rejected";
+
+    await request.save();
+
+    return res.json({
+      success: true,
+      message: "Request rejected"
+    });
+
+  } catch (error) {
+    console.error(error);
 
     return res.status(500).json({
       success: false,

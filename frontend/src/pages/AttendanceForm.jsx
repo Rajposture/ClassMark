@@ -15,6 +15,7 @@ const AttendanceForm = () => {
   const [student,   setStudent]   = useState(null);
   const [latitude,  setLatitude]  = useState(null);
   const [longitude, setLongitude] = useState(null);
+  const [accuracy, setAccuracy] = useState(null)
   const [step,      setStep]      = useState(STEP.IDLE);
   const [errorMsg,  setErrorMsg]  = useState("");
   const [attendanceMethod, setAttendanceMethod] = useState("QR Scan");
@@ -34,57 +35,179 @@ const AttendanceForm = () => {
   }
 }, [lectureCode]);
 
-  const handleSetLocation = () => {
-    if (!navigator.geolocation) { setErrorMsg("Geolocation is not supported by this browser."); setStep(STEP.ERROR); return; }
-    setStep(STEP.LOCATING);
-    setErrorMsg("");
-    navigator.geolocation.getCurrentPosition(
-      (pos) => { setLatitude(pos.coords.latitude); setLongitude(pos.coords.longitude); setStep(STEP.LOCATED); },
-      ()    => { setErrorMsg("Location access was denied. Please allow it in your browser settings."); setStep(STEP.ERROR); },
-      { enableHighAccuracy: true }
-    );
-  };
+const handleSetLocation = () => {
+  if (!navigator.geolocation) {
+    setErrorMsg(
+      "Geolocation is not supported by this browser."
+    )
+    setStep(STEP.ERROR)
+    return
+  }
 
-  const submitAttendance = async () => {
-    if (latitude === null || longitude === null)  { setErrorMsg("Please capture your location first."); return; }
-    setStep(STEP.SUBMITTING); setErrorMsg("");
-    try {
-      const endpoint = lectureCode
-  ? "/attendance/mark-by-code"
-  : "/attendance/mark";
+  setStep(STEP.LOCATING)
+  setErrorMsg("")
 
-const payload = lectureCode
-  ? {
-      lectureCode,
-      latitude,
-      longitude,
-      enrollment: student.enrollment
-    }
-  : {
-      lectureId,
-      latitude,
-      longitude,
-      enrollment: student.enrollment
-    };
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      const gpsAccuracy = position.coords.accuracy
 
-const res = await api.post(endpoint, payload);
-      if (res.status !== 201) { setErrorMsg(res.data?.message || "Failed to mark attendance."); setStep(STEP.LOCATED); }
-      else {
-        setStep(STEP.SUCCESS);
-        setTimeout(() => navigate("/student-dashboard", { replace: true }), 2200);
+      setLatitude(position.coords.latitude)
+      setLongitude(position.coords.longitude)
+      setAccuracy(gpsAccuracy)
+
+      console.log(
+        "Latitude:",
+        position.coords.latitude
+      )
+      console.log(
+        "Longitude:",
+        position.coords.longitude
+      )
+      console.log(
+        "Accuracy:",
+        gpsAccuracy
+      )
+
+      // For development keep 1000
+      // For production change to 100 or 150
+      if (gpsAccuracy > 1000) {
+        setErrorMsg(
+          `Poor GPS accuracy (${Math.round(
+            gpsAccuracy
+          )}m). Move near a window or enable High Accuracy GPS and try again.`
+        )
+
+        setStep(STEP.ERROR)
+        return
       }
-    } catch (err) {
-      setErrorMsg(err.response?.data?.message || "A server error occurred. Please try again.");
-      setStep(STEP.LOCATED);
-    }
-  };
 
+      setStep(STEP.LOCATED)
+    },
+    (error) => {
+      console.error(error)
+
+      setErrorMsg(
+        "Unable to get location. Please enable GPS and try again."
+      )
+
+      setStep(STEP.ERROR)
+    },
+    {
+      enableHighAccuracy: true,
+      timeout: 15000,
+      maximumAge: 0
+    }
+  )
+}
+const submitAttendance = async () => {
+  if (latitude === null || longitude === null) {
+    setErrorMsg("Please capture your location first.")
+    return
+  }
+
+  if (accuracy && accuracy > 500) {
+    setErrorMsg(
+      `Poor GPS accuracy (${Math.round(
+        accuracy
+      )}m). Move near a window or enable High Accuracy GPS and try again.`
+    )
+    return
+  }
+
+  setStep(STEP.SUBMITTING)
+  setErrorMsg("")
+
+  try {
+    const endpoint = lectureCode
+      ? "/attendance/mark-by-code"
+      : "/attendance/mark"
+
+    const payload = lectureCode
+      ? {
+          lectureCode,
+          latitude,
+          longitude,
+          enrollment: student.enrollment
+        }
+      : {
+          lectureId,
+          latitude,
+          longitude,
+          enrollment: student.enrollment
+        }
+
+    const res = await api.post(endpoint, payload)
+
+    if (res.status !== 201) {
+      setErrorMsg(
+        res.data?.message || "Failed to mark attendance."
+      )
+      setStep(STEP.LOCATED)
+    } else {
+      setStep(STEP.SUCCESS)
+
+      setTimeout(() => {
+        navigate("/student-dashboard", {
+          replace: true
+        })
+      }, 2200)
+    }
+  } catch (err) {
+    setErrorMsg(
+      err.response?.data?.message ||
+      "A server error occurred. Please try again."
+    )
+
+    setStep(STEP.LOCATED)
+  }
+}
+
+const handleAttendanceRequest = async () => {
+  try {
+    if (!latitude || !longitude) {
+      setErrorMsg("Please capture your location first.");
+      return;
+    }
+
+    const payload = lectureCode
+      ? {
+          lectureCode,
+          latitude,
+          longitude
+        }
+      : {
+          lectureId,
+          latitude,
+          longitude
+        };
+
+    const res = await api.post(
+      "/attendance/request",
+      payload
+    );
+
+    if (res.data?.success) {
+      setErrorMsg(
+        "Attendance request sent successfully. Please wait for teacher approval."
+      );
+    }
+  } catch (err) {
+    setErrorMsg(
+      err.response?.data?.message ||
+      "Failed to send attendance request."
+    );
+  }
+};
   const isLocating   = step === STEP.LOCATING;
   const isLocated    = step === STEP.LOCATED || step === STEP.SUBMITTING;
   const isSubmitting = step === STEP.SUBMITTING;
   const isSuccess    = step === STEP.SUCCESS;
   const isError      = step === STEP.ERROR;
 
+  const showRequestButton =
+  errorMsg.toLowerCase().includes(
+    "outside classroom radius"
+  );
   if (!student) return <LoadingScreen />;
 
   return (
@@ -223,20 +346,36 @@ const res = await api.post(endpoint, payload);
             {/* Coordinate chip */}
             <AnimatePresence>
               {isLocated && latitude && (
-                <motion.div
-                  style={s.coordChip}
-                  initial={{ opacity: 0, height: 0, marginTop: 0 }}
-                  animate={{ opacity: 1, height: "auto", marginTop: "8px" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.25 }}
-                >
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5">
-                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
-                    <circle cx="12" cy="10" r="3"/>
-                  </svg>
-                  <span style={s.coordText}>{latitude.toFixed(5)}, {longitude.toFixed(5)}</span>
-                </motion.div>
-              )}
+  <>
+    <motion.div
+      style={s.coordChip}
+      initial={{ opacity: 0, height: 0, marginTop: 0 }}
+      animate={{ opacity: 1, height: "auto", marginTop: "8px" }}
+      exit={{ opacity: 0, height: 0 }}
+      transition={{ duration: 0.25 }}
+    >
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5">
+        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+        <circle cx="12" cy="10" r="3"/>
+      </svg>
+
+      <span style={s.coordText}>
+        {latitude.toFixed(5)}, {longitude.toFixed(5)}
+      </span>
+    </motion.div>
+
+    <div
+      style={{
+        marginTop: "8px",
+        textAlign: "center",
+        fontSize: "12px",
+        color: accuracy <= 50 ? "#16a34a" : "#dc2626"
+      }}
+    >
+      GPS Accuracy: {Math.round(accuracy)}m
+    </div>
+  </>
+)}
             </AnimatePresence>
 
             {/* Submit button */}
@@ -281,24 +420,53 @@ const res = await api.post(endpoint, payload);
             </button>
 
             {/* Error banner */}
-            <AnimatePresence>
-              {(errorMsg || isError) && (
-                <motion.div
-                  style={s.errorBanner}
-                  initial={{ opacity: 0, y: -4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2.5">
-                    <circle cx="12" cy="12" r="10"/>
-                    <line x1="12" y1="8" x2="12" y2="12"/>
-                    <line x1="12" y1="16" x2="12.01" y2="16"/>
-                  </svg>
-                  {errorMsg || "An error occurred."}
-                </motion.div>
-              )}
-            </AnimatePresence>
+<AnimatePresence>
+  {(errorMsg || isError) && (
+    <>
+      <motion.div
+        style={s.errorBanner}
+        initial={{ opacity: 0, y: -4 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.2 }}
+      >
+        <svg
+          width="13"
+          height="13"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="#dc2626"
+          strokeWidth="2.5"
+        >
+          <circle cx="12" cy="12" r="10" />
+          <line x1="12" y1="8" x2="12" y2="12" />
+          <line x1="12" y1="16" x2="12.01" y2="16" />
+        </svg>
+
+        {errorMsg || "An error occurred."}
+      </motion.div>
+
+      {errorMsg.includes("Outside classroom radius") && (
+        <button
+          onClick={handleAttendanceRequest}
+          style={{
+            marginTop: "10px",
+            width: "100%",
+            padding: "12px",
+            borderRadius: "10px",
+            border: "none",
+            background: "#f59e0b",
+            color: "#fff",
+            fontWeight: "600",
+            cursor: "pointer"
+          }}
+        >
+          Request Teacher Approval
+        </button>
+      )}
+    </>
+  )}
+</AnimatePresence>
           </div>
 
           {/* ── success overlay ─────────────────────────────── */}

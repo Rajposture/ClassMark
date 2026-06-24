@@ -15,9 +15,16 @@ export const createLecture = async (req, res) => {
       return res.status(401).json({ success: false, message: "Unauthorized" });
 
     const qrSecret = crypto.randomBytes(32).toString("hex");
-    const lectureCode = Math.floor(
-  1000 + Math.random() * 9000
-).toString();
+   let lectureCode;
+let exists = true;
+
+while (exists) {
+  lectureCode = Math.floor(
+    100000 + Math.random() * 900000
+  ).toString();
+
+  exists = await Lecture.findOne({ lectureCode });
+}
 
     const startDateTime = new Date(`${date}T${startTime}`);
     const endDateTime = new Date(`${date}T${endTime}`);
@@ -31,7 +38,7 @@ export const createLecture = async (req, res) => {
       lectureCode,
       latitude: Number(latitude),
       longitude: Number(longitude),
-      radius: radius ? Number(radius) : 300,
+      radius: radius ? Number(radius) : 800,
       isActive: true,
       qrExpiresAt: null,
       attendance: []
