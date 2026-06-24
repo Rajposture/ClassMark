@@ -25,9 +25,24 @@ while (exists) {
 
   exists = await Lecture.findOne({ lectureCode });
 }
+const [startHour, startMinute] = startTime.split(":");
+const [endHour, endMinute] = endTime.split(":");
 
-    const startDateTime = new Date(`${date}T${startTime}`);
-    const endDateTime = new Date(`${date}T${endTime}`);
+const startDateTime = new Date(date);
+startDateTime.setHours(
+  Number(startHour),
+  Number(startMinute),
+  0,
+  0
+);
+
+const endDateTime = new Date(date);
+endDateTime.setHours(
+  Number(endHour),
+  Number(endMinute),
+  0,
+  0
+);
 
     const lecture = new Lecture({
       subject,
