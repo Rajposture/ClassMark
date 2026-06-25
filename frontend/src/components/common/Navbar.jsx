@@ -4,7 +4,7 @@ import { FiMenu, FiX, FiLogOut } from "react-icons/fi"
 import { IoNotificationsOutline } from "react-icons/io5"
 import { io } from "socket.io-client"
 import { useAuth } from "../../context/AuthContext"
-import NotificationDrawer from "../NotificationDrawer" // adjust path to wherever this file actually lives
+import NotificationDrawer from "./NotificationDrawer" // adjust path to wherever this file actually lives
 
 const Navbar = () => {
   const { user, logout } = useAuth()
