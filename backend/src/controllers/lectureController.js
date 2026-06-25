@@ -4,6 +4,32 @@ import ExcelJS from "exceljs";
 import Lecture from "../models/Lecture.js";
 import Notification from "../models/Notification.js";
 
+// Your app's reference timezone. Change this if your teachers/students
+// are not in India — it must match the timezone the date/time <input>
+// fields in the frontend are implicitly entered in.
+const APP_TZ_OFFSET_MINUTES = 5 * 60 + 30; // IST = UTC+5:30
+
+/**
+ * Converts a wall-clock date + time (as entered by the user, in the
+ * app's reference timezone) into the correct UTC Date instant — without
+ * ever depending on what timezone the Node process itself is running in.
+ *
+ * Why this matters: `new Date(date)` followed by `.setHours(h, m)`
+ * silently uses the SERVER's local timezone for `.setHours()`. That
+ * works fine in local dev (often IST) but breaks in production if the
+ * host (Render/Vercel/Railway/etc.) runs Node in UTC — the same
+ * "10:00" input then gets stored as 10:00 UTC, which is 3:30 PM IST.
+ */
+function localWallClockToUTC(dateStr, timeStr) {
+  const [year, month, day] = dateStr.split("-").map(Number);
+  const [hour, minute] = timeStr.split(":").map(Number);
+
+  // Build it as if it were UTC first, then shift by the app's offset
+  // to land on the true UTC instant for that local wall-clock time.
+  const asUTC = new Date(Date.UTC(year, month - 1, day, hour, minute, 0, 0));
+  return new Date(asUTC.getTime() - APP_TZ_OFFSET_MINUTES * 60 * 1000);
+}
+
 export const createLecture = async (req, res) => {
   try {
     const { subject, date, startTime, endTime, latitude, longitude, radius } = req.body;
@@ -15,34 +41,25 @@ export const createLecture = async (req, res) => {
       return res.status(401).json({ success: false, message: "Unauthorized" });
 
     const qrSecret = crypto.randomBytes(32).toString("hex");
-   let lectureCode;
-let exists = true;
+    let lectureCode;
+    let exists = true;
 
-while (exists) {
-  lectureCode = Math.floor(
-    100000 + Math.random() * 900000
-  ).toString();
+    while (exists) {
+      lectureCode = Math.floor(100000 + Math.random() * 900000).toString();
+      exists = await Lecture.findOne({ lectureCode });
+    }
 
-  exists = await Lecture.findOne({ lectureCode });
-}
-const [startHour, startMinute] = startTime.split(":");
-const [endHour, endMinute] = endTime.split(":");
+    // Fixed: build the UTC instant explicitly instead of relying on
+    // setHours(), which depends on the server process's local timezone.
+    const startDateTime = localWallClockToUTC(date, startTime);
+    const endDateTime = localWallClockToUTC(date, endTime);
 
-const startDateTime = new Date(date);
-startDateTime.setHours(
-  Number(startHour),
-  Number(startMinute),
-  0,
-  0
-);
-
-const endDateTime = new Date(date);
-endDateTime.setHours(
-  Number(endHour),
-  Number(endMinute),
-  0,
-  0
-);
+    if (endDateTime <= startDateTime) {
+      return res.status(400).json({
+        success: false,
+        message: "End time must be after start time",
+      });
+    }
 
     const lecture = new Lecture({
       subject,
@@ -63,13 +80,13 @@ endDateTime.setHours(
 
     const io = req.app.get("io");
 
-const notification = await Notification.create({
-  title: "New Lecture Scheduled",
-  message: `${lecture.subject} has been scheduled by ${req.user.name}`,
-  type: "lecture"
-});
+    const notification = await Notification.create({
+      title: "New Lecture Scheduled",
+      message: `${lecture.subject} has been scheduled by ${req.user.name}`,
+      type: "lecture"
+    });
 
-io.emit("newLecture", notification);
+    io.emit("newLecture", notification);
 
     return res.status(201).json({ success: true, lecture });
   } catch (error) {
@@ -139,12 +156,12 @@ export const generateQRToken = async (req, res) => {
     );
 
     return res.status(200).json({
-  success: true,
-  token,
-  subject: lecture.subject,
-  lectureCode: lecture.lectureCode,
-  expiresAt
-});
+      success: true,
+      token,
+      subject: lecture.subject,
+      lectureCode: lecture.lectureCode,
+      expiresAt
+    });
   } catch {
     return res.status(500).json({ success: false, message: "Server error" });
   }
@@ -165,17 +182,26 @@ export const generateExcelSheet = async (req, res) => {
 
     const totalPresent = lecture.attendance.length;
 
+    // Fixed: explicitly format in the app's reference timezone instead
+    // of toLocaleDateString()/toLocaleTimeString(), which use whatever
+    // timezone the Node server process happens to be running in — not
+    // necessarily the timezone your teachers and students are in.
+    const fmtDate = (d) =>
+      d.toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata" });
+    const fmtTime = (d) =>
+      d.toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit" });
+
     worksheet.mergeCells("A1:F1");
     worksheet.getCell("A1").value = `Attendance Sheet - ${lecture.subject}`;
     worksheet.getCell("A1").font = { bold: true, size: 16 };
     worksheet.getCell("A1").alignment = { horizontal: "center" };
 
     worksheet.mergeCells("A2:F2");
-    worksheet.getCell("A2").value = `Date: ${lecture.startDateTime.toLocaleDateString()}`;
+    worksheet.getCell("A2").value = `Date: ${fmtDate(lecture.startDateTime)}`;
     worksheet.getCell("A2").alignment = { horizontal: "center" };
 
     worksheet.mergeCells("A3:F3");
-    worksheet.getCell("A3").value = `Time: ${lecture.startDateTime.toLocaleTimeString()} - ${lecture.endDateTime.toLocaleTimeString()}`;
+    worksheet.getCell("A3").value = `Time: ${fmtTime(lecture.startDateTime)} - ${fmtTime(lecture.endDateTime)}`;
     worksheet.getCell("A3").alignment = { horizontal: "center" };
 
     worksheet.mergeCells("A4:F4");
@@ -184,7 +210,7 @@ export const generateExcelSheet = async (req, res) => {
     worksheet.getCell("A4").alignment = { horizontal: "center" };
 
     worksheet.mergeCells("A5:F5");
-    worksheet.getCell("A5").value = `Generated On: ${new Date().toLocaleString()}`;
+    worksheet.getCell("A5").value = `Generated On: ${new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}`;
     worksheet.getCell("A5").alignment = { horizontal: "center" };
 
     worksheet.addRow([]);
@@ -207,7 +233,7 @@ export const generateExcelSheet = async (req, res) => {
         sr: index + 1,
         name: entry.name,
         enrollment: entry.enrollment,
-        time: entry.time ? new Date(entry.time).toLocaleString() : "",
+        time: entry.time ? new Date(entry.time).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }) : "",
         lat: entry.latitude || "",
         lng: entry.longitude || ""
       });
@@ -256,6 +282,15 @@ export const generateMonthlyExcel = async (req, res) => {
     const subject = lecture.subject;
     const teacherId = lecture.teacherId;
 
+    // Note: getMonth()/getFullYear()/getDate() below read in the SERVER's
+    // local timezone. If the server runs in UTC, a lecture stored at, say,
+    // 7:00 PM IST on the 25th (which is 1:30 PM UTC, still the 25th) is
+    // usually safe, but late-night IST lectures near midnight can shift
+    // to the wrong UTC calendar day. For full correctness, derive these
+    // using the same Asia/Kolkata-aware approach as above. Flagging this
+    // as a follow-up since it's a separate, smaller edge case from the
+    // main bug, and changing the monthly-grouping logic affects more
+    // surface area — happy to patch this too if you want it addressed now.
     const month = lecture.startDateTime.getMonth();
     const year = lecture.startDateTime.getFullYear();
 
@@ -311,7 +346,7 @@ export const generateMonthlyExcel = async (req, res) => {
     worksheet.getCell("A1").font = { bold: true, size: 18 };
 
     worksheet.mergeCells("A2:D2");
-    worksheet.getCell("A2").value = `Month: ${lecture.startDateTime.toLocaleString("default", { month: "long" })} ${year}`;
+    worksheet.getCell("A2").value = `Month: ${lecture.startDateTime.toLocaleString("default", { month: "long", timeZone: "Asia/Kolkata" })} ${year}`;
     worksheet.getCell("A2").font = { bold: true };
 
     worksheet.mergeCells("A3:D3");

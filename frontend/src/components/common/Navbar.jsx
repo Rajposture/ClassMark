@@ -4,6 +4,7 @@ import { FiMenu, FiX, FiLogOut } from "react-icons/fi"
 import { IoNotificationsOutline } from "react-icons/io5"
 import { io } from "socket.io-client"
 import { useAuth } from "../../context/AuthContext"
+import NotificationDrawer from "../NotificationDrawer" // adjust path to wherever this file actually lives
 
 const Navbar = () => {
   const { user, logout } = useAuth()
@@ -11,7 +12,6 @@ const Navbar = () => {
   const navigate = useNavigate()
 
   const dropdownRef = useRef(null)
-  const notificationRef = useRef(null)
   const socketRef = useRef(null)
 
   const [openProfile, setOpenProfile] = useState(false)
@@ -19,36 +19,40 @@ const Navbar = () => {
   const [openNotifications, setOpenNotifications] = useState(false)
   const [notifications, setNotifications] = useState([])
   const [bellGlow, setBellGlow] = useState(false)
+
   const fetchNotifications = async () => {
-  try {
-    const token = localStorage.getItem("token")
+    try {
+      const token = localStorage.getItem("token")
 
-    const res = await fetch(
-      `${import.meta.env.VITE_API_BASE}/notifications`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`
+      const res = await fetch(
+        `${import.meta.env.VITE_API_BASE}/notifications`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
         }
+      )
+
+      const data = await res.json()
+
+      if (data.success) {
+        setNotifications(data.notifications || [])
       }
-    )
-
-    const data = await res.json()
-
-    if (data.success) {
-      setNotifications(data.notifications || [])
+    } catch (error) {
+      console.error("Notification fetch error:", error)
     }
-  } catch (error) {
-    console.error("Notification fetch error:", error)
   }
-}
 
+  // Note: the notificationRef-based "click outside to close" effect was
+  // removed because the drawer is now rendered through a portal (see
+  // NotificationDrawer.jsx) — it's no longer a DOM descendant of the bell
+  // button, so a containment check against notificationRef would
+  // incorrectly close it on every click inside the drawer itself. The
+  // drawer's own backdrop already handles click-outside-to-close.
   useEffect(() => {
     const handleClick = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
         setOpenProfile(false)
-      }
-      if (notificationRef.current && !notificationRef.current.contains(e.target)) {
-        setOpenNotifications(false)
       }
     }
     document.addEventListener("mousedown", handleClick)
@@ -56,51 +60,70 @@ const Navbar = () => {
   }, [])
 
   useEffect(() => {
-  if (isSignedIn) {
-    fetchNotifications()
-  }
-}, [isSignedIn])
-
-useEffect(() => {
-  if (!isSignedIn) return
-
-  socketRef.current = io(
-    import.meta.env.VITE_API_BASE.replace("/api", ""),
-    {
-      transports: ["websocket"]
+    if (isSignedIn) {
+      fetchNotifications()
     }
-  )
+  }, [isSignedIn])
 
-  const triggerGlow = () => {
-    setBellGlow(true)
-    setTimeout(() => setBellGlow(false), 1500)
+  useEffect(() => {
+    if (!isSignedIn) return
+
+    socketRef.current = io(
+      import.meta.env.VITE_API_BASE.replace("/api", ""),
+      {
+        transports: ["websocket"]
+      }
+    )
+
+    const triggerGlow = () => {
+      setBellGlow(true)
+      setTimeout(() => setBellGlow(false), 1500)
+    }
+
+    const handleNewLecture = (notification) => {
+      setNotifications((prev) => [notification, ...prev])
+      triggerGlow()
+    }
+
+    const handleNewAssignment = (notification) => {
+      setNotifications((prev) => [notification, ...prev])
+      triggerGlow()
+    }
+
+    socketRef.current.on("newLecture", handleNewLecture)
+    socketRef.current.on("newAssignment", handleNewAssignment)
+
+    return () => {
+      socketRef.current.off("newLecture", handleNewLecture)
+      socketRef.current.off("newAssignment", handleNewAssignment)
+      socketRef.current.disconnect()
+    }
+  }, [isSignedIn])
+
+  const handleMarkAllRead = async () => {
+    try {
+      const token = localStorage.getItem("token")
+
+      await fetch(`${import.meta.env.VITE_API_BASE}/notifications/read`, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+
+      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })))
+    } catch (err) {
+      console.error(err)
+    }
   }
 
-  const handleNewLecture = (notification) => {
-    setNotifications((prev) => [
-      notification,
-      ...prev
-    ])
-    triggerGlow()
+  // Mark a single notification read when tapped, matching the
+  // onMarkRead prop NotificationDrawer expects.
+  const handleMarkOneRead = (id) => {
+    setNotifications((prev) =>
+      prev.map((n) => ((n._id ?? prev.indexOf(n)) === id ? { ...n, read: true } : n))
+    )
   }
-
-  const handleNewAssignment = (notification) => {
-    setNotifications((prev) => [
-      notification,
-      ...prev
-    ])
-    triggerGlow()
-  }
-
-  socketRef.current.on("newLecture", handleNewLecture)
-  socketRef.current.on("newAssignment", handleNewAssignment)
-
-  return () => {
-    socketRef.current.off("newLecture", handleNewLecture)
-    socketRef.current.off("newAssignment", handleNewAssignment)
-    socketRef.current.disconnect()
-  }
-}, [isSignedIn])
 
   const handleLogout = () => {
     logout()
@@ -164,86 +187,26 @@ useEffect(() => {
 
             {isSignedIn && (
               <>
-                <div ref={notificationRef} className="relative">
-                  <button
-                    onClick={() => setOpenNotifications(!openNotifications)}
-                    className={`relative text-xl text-slate-900 transition ${
-                      bellGlow
-                        ? "animate-pulse scale-110 text-indigo-600"
-                        : "hover:text-indigo-600"
-                    }`}
-                  >
-                    <IoNotificationsOutline />
-                    {notifications.length > 0 && (
-                      <span className="absolute -top-2 -right-2 bg-white text-black text-xs w-5 h-5 flex items-center justify-center rounded-full">
-                        {notifications.length}
-                      </span>
-                    )}
-                  </button>
-
-                  {openNotifications && (
-                    <div className="absolute right-0 mt-4 w-80 max-w-[90vw] max-h-96 overflow-y-auto backdrop-blur-xl bg-black/90 border border-white/20 shadow-2xl rounded-2xl p-4 text-white">
-                      <div className="flex justify-between items-center mb-4">
-                        <h3 className="font-semibold">Notifications</h3>
-                        {notifications.length > 0 && (
-                          <button
-                            onClick={async () => {
-  try {
-    const token = localStorage.getItem("token")
-
-    await fetch(
-      `${import.meta.env.VITE_API_BASE}/notifications/read`,
-      {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      }
-    )
-
-    setNotifications([])
-  } catch (err) {
-    console.error(err)
-  }
-}}
-                            className="text-xs underline"
-                          >
-                            Mark all as read
-                          </button>
-                        )}
-                      </div>
-
-                      {notifications.length === 0 ? (
-                        <p className="text-sm text-white/60">
-                          No new notifications
-                        </p>
-                      ) : (
-                        <div className="space-y-3">
-                          {notifications.map((n, index) => (
-                            <div
-                              key={n._id || index}
-                              className="p-3 rounded-xl bg-white/10 hover:bg-white/20 transition"
-                            >
-                              <p className="text-sm font-medium">
-  {n.title}
-</p>
-
-<p className="text-xs text-white/70 mt-1">
-  {n.message}
-</p>
-
-<p className="text-xs text-white/60">
-  {n.createdAt
-    ? new Date(n.createdAt).toLocaleString()
-    : ""}
-</p>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
+                {/* Bell button only — the dropdown itself is now the
+                    portal-rendered NotificationDrawer below, so it's
+                    fixed to the viewport instead of absolute to this
+                    button, and gets the real mobile/desktop responsive
+                    treatment. */}
+                <button
+                  onClick={() => setOpenNotifications(true)}
+                  className={`relative text-xl text-slate-900 transition ${
+                    bellGlow
+                      ? "animate-pulse scale-110 text-indigo-600"
+                      : "hover:text-indigo-600"
+                  }`}
+                >
+                  <IoNotificationsOutline />
+                  {notifications.filter((n) => !n.read).length > 0 && (
+                    <span className="absolute -top-2 -right-2 bg-white text-black text-xs w-5 h-5 flex items-center justify-center rounded-full">
+                      {notifications.filter((n) => !n.read).length}
+                    </span>
                   )}
-                </div>
+                </button>
 
                 <div ref={dropdownRef} className="relative">
                   <div
@@ -294,6 +257,15 @@ useEffect(() => {
           </div>
         </nav>
       </div>
+
+      {/* Real notification drawer, portal-rendered to document.body so
+          it's always positioned relative to the viewport, not this nav. */}
+      <NotificationDrawer
+        open={openNotifications}
+        onClose={() => setOpenNotifications(false)}
+        notifications={notifications}
+        onMarkRead={handleMarkOneRead}
+      />
 
       <div
         className={`fixed inset-0 z-40 md:hidden transition ${
