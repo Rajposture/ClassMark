@@ -1,95 +1,176 @@
-╔═══════════════════════════════════════════════════════════════╗
-║                                                               ║
-║        █████╗ ████████╗████████╗███████╗███╗   ██╗██████╗    ║
-║       ██╔══██╗╚══██╔══╝╚══██╔══╝██╔════╝████╗  ██║██╔══██╗   ║
-║       ███████║   ██║      ██║   █████╗  ██╔██╗ ██║██║  ██║   ║
-║       ██╔══██║   ██║      ██║   ██╔══╝  ██║╚██╗██║██║  ██║   ║
-║       ██║  ██║   ██║      ██║   ███████╗██║ ╚████║██████╔╝   ║
-║       ╚═╝  ╚═╝   ╚═╝      ╚═╝   ╚══════╝╚═╝  ╚═══╝╚═════╝    ║
-║                                                               ║
-║              University Learning Management System           ║
-║                                                               ║
-╚═══════════════════════════════════════════════════════════════╝
+<div align="center">
 
+# 🚀 ClassMark
 
-◈ What is Classmark?
-Classmark is a production-grade University Learning Management System that replaces paper-based attendance with a geo-verified, QR-code-driven workflow. Teachers schedule lectures, generate time-expiring QR codes, and download attendance reports. Students scan QR codes, verify their GPS location, and mark attendance in seconds — all from their phone.
-Built with a clean MERN stack (MongoDB, Express, React, Node.js), it supports role-based access, real-time session management, and Excel report generation — the kind of infrastructure a real university deployment demands.
+### Smart Attendance Management System
 
-┌─────────────────────────────────────────────────────────────────┐
-│                        CLIENT  (React 18)                       │
-│                                                                 │
-│   ┌──────────────┐   ┌──────────────┐   ┌──────────────────┐   │
-│   │   Teacher    │   │   Student    │   │   Auth / Route   │   │
-│   │  Dashboard   │   │  Dashboard   │   │    Guards        │   │
-│   └──────┬───────┘   └──────┬───────┘   └────────┬─────────┘   │
-│          │                  │                    │             │
-│   ┌──────▼───────────────────▼────────────────────▼─────────┐  │
-│   │               Axios  ·  React Router  ·  Context API    │  │
-│   └──────────────────────────┬──────────────────────────────┘  │
-└─────────────────────────────│───────────────────────────────────┘
-                               │  REST / JSON
-┌─────────────────────────────▼───────────────────────────────────┐
-│                      SERVER  (Express + Node)                   │
-│                                                                 │
-│   ┌─────────────┐  ┌─────────────┐  ┌────────────────────────┐ │
-│   │  /auth      │  │  /lectures  │  │  /attendance           │ │
-│   │  register   │  │  create     │  │  mark  ·  verify       │ │
-│   │  login      │  │  history    │  │  geo-check  ·  export  │ │
-│   └─────────────┘  └─────────────┘  └────────────────────────┘ │
-│                                                                 │
-│   ┌─────────────┐  ┌─────────────┐  ┌────────────────────────┐ │
-│   │ /assignments│  │  Multer     │  │  ExcelJS               │ │
-│   │  create     │  │  (images)   │  │  daily + monthly xlsx  │ │
-│   │  list       │  └─────────────┘  └────────────────────────┘ │
-│   └─────────────┘                                               │
-│                                                                 │
-│   ┌───────────────────────────────────────────────────────────┐ │
-│   │         JWT Middleware  ·  Role Guard  ·  Geo Validator   │ │
-│   └───────────────────────────────────────────────────────────┘ │
-└─────────────────────────────┬───────────────────────────────────┘
-                               │  Mongoose ODM
-┌─────────────────────────────▼───────────────────────────────────┐
-│                       MongoDB Atlas                             │
-│                                                                 │
-│   users ·  lectures ·  attendance ·  assignments               │
-└─────────────────────────────────────────────────────────────────┘
-◈ Features
-┌─────────────────────────────────┬─────────────────────────────────────────┐
-│  TEACHER PORTAL                 │  STUDENT PORTAL                         │
-├─────────────────────────────────┼─────────────────────────────────────────┤
-│  ✦  Schedule lectures           │  ✦  QR code scanner (camera)            │
-│  ✦  Set geo-fence radius        │  ✦  GPS location verification           │
-│  ✦  Generate QR (20-min expiry) │  ✦  One-tap attendance submission       │
-│  ✦  View lecture history        │  ✦  View personal attendance record      │
-│  ✦  Download daily .xlsx        │  ✦  Assignment feed                     │
-│  ✦  Download monthly .xlsx      │  ✦  Mobile-first responsive UI          │
-│  ✦  Post assignments            │                                         │
-│  ✦  Upload assignment images    │                                         │
-└─────────────────────────────────┴─────────────────────────────────────────┘
-◈ Tech Stack
-┌─────────────────────────────────────────────────────────────────┐
-│                                                                 │
-│   FRONTEND                          BACKEND                     │
-│   ─────────────────────             ─────────────────────────   │
-│   React 18                          Node.js + Express           │
-│   React Router v6                   MongoDB + Mongoose          │
-│   Framer Motion                     JWT Authentication          │
-│   html5-qrcode                      Multer (file uploads)       │
-│   react-qr-code                     ExcelJS (xlsx reports)      │
-│   Tailwind CSS                      bcryptjs                    │
-│   Axios                             cors + dotenv               │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
+<p>
+A modern attendance management platform built for educational institutions using
+<strong>React • Node.js • Express • MongoDB • Socket.IO</strong>
+</p>
 
-Clone & Install
-bash# Clone the repository
-cd attendx-lms
+<p>
 
-# Install server dependencies
-cd server
-npm install
+<img src="https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react">
 
-# Install client dependencies
-cd ../client
-npm install
+<img src="https://img.shields.io/badge/Node.js-22-339933?style=for-the-badge&logo=node.js">
+
+<img src="https://img.shields.io/badge/Express.js-Backend-000000?style=for-the-badge&logo=express">
+
+<img src="https://img.shields.io/badge/MongoDB-Database-47A248?style=for-the-badge&logo=mongodb">
+
+<img src="https://img.shields.io/badge/Socket.IO-Realtime-010101?style=for-the-badge&logo=socket.io">
+
+<img src="https://img.shields.io/badge/JWT-Secure-orange?style=for-the-badge">
+
+</p>
+
+---
+
+<img src="images/banner.png" width="100%">
+
+</div>
+
+---
+
+# ✨ Features
+
+<table>
+
+<tr>
+
+<td width="50%">
+
+✅ Dynamic QR Attendance
+
+</td>
+
+<td width="50%">
+
+✅ Lecture Code Attendance
+
+</td>
+
+</tr>
+
+<tr>
+
+<td>
+
+📍 GPS Verification
+
+</td>
+
+<td>
+
+🔔 Real-time Notifications
+
+</td>
+
+</tr>
+
+<tr>
+
+<td>
+
+📚 Assignment Management
+
+</td>
+
+<td>
+
+📊 Attendance Analytics
+
+</td>
+
+</tr>
+
+<tr>
+
+<td>
+
+📄 Excel Export
+
+</td>
+
+<td>
+
+🛡 JWT Authentication
+
+</td>
+
+</tr>
+
+<tr>
+
+<td>
+
+📧 OTP Verification
+
+</td>
+
+<td>
+
+👨‍🏫 Teacher Approval Requests
+
+</td>
+
+</tr>
+
+</table>
+
+---
+
+# 📸 Screenshots
+
+<table>
+
+<tr>
+
+<td align="center">
+
+<img src="images/landing.png" width="400">
+
+<br>
+
+Landing Page
+
+</td>
+
+<td align="center">
+
+<img src="images/login.png" width="400">
+
+<br>
+
+Login
+
+</td>
+
+</tr>
+
+<tr>
+
+<td align="center">
+
+<img src="images/dashboard.png" width="400">
+
+<br>
+
+Teacher Dashboard
+
+</td>
+
+<td align="center">
+
+<img src="images/student.png" width="400">
+
+<br>
+
+Student Dashboard
+
+</td>
+
+</tr>
+
+</table>
